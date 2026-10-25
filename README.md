@@ -84,7 +84,9 @@ que concede cada archivo concreto).
 
 `tools/build-apk.sh` hace lo mismo que AIDE pero desde la línea de
 comandos: `aapt2 → javac → d8 → zipalign → apksigner`, sin Gradle ni
-dependencias que descargar.
+dependencias que descargar. El workflow ya compila en verde las tres
+APK, así que lo que se descarga de *Actions → Artifacts* es una APK
+firmada de verdad, no un artefacto de mentira.
 
 ```bash
 tools/build-apk.sh                      # build/aurora-minSdk21.apk
@@ -109,9 +111,19 @@ otro, y deja tres artefactos firmados listos para instalar:
 
 Un segundo job (`Cobertura de la APK`) abre la APK universal y comprueba
 lo que de verdad importa: que están el manifiesto, `resources.arsc`,
-`classes.dex` y la app web; que no aparece ninguna librería nativa (si
+`classes.dex` y la app web; que el DEX lleva **dentro** las clases de la
+app (un `classes.dex` vacío también existe, y sin esto una APK que no
+arranca pasaría por buena); que no aparece ninguna librería nativa (si
 algún día aparece, el job falla y avisa de que habría que repartir por
 ABI); y qué densidades de pantalla lleva dentro.
+
+Se compila contra la plataforma del `targetSdk` (33) y con el
+build-tools estable más nuevo: la imagen del runner trae betas
+(`android-37.2-beta3`) y el APK no debe depender de cuál toque ese día.
+
+Si la compilación falla, el propio workflow publica las últimas líneas
+del log como anotación **y** como comentario en el PR: el log del runner
+no siempre se puede leer desde fuera.
 
 Para probar en el móvil: pestaña **Actions → Compilar APK →** el run
 más reciente **→ Artifacts**, descarga el zip del tramo que

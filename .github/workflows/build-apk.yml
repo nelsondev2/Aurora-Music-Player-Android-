@@ -201,10 +201,26 @@ jobs:
           dexs = [n for n in names if n.endswith(".dex")]
           web = [n for n in names if n.startswith("assets/www/")]
 
+          # 4) Que el DEX lleve DENTRO las clases de la app: un
+          #    classes.dex vacío también «existe», y sin esto una APK que
+          #    no arranca pasaría por buena.
+          dexdata = b"".join(z.read(n) for n in dexs)
+          esperadas = [b"Lcom/nelsondev2/aurora/MainActivity;",
+                       b"Lcom/nelsondev2/aurora/NativePlayer;",
+                       b"Lcom/nelsondev2/aurora/NativePlayerBridge;",
+                       b"Lcom/nelsondev2/aurora/DeviceLibraryBridge;",
+                       b"Lcom/nelsondev2/aurora/PlaybackService;",
+                       b"Lcom/nelsondev2/aurora/ShareProvider;"]
+          faltan_clases = [c.decode().strip("L;") for c in esperadas if c not in dexdata]
+          if faltan_clases:
+              sys.exit("el DEX no lleva: " + ", ".join(faltan_clases))
+
           print()
           print("ABIs            : todas (arm64-v8a, armeabi-v7a, x86, x86_64)")
           print("                 no hay librerías nativas, el sistema pone el WebView")
           print("DEX             : " + ", ".join(dexs))
+          print("Clases          : %d comprobadas (MainActivity, NativePlayer, "
+                "DeviceLibraryBridge, ...)" % len(esperadas))
           print("Densidades      : " + (", ".join(densidades) or "solo la por defecto"))
           print("Archivos de la app web: %d" % len(web))
           print("Peso sin comprimir    : %.1f MB" % (sum(z.getinfo(n).file_size for n in names) / 1048576))
@@ -216,6 +232,7 @@ jobs:
               "|---|---|",
               "| Arquitecturas | todas: sin código nativo, el WebView es del sistema |",
               "| DEX | %s |" % ", ".join(dexs),
+              "| Clases de la app | %d comprobadas en el DEX |" % len(esperadas),
               "| Densidades | %s |" % (", ".join(densidades) or "por defecto"),
               "| Archivos web | %d |" % len(web),
               "",
