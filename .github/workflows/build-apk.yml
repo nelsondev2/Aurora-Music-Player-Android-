@@ -80,12 +80,30 @@ jobs:
 
       - name: Compilar
         run: |
-          set -euo pipefail
+          set -uo pipefail
           mkdir -p dist
-          tools/build-apk.sh \
+          LOG="$RUNNER_TEMP/build.log"
+          # bash -x deja en el log la orden exacta que falló, no solo el
+          # mensaje del tool: con el log del runner a veces no basta.
+          bash -x tools/build-apk.sh \
             --min-sdk ${{ matrix.api }} \
             --target-sdk 33 \
-            --out "dist/aurora-minSdk${{ matrix.api }}.apk"
+            --out "dist/aurora-minSdk${{ matrix.api }}.apk" >"$LOG" 2>&1
+          status=$?
+          tail -n 60 "$LOG" || true
+          if [ "$status" -ne 0 ]; then
+            # El log del runner no siempre es accesible desde fuera (y el
+            # almacenamiento de artefactos, menos). Las anotaciones sí se
+            # leen por API, así que el error viaja ahí: una sola ejecución
+            # dice qué herramienta falló y por qué.
+            esc() { sed -e 's/%/%25/g' -e 's/\r//g' | awk '{printf "%s%s", sep, $0; sep="%0A"}'; }
+            echo "::error title=build-apk.sh falló (minSdk ${{ matrix.api }})::$(tail -n 45 "$LOG" | esc | head -c 3000)"
+            if [ -f build/apk/javac.log ]; then
+              echo "::error title=javac.log::$(head -c 2500 build/apk/javac.log | esc)"
+            fi
+            echo "::error title=Entorno::$( { echo "ANDROID_HOME=$ANDROID_HOME"; java -version 2>&1 | head -2; ls "$ANDROID_HOME/build-tools" 2>&1; ls "$ANDROID_HOME/platforms" 2>&1; } | esc | head -c 2000)"
+            exit "$status"
+          fi
 
       - name: Resumen
         run: |
