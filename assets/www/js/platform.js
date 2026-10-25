@@ -154,6 +154,20 @@ Object.assign(App, {
       typeof M.mediaStart === 'function');
   },
 
+  /*  ¿Está sonando DE VERDAD? Con el motor nativo manda el MediaPlayer
+   *  (snapshot); con el <audio> del navegador, el propio elemento. No se
+   *  usa isPlaying porque esa bandera es de la interfaz y va un paso por
+   *  detrás mientras una pista se prepara: al pausar desde la notificación
+   *  con isPlaying desfasado, la orden se ignoraba y el botón «no hacía
+   *  nada».
+   */
+  isReallyPlaying() {
+    const snap = (typeof this.isNativeAudio === 'function' && this.isNativeAudio() &&
+      window.NativeAudio) ? window.NativeAudio.snapshot() : null;
+    if (snap) return !!snap.playing;
+    return !!(this.audio && this.audio.paused === false);
+  },
+
   /* Manda a Android lo que está sonando.
    * Se llama desde updatePlayUI(), renderCurrentTrack() y seekToTime():
    * el estado ya está calculado y aquí solo se compara con lo último
@@ -174,10 +188,21 @@ Object.assign(App, {
       return;
     }
 
-    const playing = !!this.isPlaying;
-    const dur = this.audio && isFinite(this.audio.duration) && this.audio.duration > 0
-      ? this.audio.duration : (t.duration || 0);
-    const pos = this.audio && isFinite(this.audio.currentTime) ? this.audio.currentTime : 0;
+    //  Con el motor nativo, la notificación debe decir lo MISMO que el
+    //  altavoz: se copia el snapshot de Java en vez de la bandera de la
+    //  interfaz (que puede ir un paso por detrás mientras carga). Era el
+    //  origen de que la notificación dijera «reproduciendo» en silencio y
+    //  siguiera así al pausar desde la pantalla de bloqueo.
+    const snap = (typeof this.isNativeAudio === 'function' && this.isNativeAudio() &&
+      window.NativeAudio) ? window.NativeAudio.snapshot() : null;
+    const playing = snap ? !!snap.playing : !!this.isPlaying;
+    const dur = snap && snap.duration > 0
+      ? snap.duration / 1000
+      : (this.audio && isFinite(this.audio.duration) && this.audio.duration > 0
+        ? this.audio.duration : (t.duration || 0));
+    const pos = snap && snap.position >= 0
+      ? snap.position / 1000
+      : (this.audio && isFinite(this.audio.currentTime) ? this.audio.currentTime : 0);
 
     // El servicio se levanta en la primera reproducción, no al abrir una
     // pista en pausa: así no aparece una notificación muda al arrancar.
@@ -289,16 +314,29 @@ window.AuroraMediaCommand = function (cmd) {
   try {
     const name = String(cmd || '');
     if (!window.App) return;
+    //  ¿Suena o no? Se pregunta al motor, no a la bandera de la interfaz:
+    //  un toque en «pausa» con isPlaying desfasado se perdía y el botón de
+    //  la notificación parecía muerto.
+    const sonando = typeof App.isReallyPlaying === 'function'
+      ? App.isReallyPlaying() : !!App.isPlaying;
+    //  La pausa llega desde el sistema ANTES de que la web se entere: en la
+    //  pérdida de foco, PlaybackService pausa el motor nativo y solo
+    //  después avisa aquí. Si se decidiera solo por «¿suena?», la respuesta
+    //  sería «no» y la interfaz se quedaría en «reproduciendo» con el
+    //  altavoz en silencio (justo el fallo reportado). Por eso también
+    //  cuentan la bandera de la interfaz y la intención del <audio>.
+    const queria = !!(App.audio && App.audio._wantPlay);
+    const activo = sonando || !!App.isPlaying || queria;
     if (name === 'play') {
-      if (App.currentTrack && !App.isPlaying) App.togglePlay(true);
+      if (App.currentTrack && !sonando) App.togglePlay(true);
     } else if (name === 'pause') {
-      if (App.isPlaying) App.togglePlay(false);
+      if (activo) App.togglePlay(false);
     } else if (name === 'next') {
       if (typeof App.next === 'function') App.next();
     } else if (name === 'prev') {
       if (typeof App.prev === 'function') App.prev();
     } else if (name === 'stop') {
-      if (App.isPlaying) App.togglePlay(false);
+      if (activo) App.togglePlay(false);
     }
   } catch (e) {}
 };

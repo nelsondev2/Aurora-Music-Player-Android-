@@ -496,6 +496,35 @@ Object.assign(App, {
           this.playPlaylist(this._editingPlaylistId);
         }
       });
+      //  Elegir varias pistas de la biblioteca y añadirlas de golpe.
+      const btnAddTracks = document.getElementById('btnAddTracksToPlaylist');
+      if (btnAddTracks) btnAddTracks.addEventListener('click', () => {
+        if (!this._editingPlaylistId) return;
+        if (typeof this.openAddTracksPicker === 'function') {
+          this.openAddTracksPicker(this._editingPlaylistId);
+        }
+      });
+      const btnPickConfirm = document.getElementById('btnPickConfirm');
+      if (btnPickConfirm) btnPickConfirm.addEventListener('click', () => {
+        if (typeof this.confirmAddPicked === 'function') this.confirmAddPicked();
+      });
+      const btnPickAll = document.getElementById('btnPickSelectAll');
+      if (btnPickAll) btnPickAll.addEventListener('click', () => {
+        if (typeof this.selectAllPickTracks === 'function') this.selectAllPickTracks();
+      });
+      const pickSearch = document.getElementById('pickSearch');
+      if (pickSearch) {
+        // Entrada de texto: sin debounce cada tecla reordena/filtra la
+        // biblioteca entera y con miles de pistas se nota.
+        let pickTimer = null;
+        pickSearch.addEventListener('input', () => {
+          clearTimeout(pickTimer);
+          pickTimer = setTimeout(() => {
+            this._pickQuery = pickSearch.value || '';
+            if (typeof this.renderPickTracks === 'function') this.renderPickTracks();
+          }, 180);
+        });
+      }
       // Subir canciones directamente a la playlist desde el almacenamiento
       const btnUploadToPl = document.getElementById('btnUploadToPlaylist');
       if (btnUploadToPl) btnUploadToPl.addEventListener('click', () => {
@@ -910,8 +939,17 @@ Object.assign(App, {
         this._onAudioPlaying = () => {
           this._decodeSkipCount = 0;
           this._gaplessConsumed = false;
+          //  El «suena» no lo decide la web: lo dice el motor (o el
+          // propio <audio>). Aplicarlo aquí mantiene mini reproductor,
+          // reproductor y notificación a la vez.
+          if (typeof this._applyNativePlayState === 'function') this._applyNativePlayState(true);
           this.updateMediaPosition(true);
           if (typeof this.setBuffering === 'function') this.setBuffering(false);
+        };
+        this._onAudioPause = () => {
+          if (typeof this._applyNativePlayState === 'function') this._applyNativePlayState(false);
+          if (typeof this.setBuffering === 'function') this.setBuffering(false);
+          this.updateMediaPosition(true);
         };
         this._onAudioWaiting = () => {
           if (typeof this.setBuffering === 'function') this.setBuffering(true);
@@ -923,6 +961,7 @@ Object.assign(App, {
         };
       }
       if (this._boundAudioEl && this._boundAudioEl !== el) {
+        this._boundAudioEl.removeEventListener('pause', this._onAudioPause);
         this._boundAudioEl.removeEventListener('timeupdate', this._onAudioTimeUpdate);
         this._boundAudioEl.removeEventListener('loadedmetadata', this._onAudioLoadedMeta);
         this._boundAudioEl.removeEventListener('ended', this._onAudioEnded);
@@ -934,6 +973,7 @@ Object.assign(App, {
         this._boundAudioEl.removeEventListener('canplaythrough', this._onAudioCanPlay);
       }
       if (this._boundAudioEl === el) return;
+      el.addEventListener('pause', this._onAudioPause);
       el.addEventListener('timeupdate', this._onAudioTimeUpdate);
       el.addEventListener('loadedmetadata', this._onAudioLoadedMeta);
       el.addEventListener('ended', this._onAudioEnded);

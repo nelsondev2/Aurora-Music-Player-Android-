@@ -469,3 +469,165 @@ Object.assign(App, {
       }
     }
 });
+
+/* =====================================================================
+ *  Elegir VARIAS pistas de la biblioteca y añadirlas a una lista.
+ *
+ *  Antes no existía: para meter canciones en una lista había que volver a
+ *  subir los archivos desde el almacenamiento («Subir canciones»), de una
+ *  en una. Aquí se marcan todas las que se quieran —con buscador, con
+ *  «seleccionar todo» y con lista virtual para bibliotecas grandes— y se
+ *  añaden de golpe.
+ * ===================================================================== */
+Object.assign(App, {
+  /* Ids marcados en la hoja (Set de cadenas). */
+  _pickIds: null,
+  _pickQuery: '',
+
+  openAddTracksPicker(playlistId) {
+    const id = playlistId || this._editingPlaylistId;
+    const pl = this.playlists.find(p => p.id === id);
+    if (!pl) return;
+    this._pickPlaylistId = id;
+    this._pickIds = new Set();
+    this._pickItems = [];
+    this._pickQuery = '';
+    const input = document.getElementById('pickSearch');
+    if (input) input.value = '';
+    this.renderPickTracks();
+    this.openSheet('sheetPickTracks');
+  },
+
+  /* Pistas que aún no están en la lista, filtradas por el buscador. */
+  _pickCandidates() {
+    const pl = this.playlists.find(p => p.id === this._pickPlaylistId);
+    if (!pl) return [];
+    const inList = new Set(pl.trackIds || []);
+    const q = (this._pickQuery || '').trim().toLowerCase();
+    const norm = (s) => String(s || '').toLowerCase();
+    const items = this.tracks.filter(t => t && !inList.has(t.id));
+    const filtered = q
+      ? items.filter(t => norm(t.title).indexOf(q) >= 0 || norm(t.artist).indexOf(q) >= 0 ||
+          norm(t.album).indexOf(q) >= 0)
+      : items;
+    // Orden alfabético estable: buscar en una lista desordenada es peor.
+    return filtered.slice().sort((a, b) => norm(a.title).localeCompare(norm(b.title)));
+  },
+
+  renderPickTracks() {
+    const ul = document.getElementById('pickTracksList');
+    if (!ul) return;
+    const items = this._pickCandidates();
+    //  Lo marcado se conserva aunque el buscador lo esconda: buscar otra
+    //  canción no puede deshacer la selección anterior. El pie cuenta todo
+    //  lo marcado, esté a la vista o no, y al confirmar se añade todo.
+    this._pickItems = items;
+    if (!items.length) {
+      ul.innerHTML = '';
+      const li = document.createElement('li');
+      li.className = 'pick-row is-empty';
+      li.textContent = this._pickQuery ? this.t('pick_none') : this.t('pick_none_left');
+      ul.appendChild(li);
+      this.updatePickFooter();
+      return;
+    }
+    const makeRow = (t) => {
+      const li = document.createElement('li');
+      li.className = 'pick-row' + (this._pickIds.has(t.id) ? ' is-picked' : '');
+      li.dataset.id = t.id;
+      li.setAttribute('role', 'checkbox');
+      li.setAttribute('aria-checked', this._pickIds.has(t.id) ? 'true' : 'false');
+      li.innerHTML = `
+        <span class="pick-check" aria-hidden="true"><svg class="ico"><use href="#i-check"></use></svg></span>
+        <div class="row-cover"><canvas width="144" height="144"></canvas></div>
+        <div class="row-text">
+          <div class="row-title"></div>
+          <div class="row-sub"></div>
+        </div>`;
+      li.querySelector('.row-title').textContent = t.title || '—';
+      li.querySelector('.row-sub').textContent = t.artist || this.t('unknown_artist');
+      const cv = li.querySelector('canvas');
+      if (cv && typeof this.drawRowCover === 'function') this.drawRowCover(cv, t);
+      li.addEventListener('click', () => this.togglePickTrack(t.id));
+      return li;
+    };
+    // Lista virtual a partir de 80 filas: con 3.000 canciones, pintarlas
+    // todas a la vez congela la hoja (justo lo que hay que evitar aquí).
+    if (typeof this.fillVirtualList === 'function') {
+      this.fillVirtualList(ul, items, makeRow, { threshold: 80, rowHeight: 64 });
+    } else {
+      ul.innerHTML = '';
+      items.forEach(t => ul.appendChild(makeRow(t)));
+    }
+    this.updatePickFooter();
+  },
+
+  togglePickTrack(trackId) {
+    if (!this._pickIds) this._pickIds = new Set();
+    if (this._pickIds.has(trackId)) this._pickIds.delete(trackId);
+    else this._pickIds.add(trackId);
+    const row = document.querySelector('#pickTracksList .pick-row[data-id="' + trackId + '"]');
+    if (row) {
+      const on = this._pickIds.has(trackId);
+      row.classList.toggle('is-picked', on);
+      row.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    this.updatePickFooter();
+  },
+
+  selectAllPickTracks() {
+    const items = this._pickItems || this._pickCandidates();
+    if (!this._pickIds) this._pickIds = new Set();
+    // Si ya están todas, el botón desmarca: un solo botón para las dos cosas.
+    const todas = items.length > 0 && items.every(t => this._pickIds.has(t.id));
+    this._pickIds.clear();
+    if (!todas) items.forEach(t => this._pickIds.add(t.id));
+    this.renderPickTracks();
+  },
+
+  updatePickFooter() {
+    const n = this._pickIds ? this._pickIds.size : 0;
+    const btn = document.getElementById('btnPickConfirm');
+    const label = document.getElementById('btnPickConfirmLabel');
+    const count = document.getElementById('pickCount');
+    if (btn) btn.disabled = n === 0;
+    if (label) {
+      label.textContent = n === 0 ? this.t('pick_add_none')
+        : this.t('pick_add_count').replace('X', String(n));
+    }
+    if (count) {
+      //  Se reutiliza lo que ya calculó la última pintura: recalcular aquí
+      //  ordenaba la biblioteca entera a cada casilla marcada.
+      const total = (this._pickItems || []).length;
+      count.textContent = total === 0 ? '' : this.t('pick_available').replace('X', String(total));
+    }
+  },
+
+  /* Añade de golpe lo marcado a la lista que se estaba editando. */
+  async confirmAddPicked() {
+    const pl = this.playlists.find(p => p.id === this._pickPlaylistId);
+    const ids = this._pickIds ? Array.from(this._pickIds) : [];
+    if (!pl || !ids.length) return;
+    pl.trackIds = Array.isArray(pl.trackIds) ? pl.trackIds : [];
+    let added = 0;
+    ids.forEach(id => {
+      if (!pl.trackIds.includes(id) && this.tracks.some(t => t.id === id)) {
+        pl.trackIds.push(id);
+        added++;
+      }
+    });
+    if (typeof this._invalidatePlaylistCover === 'function') this._invalidatePlaylistCover(pl);
+    try { await this.persistPlaylist(pl); } catch (e) {}
+    this._pickIds = new Set();
+    this.closeSheet('sheetPickTracks');
+    this.toast(this.t('toast_pick_added').replace('X', String(added)));
+    try { this.renderPlaylists(); } catch (e) {}
+    try { if (typeof this.renderHome === 'function') this.renderHome(); } catch (e) {}
+    if (this._editingPlaylistId === pl.id) this.renderEditPlaylist();
+    // Si la lista es la que está sonando, que la cola lo sepa.
+    if (this.playContext && this.playContext.type === 'playlist' && this.playContext.id === pl.id) {
+      if (typeof this._syncQueueWithPlaylist === 'function') this._syncQueueWithPlaylist();
+      if (typeof this.syncNativeQueue === 'function') this.syncNativeQueue();
+    }
+  }
+});

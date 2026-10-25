@@ -377,6 +377,10 @@ Object.assign(App, {
 
     /* Precarga la siguiente pista en un <audio> NO conectado al grafo EQ. */
     preloadNextTrack() {
+      //  Con el motor nativo no hay nada que precargar en el WebView: la
+      // siguiente se prepara en MediaPlayer (setNextMediaPlayer) y este
+      // <audio> paralelo solo gastaba memoria y datos.
+      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) return;
       if (!this._gaplessEnabled && !(this.crossfadeEnabled && this.crossfadeDuration > 0)) return;
       let nextIdx = this.queueIdx + 1;
       if (nextIdx >= this.queue.length) {
@@ -402,6 +406,10 @@ Object.assign(App, {
     /* Gapless con EQ: mismo <audio> conectado; swap de src ~80 ms antes de ended. */
     gaplessNext() {
       if (!this._gaplessEnabled) return false;
+      //  El relevo sin hueco lo hace MediaPlayer: si esta función también
+      // cambiaba el src, se liberaba el reproductor preparado y volvía a
+      // cargarse la misma pista en cada timeupdate de la ventana final.
+      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) return false;
       if (this._sleepEndOfTrack || this._sleepFading) return false;
       if (this.crossfadeEnabled && this.crossfadeDuration > 0) return false;
       if (this.repeat === 'one') return false;

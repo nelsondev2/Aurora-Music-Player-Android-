@@ -493,6 +493,10 @@
                 <svg class="ico" aria-hidden="true"><use href="#i-cloud-arrow-up"></use></svg>
                 <span data-i18n="upload_to_playlist_btn">Subir canciones</span>
               </button>
+              <button class="pl-action-btn" id="btnAddTracksToPlaylist" type="button">
+                <svg class="ico" aria-hidden="true"><use href="#i-plus"></use></svg>
+                <span data-i18n="add_tracks_btn">Añadir pistas</span>
+              </button>
               <button class="pl-action-btn" id="btnRenamePlaylist" type="button">
                 <svg class="ico" aria-hidden="true"><use href="#i-pen"></use></svg>
                 <span data-i18n="rename_playlist_btn">Renombrar</span>
@@ -527,6 +531,35 @@
             <h4 class="section-title" data-i18n="all_tracks_section">Pistas</h4>
             <ul class="track-list" id="editPlaylistTracks"></ul>
           </div>
+        </div>
+      </div>
+
+      <!-- Elegir varias pistas de la biblioteca para una lista.
+           : antes solo se podía añadir subiendo los archivos otra vez,
+           y de uno en uno. -->
+      <div class="sheet sheet-full" id="sheetPickTracks">
+        <div class="sheet-backdrop" data-close-sheet="sheetPickTracks"></div>
+        <div class="sheet-panel">
+          <div class="sheet-handle"></div>
+          <header class="sheet-header" role="presentation">
+            <button class="icon-btn-sm" data-close-sheet="sheetPickTracks" data-i18n-aria="close_btn" aria-label="Cerrar"><svg class="ico" aria-hidden="true"><use href="#i-xmark"></use></svg></button>
+            <h3 data-i18n="pick_tracks_title">Añadir pistas</h3>
+            <button class="icon-btn-sm" id="btnPickSelectAll" type="button" data-i18n-aria="pick_select_all" aria-label="Seleccionar todo">
+              <svg class="ico" aria-hidden="true"><use href="#i-check"></use></svg>
+            </button>
+          </header>
+          <div class="sheet-body">
+            <label class="field">
+              <input type="search" id="pickSearch" data-i18n-ph="pick_tracks_search" data-i18n-aria="pick_tracks_search" aria-label="Buscar en la biblioteca" placeholder="Buscar en la biblioteca" />
+            </label>
+            <p class="pick-count" id="pickCount"></p>
+            <ul class="track-list" id="pickTracksList"></ul>
+          </div>
+          <footer class="sheet-footer">
+            <button class="primary-btn" id="btnPickConfirm" type="button" disabled>
+              <span id="btnPickConfirmLabel" data-i18n="pick_add_none">Añadir</span>
+            </button>
+          </footer>
         </div>
       </div>
 

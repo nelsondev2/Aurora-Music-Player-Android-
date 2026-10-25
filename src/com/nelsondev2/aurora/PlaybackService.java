@@ -200,27 +200,16 @@ public class PlaybackService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && intent.getAction() != null) {
             String action = intent.getAction();
-            // Primero la web (es quien sabe qué suena y qué viene después);
-            // si la página ya no existe, play/pausa aún se atiende en el
-            // motor nativo, que no depende de ella.
             if (ACTION_TOGGLE.equals(action)) {
-                WebApp.mediaCommand(sPlaying ? "pause" : "play");
-                if (!WebApp.attached()) {
-                    if (sPlaying) NativePlayerBridge.pauseIfPlaying();
-                }
+                command(sPlaying ? "pause" : "play");
             } else if (ACTION_PLAY.equals(action)) {
-                WebApp.mediaCommand("play");
+                command("play");
             } else if (ACTION_PAUSE.equals(action)) {
-                NativePlayerBridge.pauseIfPlaying();
-                WebApp.mediaCommand("pause");
+                command("pause");
             } else if (ACTION_NEXT.equals(action)) {
-                // Con página manda la web (sabe de aleatorio y listas);
-                // sin página, la cola nativa.
-                if (WebApp.attached()) WebApp.mediaCommand("next");
-                else stepQueue(true);
+                command("next");
             } else if (ACTION_PREV.equals(action)) {
-                if (WebApp.attached()) WebApp.mediaCommand("prev");
-                else stepQueue(false);
+                command("prev");
             }
         }
         return START_NOT_STICKY; // sin WebView no hay nada que reanudar
@@ -254,6 +243,34 @@ public class PlaybackService extends Service {
         // mandar comandos.
         if (!sPlaying) stopSelf();
         super.onTaskRemoved(rootIntent);
+    }
+
+    /**
+     * Un comando del sistema (notificación, bloqueo, auriculares).
+     *
+     * Con la página viva manda la web, que sabe de aleatorio, listas y
+     * contexto. Si el WebView ya no está, se atiende aquí: antes, con la
+     * app cerrada, los botones de la notificación y los del casco no
+     * hacían nada (solo el de pausa) y la notificación se quedaba mintiendo.
+     */
+    private void command(String name) {
+        if (WebApp.attached()) {
+            WebApp.mediaCommand(name);
+            return;
+        }
+        if ("play".equals(name)) {
+            NativePlayerBridge.resumePlayback();
+            sPlaying = true;
+            applyState();
+        } else if ("pause".equals(name)) {
+            NativePlayerBridge.pauseIfPlaying();
+            sPlaying = false;
+            applyState();
+        } else if ("next".equals(name)) {
+            stepQueue(true);
+        } else if ("prev".equals(name)) {
+            stepQueue(false);
+        }
     }
 
     // --------------------------------------------------------- cola nativa
@@ -347,27 +364,27 @@ public class PlaybackService extends Service {
         session.setCallback(new MediaSession.Callback() {
             @Override
             public void onPlay() {
-                WebApp.mediaCommand("play");
+                command("play");
             }
 
             @Override
             public void onPause() {
-                WebApp.mediaCommand("pause");
+                command("pause");
             }
 
             @Override
             public void onSkipToNext() {
-                WebApp.mediaCommand("next");
+                command("next");
             }
 
             @Override
             public void onSkipToPrevious() {
-                WebApp.mediaCommand("prev");
+                command("prev");
             }
 
             @Override
             public void onStop() {
-                WebApp.mediaCommand("pause");
+                command("pause");
             }
         });
         session.setActive(true);
@@ -378,9 +395,13 @@ public class PlaybackService extends Service {
         updateSessionMetadata();
         updatePlaybackState();
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        //  Una sola notificación por actualización: antes se construía dos
+        // veces (notify + startForeground) y cada construcción infla la
+        // carátula otra vez en el hilo principal.
+        Notification notification = buildNotification();
         if (nm != null) {
             try {
-                nm.notify(NOTIFICATION_ID, buildNotification());
+                nm.notify(NOTIFICATION_ID, notification);
             } catch (Exception e) {
                 Log.w(TAG, "notificación: " + e);
             }
@@ -389,7 +410,7 @@ public class PlaybackService extends Service {
             acquireWakeLock();
             requestFocus();
             // Sigue en primer plano: Android no debería matar la música.
-            startForeground(NOTIFICATION_ID, buildNotification());
+            startForeground(NOTIFICATION_ID, notification);
         } else {
             releaseWakeLock();
             releaseFocus();

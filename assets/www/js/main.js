@@ -29,7 +29,15 @@ if (document.readyState === 'loading') {
 
 // Reanudar audio context al volver a la app (iOS)
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && App.audioCtx && App.audioCtx.state === 'suspended' && App.isPlaying) {
+  if (document.hidden) return;
+  if (App.audioCtx && App.audioCtx.state === 'suspended' && App.isPlaying) {
     App.audioCtx.resume().catch(() => {});
+  }
+  //  Con la página dormida la música sigue sonando en MediaPlayer y el
+  // servicio puede haberla pausado (foco de audio) o avanzado de pista.
+  // Al volver se pregunta en vez de suponer: mini reproductor,
+  // reproductor y notificación vuelven a decir lo mismo.
+  if (typeof App.syncNativeState === 'function') {
+    try { App.syncNativeState(); } catch (e) {}
   }
 });

@@ -4,7 +4,42 @@ Historial de versiones **publicadas** de Aurora Music Player.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 
-- **La compilación en CI está comprobada de verdad**: el primer intento
+- **Auditoría de los cuatro fallos reportados en el móvil** (y sus
+  arreglos, con la causa raíz de cada uno):
+  - **Añadir varias canciones a la vez a una lista**: nuevo botón
+    **«Añadir pistas»** dentro de la lista, con hoja a pantalla completa,
+    buscador, casillas, «seleccionar todo» y contador. Antes solo se podía
+    añadir la canción cuyo menú se abría. Las que ya están no se repiten,
+    la lista virtualiza sus filas a partir de 80 y, si esa lista está
+    sonando, la cola se re-sincroniza sin cortar la pista actual.
+  - **La interfaz se congelaba**: `PlaybackService.command()` solo sabía
+    pausar (con el WebView cerrado, «play», «siguiente» y «anterior» no
+    hacían nada); el puente subía el audio a Java en trozos de 512 KB sin
+    ceder el hilo y con dos subidas entrelazadas que corrompían archivos;
+    y cada actualización de la notificación la construía dos veces
+    decodificando la carátula en el hilo principal. Ahora las cinco
+    acciones tienen respaldo nativo, las subidas van en serie
+    (`_uploadChain`, cediendo el hilo cada 256 KB) y se construye una sola
+    notificación por actualización.
+  - **Mini reproductor, reproductor y notificación sin coordinar**: una
+    sola fuente de verdad (`_applyNativePlayState()`), reconciliación con
+    Java al volver a primer plano (`syncNativeState()`), la `MediaSession`
+    del WebView se calla bajo el motor nativo, la notificación copia el
+    estado del `snapshot()` de Java en vez de la bandera de la interfaz y
+    los comandos del sistema se deciden por el estado real del motor
+    (`isReallyPlaying()`), incluso si Java ya pausó por pérdida de foco.
+    `_realignQueueIdx()` evita que «siguiente» repita la canción actual
+    cuando el índice de la cola se quedó atrás.
+  - **«Dice que reproduce y no se oye nada»**: `play()` ya no miente —
+    resuelve cuando Java confirma `playing` (y a los 15 s se rechaza con
+    `TimeoutError` sin saltarse la pista); se carga con
+    `load()`/`loadUri()` y solo se arranca con `resume()` si el usuario
+    quiere sonido; con el motor nativo el relevo lo lleva
+    `setNextMediaPlayer` (la web ya no recarga la misma pista en cada
+    `timeupdate`); y la caché de audio se purga una vez para tirar los
+    archivos dañados.
+  - Diez claves nuevas de traducción en los 14 idiomas.
+- **La compilación en CI está comprobada de verdad**: el primer intento- **La compilación en CI está comprobada de verdad**: el primer intento
   falló con cuatro errores de `javac` que aquí no se veían (dos métodos
   `isPlaying()`, un aviso de relevo con el método equivocado, `JSONArray.add`
   y un `Uri` sin importar). Ya están arreglados, se compila contra la

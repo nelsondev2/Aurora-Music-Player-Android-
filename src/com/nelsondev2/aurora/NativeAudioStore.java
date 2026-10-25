@@ -33,6 +33,26 @@ final class NativeAudioStore {
         this.appContext = context.getApplicationContext();
     }
 
+    /**
+     * Tira toda la caché de audio. La web lo llama una vez al estrenar esta
+     * versión del motor: antes las subidas de dos pistas podían
+     * entrelazarse (el almacén tiene un solo archivo abierto) y quedaban
+     * archivos a medias que «existían» pero no sonaban.
+     */
+    static int clearAll(Context context) {
+        int borrados = 0;
+        try {
+            File[] files = dir(context).listFiles();
+            if (files == null) return 0;
+            for (File f : files) {
+                if (f.isFile() && f.delete()) borrados++;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "clearAll: " + e);
+        }
+        return borrados;
+    }
+
     static File dir(Context context) {
         File d = new File(context.getApplicationContext().getFilesDir(), "audio");
         if (!d.exists()) {

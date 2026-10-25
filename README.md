@@ -30,7 +30,9 @@ servidor, sin cuenta y sin publicidad. Carga archivos locales
   desplazamiento automático y pantalla de letras a lo grande.
 - **Listas para todo**: crea y edita listas, marca **Favoritos** y
   deja que la app mantenga sola «Mi Música» (lo añadido fuera de
-  listas). Todas las listas —Favoritos incluida— **se ordenan solas
+  listas). Para llenar una lista hay **«Añadir pistas»**: una hoja con
+  buscador, casillas y «seleccionar todo» que añade **muchas canciones
+  de una vez** (las que ya están en la lista no se repiten). Todas las listas —Favoritos incluida— **se ordenan solas
   por tus estrellas**: las mejores arriba, las sin nota al final, y
   la cola suena en ese mismo orden.
 - **Estrellas de 1 a 5** en el menú de cada canción, en el reproductor
@@ -282,6 +284,103 @@ Los dos motores se presentan a la app igual: `js/native-audio.js` expone
 un objeto que se comporta como el `<audio>` (mismos eventos
 `timeupdate`, `ended`, `error`…), así que la cola, las estadísticas, las
 letras y la interfaz no saben —ni necesitan saber— cuál está sonando.
+
+## Auditoría de los reproductores
+
+Los cuatro fallos que se reportaron usando la app en el móvil tenían la
+misma raíz: **tres reproductores contando la misma historia por su
+cuenta** —el `<audio>` de la web, el `MediaPlayer` de Java y la
+notificación de `PlaybackService`— y ninguno obligado a coincidir con el
+altavoz. Esto es lo que estaba mal y lo que se cambió, pieza por pieza.
+
+### 1. «No deja añadir más de una canción a la vez a una lista»
+
+**Causa:** no había ninguna pantalla para eso. El menú de cada canción
+solo sabía añadir *esa* canción, así que llenar una lista de 30 era abrir
+el menú 30 veces.
+
+**Arreglo:** botón **«Añadir pistas»** dentro de la lista
+(`js/playlist-edit.js`): hoja a pantalla completa con buscador (con
+retardo de 180 ms para no filtrar en cada tecla), casillas por fila,
+«seleccionar todo», contador y un pie que dice cuántas se van a añadir.
+Lista virtualizada a partir de 80 filas para que una biblioteca de miles
+de canciones se abra igual de rápida. Al confirmar se descartan las que
+ya estaban, se guarda la lista y —si esa lista es la que está sonando—
+se re-sincroniza la cola sin cortar la canción actual.
+
+### 2. «La interfaz del reproductor se congela»
+
+**Causa:** tres atasquen el hilo principal:
+- `PlaybackService.command()` solo atendía «pausa» si el WebView ya no
+  existía; play, siguiente y anterior no hacían nada (el botón parecía
+  muerto).
+- El puente subía el audio a Java en trozos de 512 KB **sin ceder el
+  hilo** entre trozos, y dos subidas a la vez (la actual y la siguiente)
+  se entrelazaban: `NativeAudioStore` abre un archivo cada vez, así que
+  se mezclaban los trozos y quedaban archivos corruptos que «existían»
+  pero no sonaban.
+- Cada `update()` de la notificación construía la notificación **dos
+  veces**, decodificando la carátula en el hilo principal cada vez.
+
+**Arreglo:** `command()` atiende las cinco acciones con respaldo nativo
+(`NativePlayerBridge.resumePlayback()` incluido); las subidas van en
+serie (`_uploadChain`) y ceden el hilo cada 256 KB; se construye una sola
+notificación por actualización.
+
+### 3. «No hay coordinación entre mini reproductor, reproductor y notificación»
+
+**Causa:** cada superficie decidía por su cuenta. La web marcaba
+«reproduciendo» al instante (antes de que sonara), la notificación se
+enteraba por otro camino, y la bandera de la interfaz podía quedar un
+paso por detrás mientras una pista se preparaba. Encima, la web y
+`PlaybackService` registraban **dos** `MediaSession` con los mismos
+botones: dos dueños contestando a la vez, cada uno con su idea de si
+sonaba.
+
+**Arreglo:** una sola fuente de verdad, `App._applyNativePlayState()`
+(`js/native-audio.js`), por la que pasan los eventos de Java, los del
+`<audio>` y el arranque. Al volver a primer plano, `syncNativeState()`
+reconcilia pista, posición y estado con el `snapshot()` del motor. La
+`MediaSession` del WebView se calla cuando manda la nativa
+(`updateMediaSession()`), y lo que la notificación muestra se copia del
+snapshot de Java, no de la bandera de la interfaz. Los comandos del
+sistema («play/pausa» de la notificación, del bloqueo o del casco) se
+deciden por el estado **real** del motor (`App.isReallyPlaying()`), no por
+la bandera, y la pausa se aplica aunque Java ya haya pausado por pérdida
+de foco. `_realignQueueIdx()` recoloca la cola antes de «siguiente» y
+«anterior»: si el índice se quedaba atrás, «siguiente» repetía la misma
+canción.
+
+### 4. «A veces pone que está reproduciendo y no se oye nada»
+
+**Causa:** `play()` no esperaba a nadie. La app marcaba «reproduciendo»,
+la notificación también, y si `MediaPlayer` no podía abrir el archivo
+—caché corrupta, pista sin preparar— el resultado era pantalla mintiendo
+y altavoz callado. Además, el relevo automático seguía funcionando en la
+web con el motor nativo: cada `timeupdate` intentaba recargar la misma
+pista y mataba el `MediaPlayer` en marcha.
+
+**Arreglo:** `play()` devuelve una promesa que se resuelve **cuando Java
+confirma** `playing` (y si no llega en 15 s se rechaza con
+`TimeoutError`: la interfaz deja de mentir sin saltarse la pista). Se
+carga con `load()`/`loadUri()` y solo se arranca con `resume()` si el
+usuario quiere sonido, así que preparar una pista no la pone a sonar. Con
+el motor nativo, `tickPlaybackAdvance()`, `_startCrossfadeOut()`,
+`gaplessNext()` y `preloadNextTrack()` no hacen nada (el relevo lo lleva
+`setNextMediaPlayer`). Y la caché de audio se purga una vez
+(`audioClear()` + `aurora_native_cache_gen`) para tirar los archivos que
+quedaron corruptos.
+
+### Comprobado con un banco de pruebas
+
+Además de `tools/check.py`, los cuatro fallos se reprodujeron y se
+verificaron en jsdom con un `MediaPlayer` simulado que se comporta como
+el de verdad (`play()` carga y suena, `load()` carga sin sonar,
+`resume()` arranca al estar listo, `paused` por eventos): 33
+comprobaciones sobre play, pausa desde el sistema, carga en pausa,
+pausa/play/siguiente desde la notificación, pérdida de foco, fin de
+pista sin recargas, reconciliación al volver a la app, subidas en serie y
+la selección múltiple de pistas.
 
 ## Limitaciones conocidas
 

@@ -3595,6 +3595,133 @@ const I18N = {
     id: 'Diunduh',
     'zh-TW': '已下載'
   },
+  /* ---- Añadir pistas a una lista (selección múltiple) ---- */
+  add_tracks_btn: {
+    es: 'Añadir pistas', en: 'Add tracks', pt: 'Adicionar faixas',
+    zh: '添加曲目', ja: '曲を追加', fr: 'Ajouter des titres',
+    it: 'Aggiungi brani', ru: 'Добавить треки',
+    de: 'Titel hinzufügen',
+    uk: 'Додати треки',
+    pl: 'Dodaj utwory',
+    tr: 'Parça ekle',
+    id: 'Tambah lagu',
+    'zh-TW': '新增曲目'
+  },
+  pick_tracks_title: {
+    es: 'Añadir pistas', en: 'Add tracks', pt: 'Adicionar faixas',
+    zh: '添加曲目', ja: '曲を追加', fr: 'Ajouter des titres',
+    it: 'Aggiungi brani', ru: 'Добавить треки',
+    de: 'Titel hinzufügen',
+    uk: 'Додати треки',
+    pl: 'Dodaj utwory',
+    tr: 'Parça ekle',
+    id: 'Tambah lagu',
+    'zh-TW': '新增曲目'
+  },
+  pick_tracks_search: {
+    es: 'Buscar en la biblioteca', en: 'Search the library', pt: 'Procurar na biblioteca',
+    zh: '在资料库中搜索', ja: 'ライブラリを検索', fr: 'Rechercher dans la bibliothèque',
+    it: 'Cerca nella libreria', ru: 'Поиск в библиотеке',
+    de: 'Bibliothek durchsuchen',
+    uk: 'Пошук у бібліотеці',
+    pl: 'Szukaj w bibliotece',
+    tr: 'Kitaplıkta ara',
+    id: 'Cari di pustaka',
+    'zh-TW': '在資料庫中搜尋'
+  },
+  pick_select_all: {
+    es: 'Seleccionar todo', en: 'Select all', pt: 'Selecionar tudo',
+    zh: '全选', ja: 'すべて選択', fr: 'Tout sélectionner',
+    it: 'Seleziona tutto', ru: 'Выбрать всё',
+    de: 'Alle auswählen',
+    uk: 'Вибрати все',
+    pl: 'Zaznacz wszystko',
+    tr: 'Tümünü seç',
+    id: 'Pilih semua',
+    'zh-TW': '全選'
+  },
+  pick_add_none: {
+    es: 'Añadir', en: 'Add', pt: 'Adicionar',
+    zh: '添加', ja: '追加', fr: 'Ajouter',
+    it: 'Aggiungi', ru: 'Добавить',
+    de: 'Hinzufügen',
+    uk: 'Додати',
+    pl: 'Dodaj',
+    tr: 'Ekle',
+    id: 'Tambah',
+    'zh-TW': '新增'
+  },
+  pick_add_count: {
+    es: 'Añadir X pistas', en: 'Add X tracks', pt: 'Adicionar X faixas',
+    zh: '添加 X 首曲目', ja: 'X 曲を追加', fr: 'Ajouter X titres',
+    it: 'Aggiungi X brani', ru: 'Добавить треков: X',
+    de: 'X Titel hinzufügen',
+    uk: 'Додати треків: X',
+    pl: 'Dodaj utworów: X',
+    tr: 'X parça ekle',
+    id: 'Tambah X lagu',
+    'zh-TW': '新增 X 首曲目'
+  },
+  pick_available: {
+    es: 'X pistas disponibles para añadir', en: 'X tracks available to add', pt: 'X faixas disponíveis',
+    zh: '可添加 X 首曲目', ja: '追加できる曲：X', fr: 'X titres disponibles',
+    it: 'X brani disponibili', ru: 'Доступно треков: X',
+    de: 'X Titel verfügbar',
+    uk: 'Доступно треків: X',
+    pl: 'Dostępnych utworów: X',
+    tr: 'Eklenebilir X parça',
+    id: 'X lagu tersedia',
+    'zh-TW': '可新增 X 首曲目'
+  },
+  pick_none: {
+    es: 'Ninguna canción coincide con la búsqueda', en: 'No song matches the search', pt: 'Nenhuma canção corresponde',
+    zh: '没有符合条件的歌曲', ja: '一致する曲がありません', fr: 'Aucun titre ne correspond',
+    it: 'Nessun brano corrisponde', ru: 'Ничего не найдено',
+    de: 'Kein Titel passt zur Suche',
+    uk: 'Нічого не знайдено',
+    pl: 'Brak pasujących utworów',
+    tr: 'Eşleşen şarkı yok',
+    id: 'Tidak ada lagu yang cocok',
+    'zh-TW': '沒有符合的歌曲'
+  },
+  pick_none_left: {
+    es: 'Ya están todas en esta lista', en: 'They are all in this list already', pt: 'Já estão todas nesta lista',
+    zh: '它们都已在列表中', ja: 'すべてこのリストにあります', fr: 'Tous sont déjà dans cette liste',
+    it: 'Sono già tutti in questa lista', ru: 'Все уже в этом списке',
+    de: 'Alle sind schon in dieser Liste',
+    uk: 'Усі вже в цьому списку',
+    pl: 'Wszystkie są już na tej liście',
+    tr: 'Hepsi bu listede zaten var',
+    id: 'Semuanya sudah ada di daftar ini',
+    'zh-TW': '它們都已在清單中'
+  },
+  toast_pick_added: {
+    es: 'X pistas añadidas a la lista', en: 'X tracks added to the list', pt: 'X faixas adicionadas à lista',
+    zh: '已将 X 首曲目加入列表', ja: 'X 曲をリストに追加しました', fr: 'X titres ajoutés à la liste',
+    it: 'X brani aggiunti alla lista', ru: 'В список добавлено треков: X',
+    de: 'X Titel zur Liste hinzugefügt',
+    uk: 'До списку додано треків: X',
+    pl: 'Dodano X utworów do listy',
+    tr: 'Listeye X parça eklendi',
+    id: 'X lagu ditambahkan ke daftar',
+    'zh-TW': '已將 X 首曲目加入清單'
+  },
+  toast_play_slow: {
+    es: 'El motor de audio no responde; prueba otra vez',
+    en: 'The audio engine is not responding; try again',
+    pt: 'O motor de áudio não responde; tenta de novo',
+    zh: '音频引擎无响应，请重试',
+    ja: 'オーディオエンジンが応答しません。もう一度お試しください',
+    fr: 'Le moteur audio ne répond pas ; réessayez',
+    it: 'Il motore audio non risponde; riprova',
+    ru: 'Аудиодвижок не отвечает; попробуйте ещё раз',
+    de: 'Die Audio-Engine antwortet nicht; versuch es erneut',
+    uk: 'Аудіодвижок не відповідає; спробуйте ще раз',
+    pl: 'Silnik audio nie odpowiada; spróbuj ponownie',
+    tr: 'Ses motoru yanıt vermiyor; tekrar dene',
+    id: 'Mesin audio tidak merespons; coba lagi',
+    'zh-TW': '音訊引擎無回應，請重試'
+  },
   /* ---- Música del móvil (MediaStore) ---- */
   menu_scan_device: {
     es: 'Buscar música en el móvil', en: 'Find music on this device', pt: 'Procurar música no dispositivo',

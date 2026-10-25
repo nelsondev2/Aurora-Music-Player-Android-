@@ -528,6 +528,16 @@ Object.assign(App, {
               this.toast(this.t('toast_play_blocked'));
               return;
             }
+            //  El motor nativo no confirmó (15 s): la interfaz deja de
+            // decir «reproduciendo», pero NO se salta la pista: puede ser
+            // solo que el archivo tarda en prepararse.
+            if (name === 'TimeoutError') {
+              this.toast(this.t('toast_play_slow'));
+              this.isPlaying = false;
+              if (typeof this.updatePlayUI === 'function') this.updatePlayUI();
+              if (typeof this.setBuffering === 'function') this.setBuffering(false);
+              return;
+            }
             // NotSupportedError u otros: el archivo no se puede reproducir.
             // Misma política que el evento 'error': recorrer la cola una
             // vez antes de rendirse (ver _handleDecodeFailure).
@@ -773,6 +783,7 @@ Object.assign(App, {
       // lista y salen las que ya no están en ella (ver
       // _syncQueueWithPlaylist). Con shuffle manda _originalQueue.
       if (!this.shuffle) this._syncQueueWithPlaylist();
+      this._realignQueueIdx();
       const xfadeOn = this.crossfadeEnabled && this.crossfadeDuration > 0;
       if (auto && !this._xfadeIncoming && !xfadeOn && this._gaplessEnabled && this.gaplessNext()) {
         return;
@@ -806,9 +817,25 @@ Object.assign(App, {
         this.updateMediaPosition(true);
         return;
       }
+      this._realignQueueIdx();
       let prev = this.queueIdx - 1;
       if (prev < 0) prev = this.queue.length - 1;
       this.playFromQueue(prev);
+    },
+
+    /*  «Siguiente» y «anterior» se calculan desde queueIdx. Si ese índice
+     *  se quedó apuntando a una pista distinta de la que está cargada de
+     *  verdad (sesión restaurada, relevo hecho por MediaPlayer, cola
+     *  reordenada o acortada), next() repetía la canción actual en vez de
+     *  avanzar: se pulsaba «siguiente» en la notificación y sonaba otra
+     *  vez la misma. Aquí se recoloca con la pista real antes de calcular.
+     */
+    _realignQueueIdx() {
+      const t = this.currentTrack;
+      if (!t || !Array.isArray(this.queue) || !this.queue.length) return;
+      const pos = this.queue.indexOf(t.id);
+      if (pos < 0 || pos === this.queueIdx) return;
+      this.queueIdx = pos;
     },
 
     _nextQueueIndex(auto) {
@@ -923,6 +950,9 @@ Object.assign(App, {
     },
 
     _startCrossfadeOut(remain) {
+      // Sin Web Audio no hay fundido: con el motor nativo, programar un
+      // crossfade solo duplicaba la carga de la pista siguiente.
+      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) return;
       this._xfadeStarted = true;
       const dur = Math.max(0.05, remain);
       if (this.gainNode && this.audioCtx) {
@@ -946,6 +976,14 @@ Object.assign(App, {
     /* timeupdate: gapless ~80 ms antes del corte, o arranque de crossfade. */
     tickPlaybackAdvance() {
       if (!this.isPlaying || !this.audio || this._sleepFading) return;
+      //  Con el motor nativo el relevo lo hace MediaPlayer
+      // (setNextMediaPlayer) y el fundido no existe sin Web Audio. Aquí
+      // esta función solo servía para volver a cargar la MISMA pista cada
+      // 250 ms si se cruzaba el final de una canción corta: cada recarga
+      // mataba el MediaPlayer en curso (silencio) y encadenaba subidas de
+      // la siguiente. De ahí los tirones al final de cada canción y el
+      // «dice que suena pero no se oye».
+      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) return;
       const dur = this.audio.duration;
       const cur = this.audio.currentTime;
       if (!isFinite(dur) || dur <= 0) return;

@@ -59,6 +59,11 @@ class NativePlayerBridge {
         if (player != null) player.pause();
     }
 
+    /** Reanudar desde la notificación con la página cerrada. */
+    static synchronized void resumePlayback() {
+        if (player != null) player.resume();
+    }
+
     private NativePlayer player() {
         return get(context);
     }
@@ -91,6 +96,21 @@ class NativePlayerBridge {
         } catch (Exception e) {
             Log.w(TAG, "audioFinish: " + e);
             return false;
+        }
+    }
+
+    /**
+     * Vacía la caché de audio del motor nativo. La web lo llama una sola
+     * vez al estrenar el motor nuevo: las versiones anteriores podían
+     * dejar archivos a medias que «existían» pero no sonaban.
+     */
+    @JavascriptInterface
+    public int audioClear() {
+        try {
+            return player().clearCache();
+        } catch (Exception e) {
+            Log.w(TAG, "audioClear: " + e);
+            return 0;
         }
     }
 
@@ -151,6 +171,42 @@ class NativePlayerBridge {
             return player.prepareNextUri(uri);
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    /**
+     * Carga una pista sin reproducirla (restaurar sesión, dejar lista la
+     * siguiente). Sin esto la web solo podía pedir «play» y el altavoz
+     * arrancaba aunque la interfaz dijera pausa.
+     */
+    @JavascriptInterface
+    public boolean load(String trackId, double startMs) {
+        try {
+            return player().load(trackId, Math.round(startMs));
+        } catch (Exception e) {
+            Log.w(TAG, "load: " + e);
+            return false;
+        }
+    }
+
+    /** content:// del móvil cargado sin sonar. */
+    @JavascriptInterface
+    public boolean loadUri(String trackId, String uri, double startMs) {
+        try {
+            return player().loadUri(trackId, uri, Math.round(startMs));
+        } catch (Exception e) {
+            Log.w(TAG, "loadUri: " + e);
+            return false;
+        }
+    }
+
+    /** Estado real del reproductor (JSON) para reconciliar la interfaz. */
+    @JavascriptInterface
+    public String snapshot() {
+        try {
+            return player().snapshot();
+        } catch (Exception e) {
+            return "{}";
         }
     }
 

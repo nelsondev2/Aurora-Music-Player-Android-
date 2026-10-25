@@ -38,6 +38,12 @@ Object.assign(App, {
           this._engine = 'web';
         }
       }
+      //  Una sola vez por versión del motor: si la caché nativa viene de
+      // una versión que podía entrelazar subidas, se tira entera (es solo
+      // caché; el audio bueno sigue en IndexedDB).
+      if (window.NativeAudio && typeof window.NativeAudio.refresh === 'function') {
+        try { window.NativeAudio.refresh(); } catch (e) {}
+      }
       this.audio = this.isNativeAudio()
         ? window.NativeAudio.get()
         : document.getElementById('audioEl');
@@ -91,6 +97,13 @@ Object.assign(App, {
       this.setRepeatUI();
       if (typeof this.updateLrcOffsetUI === 'function') this.updateLrcOffsetUI();
       if (typeof this.updateChrome === 'function') this.updateChrome();
+
+      //  Al arrancar, el motor nativo y el servicio pueden seguir vivos
+      // de la sesión anterior: si estaba sonando, la web no puede suponer
+      // que no. Se le pregunta y se pinta lo que diga.
+      if (typeof this.syncNativeState === 'function') {
+        try { this.syncNativeState(); } catch (e) {}
+      }
 
       // Guardar sesión cada 5 s. saveSession() deduplica: no escribe si
       // nada cambió y está en pausa. Se guarda el id para poder limpiarlo.

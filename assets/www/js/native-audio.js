@@ -19,8 +19,15 @@
 
 'use strict';
 
-/* Tamaño de trozo al cruzar el audio a Java: el mismo que al compartir. */
-const NATIVE_AUDIO_CHUNK = 512 * 1024;
+/* Tamaño de trozo al cruzar el audio a Java. 256 KB de bytes son ~341 KB
+ * de base64: cada llamada al puente bloquea el hilo de JavaScript mientras
+ * Java decodifica y escribe, así que trozos más pequeños (con una pausa
+ * entre ellos) mantienen la interfaz respondiendo en archivos grandes. */
+const NATIVE_AUDIO_CHUNK = 256 * 1024;
+/* Versión del formato de caché nativa. Al cambiar, se vacía la caché: las
+ * versiones anteriores podían entrelazar dos subidas (el almacén tiene un
+ * solo archivo abierto) y dejar archivos que existían pero no sonaban. */
+const NATIVE_CACHE_GEN = '2';
 
 const NativeAudio = {
   /* ¿Hay reproductor nativo en esta build? */
@@ -55,9 +62,36 @@ const NativeAudio = {
     if (this.element) this.element._onNativeEvent(payload);
   },
 
+  /* Foto del estado real del reproductor (NativePlayer.snapshot). */
+  snapshot() {
+    const N = window.AuroraNativePlayer;
+    if (!N || typeof N.snapshot !== 'function') return null;
+    try {
+      const raw = N.snapshot();
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
   /* Sube una pista a la caché nativa si no está ya. Devuelve Promise<bool>.
-   * `blob` es el archivo; si no se pasa, se intenta con la URL de la pista. */
-  async ensureUploaded(trackId, ext, sourceUrl, blob) {
+   * `blob` es el archivo; si no se pasa, se intenta con la URL de la pista.
+   *
+   *  Las subidas se encadenan: NativeAudioStore abre UN archivo cada vez
+   * (begin() cierra el anterior), así que subir la pista actual y la
+   * siguiente a la vez mezclaba los trozos de las dos y dejaba archivos
+   * corruptos que luego «existían» pero no sonaban.
+   */
+  ensureUploaded(trackId, ext, sourceUrl, blob) {
+    const run = () => this._uploadOne(trackId, ext, sourceUrl, blob);
+    const next = this._uploadChain
+      ? this._uploadChain.then(run, run)
+      : run();
+    this._uploadChain = next.then(() => undefined, () => undefined);
+    return next;
+  },
+
+  async _uploadOne(trackId, ext, sourceUrl, blob) {
     const N = window.AuroraNativePlayer;
     if (!this.available || !trackId) return false;
     try {
@@ -81,6 +115,10 @@ const NativeAudio = {
         const part = data.slice(off, Math.min(off + NATIVE_AUDIO_CHUNK, data.size));
         const b64 = await readChunkAsBase64(part);
         if (!N.audioChunk(b64)) return false;
+        //  Se cede el hilo cada trozo: sin esto, un FLAC de 40 MB son ~160
+        // llamadas seguidas al puente y la interfaz se queda congelada
+        // hasta que termina la subida entera.
+        await new Promise(r => setTimeout(r, 0));
       }
       return !!N.audioFinish(trackId, ext || 'audio');
     } catch (e) {
@@ -96,6 +134,20 @@ const NativeAudio = {
     }
     return 'audio';
   }
+};
+
+/* Limpieza única de la caché envenenada de versiones anteriores. */
+NativeAudio.refresh = function () {
+  const N = window.AuroraNativePlayer;
+  if (!N || typeof N.audioClear !== 'function') return;
+  let gen = '';
+  try { gen = localStorage.getItem('aurora_native_cache_gen') || ''; } catch (e) {}
+  if (gen === NATIVE_CACHE_GEN) return;
+  try {
+    const n = N.audioClear();
+    console.info('[Aurora] caché nativa vaciada:', n);
+  } catch (e) {}
+  try { localStorage.setItem('aurora_native_cache_gen', NATIVE_CACHE_GEN); } catch (e) {}
 };
 
 window.NativeAudio = NativeAudio;
@@ -175,8 +227,12 @@ class NativeAudioElement {
     return this._duration;
   }
 
+  /* `paused` responde a la INTENCIÓN (¿el usuario quiere que suene?), no a
+   * lo último que dijo MediaPlayer: sin esto, dos toques seguidos en play
+   * leían «pausado» mientras se preparaba la pista y volvían a reproducir
+   * en vez de pausar. El estado real llega por eventos (playing/paused). */
   get paused() {
-    return this._paused;
+    return !this._wantPlay;
   }
 
   get volume() {
@@ -223,23 +279,55 @@ class NativeAudioElement {
   /* ---------- métodos de reproducción ---------- */
   play() {
     this._wantPlay = true;
-    const N = window.AuroraNativePlayer;
-    if (!this._trackId) {
-      // play() antes de que la carga termine: se reanuda al preparar.
-      return Promise.resolve();
-    }
-    if (N) {
-      try {
-        if (this._readyState >= 2) N.resume();
-      } catch (e) {}
-    }
     this._paused = false;
-    return Promise.resolve();
+    const N = window.AuroraNativePlayer;
+    if (!N) return Promise.resolve();
+
+    //  La promesa se resuelve cuando Java confirma que SUENA ('playing'),
+    // no al instante: la app marca isPlaying en su .then(), y resolver
+    // antes dejaba la interfaz (y la notificación) diciendo
+    // «reproduciendo» con el altavoz en silencio.
+    const token = (this._playToken = (this._playToken || 0) + 1);
+    const waiter = { token: token };
+    const promise = new Promise((resolve, reject) => {
+      waiter.resolve = resolve;
+      waiter.reject = reject;
+    });
+    this._playWaiters = this._playWaiters || [];
+    this._playWaiters.push(waiter);
+
+    // Si el MediaPlayer no confirma en 15 s, la interfaz deja de mentir:
+    // se rechaza y la app apaga el «reproduciendo» sin saltar de pista
+    // (un FLAC enorme puede tardar, pero 15 s ya no es «cargando»).
+    waiter.timer = setTimeout(() => {
+      this._settlePlay(waiter, false, { name: 'TimeoutError', message: 'sin respuesta del motor' });
+    }, 15000);
+
+    try { N.resume(); } catch (e) {}
+    return promise;
+  }
+
+  /* Cierra la promesa de play() pendiente de ese token. */
+  _settlePlay(waiter, ok, error) {
+    const list = this._playWaiters;
+    if (!waiter || waiter.done) return;
+    waiter.done = true;
+    if (waiter.timer) clearTimeout(waiter.timer);
+    if (list) {
+      const i = list.indexOf(waiter);
+      if (i >= 0) list.splice(i, 1);
+    }
+    if (ok) waiter.resolve();
+    else if (waiter.reject) waiter.reject(error || new Error('no se pudo reproducir'));
   }
 
   pause() {
     this._wantPlay = false;
     this._paused = true;
+    // Un play() a medias ya no tiene sentido: se descarta sin marcar error.
+    (this._playWaiters || []).slice().forEach(w => {
+      this._settlePlay(w, false, { name: 'AbortError', message: 'pausado' });
+    });
     if (window.AuroraNativePlayer) {
       try { window.AuroraNativePlayer.pause(); } catch (e) {}
     }
@@ -304,12 +392,19 @@ class NativeAudioElement {
         this._fail('sin motor nativo');
         return;
       }
+      //  Se CARGA siempre sin sonar y, si el usuario había pedido play, se
+      // arranca con resume(). Antes esto era play() a secas, así que dejar
+      // una pista lista (restaurar sesión, borrar la que sonaba) la ponía a
+      // sonar con la interfaz en pausa: pantalla y altavoz en desacuerdo.
+      const ms = Math.round(startAt * 1000);
       let started = false;
       if (track.deviceUri) {
         // Pista del móvil: se reproduce el archivo original, sin copiarlo
         // ni subirlo a la caché.
         try {
-          started = N.playUri(trackId, track.deviceUri, Math.round(startAt * 1000));
+          started = (typeof N.loadUri === 'function')
+            ? N.loadUri(trackId, track.deviceUri, ms)
+            : N.playUri(trackId, track.deviceUri, ms);
         } catch (e) {
           started = false;
         }
@@ -322,7 +417,9 @@ class NativeAudioElement {
           return;
         }
         try {
-          started = N.play(trackId, Math.round(startAt * 1000));
+          started = (typeof N.load === 'function')
+            ? N.load(trackId, ms)
+            : N.play(trackId, ms);
         } catch (e) {
           started = false;
         }
@@ -381,6 +478,10 @@ class NativeAudioElement {
     this._error = { code: 4, message: message || 'error' };
     this._readyState = 0;
     this._paused = true;
+    this._wantPlay = false;
+    (this._playWaiters || []).slice().forEach(w => {
+      this._settlePlay(w, false, { name: 'NotSupportedError', message: message || 'error' });
+    });
     if (window.App && typeof window.App._nativeAudioFailed === 'function') {
       try { window.App._nativeAudioFailed(message); } catch (e) {}
     }
@@ -404,14 +505,28 @@ class NativeAudioElement {
 
     if (kind === 'playing') {
       this._paused = false;
+      this._wantPlay = true;
       this._readyState = 4;
+      (this._playWaiters || []).slice().forEach(w => this._settlePlay(w, true));
       this._emit('playing');
+      if (window.App && typeof window.App._applyNativePlayState === 'function') {
+        window.App._applyNativePlayState(true);
+      }
       return;
     }
 
     if (kind === 'paused') {
       this._paused = true;
+      this._wantPlay = false;
       if (payload.position != null) this._position = Number(payload.position) / 1000;
+      //  Java puede pausar sin que la web lo pida (pérdida de foco de
+      // audio: llamada, otra app, el botón del casco). Antes esto no salía
+      // de aquí y la interfaz —y la notificación— seguían diciendo
+      // «reproduciendo» con el altavoz callado.
+      this._emit('pause');
+      if (window.App && typeof window.App._applyNativePlayState === 'function') {
+        window.App._applyNativePlayState(false);
+      }
       return;
     }
 
@@ -425,6 +540,7 @@ class NativeAudioElement {
 
     if (kind === 'ended') {
       this._paused = true;
+      this._wantPlay = false;
       this._lastEndedAt = Date.now();
       this._readyState = 0;
       this._emit('ended');
@@ -438,6 +554,7 @@ class NativeAudioElement {
       this._trackId = nextId || this._trackId;
       this._position = 0;
       this._paused = false;
+      this._wantPlay = true;
       this._duration = (Number(payload.duration) || 0) / 1000;
       if (window.App && typeof window.App._onNativeTrackChanged === 'function') {
         try { window.App._onNativeTrackChanged(nextId); } catch (e) {}
@@ -472,6 +589,49 @@ Object.assign(App, {
       ? 'native' : 'web';
     if (typeof this.syncPlaybackSettingsUI === 'function') this.syncPlaybackSettingsUI();
     return this._engine;
+  },
+
+  /* El motor nativo dice si suena o no. La interfaz le obedece: es el
+   * único que sabe lo que pasa de verdad (foco de audio, llamada, botón
+   * del casco, relevo sin hueco). */
+  _applyNativePlayState(playing) {
+    const next = !!playing;
+    const changed = !!this.isPlaying !== next;
+    this.isPlaying = next;
+    if (changed) {
+      if (typeof this.updatePlayUI === 'function') this.updatePlayUI();
+      if (typeof this.updateChrome === 'function') this.updateChrome();
+      if (typeof this.updateMediaPosition === 'function') this.updateMediaPosition(true);
+    }
+    if (typeof this.syncNativeMedia === 'function') this.syncNativeMedia();
+  },
+
+  /* Reconciliar al arrancar y al volver a primer plano: el servicio y el
+   * MediaPlayer siguen vivos con la página dormida, así que la web no
+   * puede suponer su estado. Devuelve true si había una pista sonando. */
+  syncNativeState() {
+    if (!this.isNativeAudio()) return false;
+    const snap = window.NativeAudio ? window.NativeAudio.snapshot() : null;
+    if (!snap) return false;
+    const el = window.NativeAudio.element;
+    if (el && snap.position != null) el._position = Number(snap.position) / 1000;
+    const id = snap.trackId || '';
+    if (id && (!this.currentTrack || this.currentTrack.id !== id)) {
+      const track = this.tracks.find(t => t.id === id);
+      if (track) {
+        this.currentTrack = track;
+        this.currentTrackIdx = this.tracks.indexOf(track);
+        const q = this.queue.indexOf(id);
+        if (q >= 0) this.queueIdx = q;
+        if (typeof this.renderCurrentTrack === 'function') this.renderCurrentTrack();
+        if (typeof this.renderLyrics === 'function') this.renderLyrics();
+      }
+    }
+    const playing = !!snap.playing;
+    if (el) el._wantPlay = playing || !!snap.wantsPlay;
+    this._applyNativePlayState(playing);
+    if (typeof this.updateProgress === 'function') this.updateProgress();
+    return playing;
   },
 
   /* Pista que tocaría después de `currentId` según la cola actual.

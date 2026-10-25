@@ -42,6 +42,10 @@ final class NativePlayer {
     /** Id que se asignará al preparar la siguiente (para el relevo por URI). */
     private String pendingPreparedId;
     private boolean wantPlay;
+    /** ¿El MediaPlayer actual ya está preparado? `start()` antes de tiempo
+     *  lanza IllegalStateException y dejaba la interfaz diciendo
+     *  «reproduciendo» con el altavoz en silencio. */
+    private boolean currentPrepared;
     private boolean released;
     private float volume = 1f;
 
@@ -112,6 +116,12 @@ final class NativePlayer {
         return store.has(trackId);
     }
 
+    /** Vacía la caché de audio (ver NativeAudioStore.clearAll). */
+    int clearCache() {
+        stop();
+        return NativeAudioStore.clearAll(appContext);
+    }
+
     /** Olvida una pista: fuera de la caché y de los reproductores. */
     void forget(String trackId) {
         if (trackId == null) return;
@@ -125,7 +135,20 @@ final class NativePlayer {
         if (released) return false;
         String path = store.pathFor(trackId);
         if (path == null) return false;
-        return start(path, null, startMs, trackId);
+        return start(path, null, startMs, trackId, true);
+    }
+
+    /**
+     * Carga una pista SIN reproducirla. Es lo que necesita la web cuando la
+     * pista solo se deja lista (restaurar sesión, borrar la que suena):
+     * antes se llamaba a play() y el MediaPlayer sonaba aunque la interfaz
+     * dijera «en pausa», así que la pantalla y el altavoz no coincidían.
+     */
+    boolean load(String trackId, long startMs) {
+        if (released) return false;
+        String path = store.pathFor(trackId);
+        if (path == null) return false;
+        return start(path, null, startMs, trackId, false);
     }
 
     /**
@@ -134,7 +157,13 @@ final class NativePlayer {
      */
     boolean playUri(String trackId, String uri, long startMs) {
         if (released || uri == null || uri.length() == 0) return false;
-        return start(null, uri, startMs, trackId);
+        return start(null, uri, startMs, trackId, true);
+    }
+
+    /** content:// del móvil cargado sin sonar (misma razón que load()). */
+    boolean loadUri(String trackId, String uri, long startMs) {
+        if (released || uri == null || uri.length() == 0) return false;
+        return start(null, uri, startMs, trackId, false);
     }
 
     /** Prepara la siguiente por content:// (relevo gapless sin caché). */
@@ -142,8 +171,9 @@ final class NativePlayer {
         return prepare(null, uri);
     }
 
-    private boolean start(String path, String uri, long startMs, String trackId) {
-        wantPlay = true;
+    private boolean start(String path, String uri, long startMs, String trackId,
+                          boolean autoplay) {
+        wantPlay = autoplay;
         releasePrepared();
         releaseCurrent();
 
@@ -159,11 +189,13 @@ final class NativePlayer {
         }
         current = player;
         currentId = trackId;
+        currentPrepared = false;
         final long start = Math.max(0, startMs);
         player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mp) {
                 if (mp != current) return;
+                currentPrepared = true;
                 if (start > 0) {
                     try { mp.seekTo((int) start); } catch (Exception ignored) {}
                 }
@@ -245,7 +277,10 @@ final class NativePlayer {
     void resume() {
         if (released) return;
         wantPlay = true;
-        if (current != null && !isPlaying()) startPlayer(current);
+        // Si aún se está preparando, no se toca: onPrepared mirará wantPlay
+        // y arrancará. Llamar a start() antes de tiempo lanzaba
+        // IllegalStateException y la web se quedaba «reproduciendo en silencio».
+        if (current != null && currentPrepared && !isPlaying()) startPlayer(current);
     }
 
     void pause() {
@@ -324,6 +359,22 @@ final class NativePlayer {
         }
     }
 
+    /**
+     * Foto del estado real del reproductor, para que la web pueda
+     * reconciliar su interfaz (y la notificación) al volver a primer plano:
+     * {"playing":bool,"trackId":"…","position":ms,"duration":ms,"prepared":bool}
+     */
+    String snapshot() {
+        JSONObject out = new JSONObject();
+        put(out, "playing", isPlaying());
+        put(out, "trackId", currentId == null ? "" : currentId);
+        put(out, "position", position());
+        put(out, "duration", duration());
+        put(out, "prepared", currentPrepared);
+        put(out, "wantsPlay", wantPlay);
+        return out.toString();
+    }
+
     // -------------------------------------------------------------- interno
 
     private MediaPlayer newPlayer() {
@@ -388,6 +439,9 @@ final class NativePlayer {
                         }
                         current = incoming;
                         currentId = incomingId;
+                        // El relevo ya venía preparado y sonando: la web no
+                        // debe volver a cargarlo (se oía un doble arranque).
+                        currentPrepared = true;
                         incoming.setOnCompletionListener(completionListener);
                         incoming.setOnErrorListener(errorListener);
                         JSONObject event = new JSONObject();
@@ -442,6 +496,7 @@ final class NativePlayer {
         }
         current = null;
         currentId = null;
+        currentPrepared = false;
     }
 
     private void releasePrepared() {

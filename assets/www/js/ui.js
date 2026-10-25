@@ -292,6 +292,12 @@ Object.assign(App, {
      * ============================================================ */
     updateMediaSession() {
       if (!('mediaSession' in navigator) || !this.currentTrack) return;
+      //  Dentro de la app Android la sesión de sistema la mantiene
+      // PlaybackService (notificación, pantalla de bloqueo, auriculares).
+      // Registrar aquí otra sesión con los mismos botones hacía que dos
+      // dueños contestaran a la vez, cada uno con su idea de si sonaba.
+      // En el navegador (sin servicio) sigue siendo la única.
+      if (typeof this.hasNativeMedia === 'function' && this.hasNativeMedia()) return;
       const t = this.currentTrack;
       try {
         navigator.mediaSession.metadata = new MediaMetadata({
