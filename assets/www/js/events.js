@@ -330,6 +330,18 @@ Object.assign(App, {
         this.openFilePicker();
         this.closeSheet('sheetMore');
       });
+      const btnScanDevice = document.getElementById('menuScanDevice');
+      if (btnScanDevice) {
+        // Solo tiene sentido dentro de la app Android con puente MediaStore.
+        if (typeof this.canScanDevice === 'function' && !this.canScanDevice()) {
+          btnScanDevice.style.display = 'none';
+        } else {
+          btnScanDevice.addEventListener('click', () => {
+            this.closeSheet('sheetMore');
+            this.scanDeviceLibrary();
+          });
+        }
+      }
       const btnLoadFolder = document.getElementById('menuLoadFolder');
       if (btnLoadFolder) {
         // Sin soporte de carpetas (Android/WebView): ocultar la opción

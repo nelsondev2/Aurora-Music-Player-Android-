@@ -4429,6 +4429,16 @@ html.aurora-wide .toast {
 }
 .empty-cta .ico { width: 18px; height: 18px; }
 
+/* CTA secundaria del estado vacío (buscar la música del móvil): misma
+   forma que la principal, sin relleno, para no competir con ella. */
+.empty-cta-ghost {
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.16));
+  box-shadow: none;
+}
+.empty-cta-ghost:hover { background: rgba(255, 255, 255, 0.06); }
+
 /* Fila de favorito del menú de pista: estado marcado visible. */
 .menu-row.is-fav,
 .menu-row.is-fav .ico { color: var(--accent); }

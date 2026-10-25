@@ -130,6 +130,29 @@ class NativePlayerBridge {
 
     // --------------------------------------------------------- reproducción
 
+    /** Reproduce un content:// de MediaStore (pista sin copiar). */
+    @JavascriptInterface
+    public boolean playUri(String trackId, String uri, double startMs) {
+        try {
+            return player().playUri(trackId, uri, Math.round(startMs));
+        } catch (Exception e) {
+            Log.w(TAG, "playUri: " + e);
+            return false;
+        }
+    }
+
+    /** Deja preparada la siguiente por content://. */
+    @JavascriptInterface
+    public boolean prepareNextUri(String trackId, String uri) {
+        try {
+            NativePlayer player = player();
+            player.setPendingPreparedId(trackId);
+            return player.prepareNextUri(uri);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @JavascriptInterface
     public boolean play(String trackId, double startMs) {
         try {

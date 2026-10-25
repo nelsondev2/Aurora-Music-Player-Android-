@@ -27,6 +27,14 @@
     <!-- Android 13+ pide permiso en tiempo de ejecución para la notificación -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Escanear la música que ya está en el móvil (MediaStore).
+         Desde Android 13 el permiso es READ_MEDIA_AUDIO; antes,
+         READ_EXTERNAL_STORAGE (limitado a API 32 a propósito). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <application
         android:allowBackup="true"
         android:hardwareAccelerated="true"

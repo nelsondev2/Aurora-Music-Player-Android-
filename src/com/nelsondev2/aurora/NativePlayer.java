@@ -4,6 +4,7 @@ import android.content.Context;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
@@ -38,6 +39,8 @@ final class NativePlayer {
     private MediaPlayer prepared;
     private String currentId;
     private String preparedId;
+    /** Id que se asignará al preparar la siguiente (para el relevo por URI). */
+    private String pendingPreparedId;
     private boolean wantPlay;
     private boolean released;
     private float volume = 1f;
@@ -53,6 +56,11 @@ final class NativePlayer {
     /** El relevo ya sonó: la cola nativa mueve su cursor. */
     void setOnTrackChangedListener(OnEndedListener listener) {
         this.changedListener = listener;
+    }
+
+    /** Id que llevará la pista preparada en el relevo (la web lo sabe). */
+    void setPendingPreparedId(String trackId) {
+        this.pendingPreparedId = trackId;
     }
 
     void setOnEndedListener(OnEndedListener listener) {
@@ -107,6 +115,24 @@ final class NativePlayer {
         if (released) return false;
         String path = store.pathFor(trackId);
         if (path == null) return false;
+        return start(path, null, startMs, trackId);
+    }
+
+    /**
+     * Reproduce un content:// de MediaStore: el archivo original del móvil,
+     * sin copiarlo. `trackId` es el id de la app (solo para los eventos).
+     */
+    boolean playUri(String trackId, String uri, long startMs) {
+        if (released || uri == null || uri.length() == 0) return false;
+        return start(null, uri, startMs, trackId);
+    }
+
+    /** Prepara la siguiente por content:// (relevo gapless sin caché). */
+    boolean prepareNextUri(String uri) {
+        return prepare(null, uri);
+    }
+
+    private boolean start(String path, String uri, long startMs, String trackId) {
         wantPlay = true;
         releasePrepared();
         releaseCurrent();
@@ -114,7 +140,8 @@ final class NativePlayer {
         MediaPlayer player = newPlayer();
         if (player == null) return false;
         try {
-            player.setDataSource(path);
+            if (uri != null) player.setDataSource(appContext, Uri.parse(uri));
+            else player.setDataSource(path);
         } catch (Exception e) {
             Log.w(TAG, "setDataSource: " + e);
             player.release();
@@ -157,18 +184,24 @@ final class NativePlayer {
         if (trackId.equals(currentId)) return false;
         String path = store.pathFor(trackId);
         if (path == null) return false;
+        return prepare(path, null);
+    }
 
+    private boolean prepare(String path, String uri) {
+        if (released || current == null) return false;
         releasePrepared();
         MediaPlayer next = newPlayer();
         if (next == null) return false;
         try {
-            next.setDataSource(path);
+            if (uri != null) next.setDataSource(appContext, Uri.parse(uri));
+            else next.setDataSource(path);
         } catch (Exception e) {
             next.release();
             return false;
         }
         prepared = next;
-        preparedId = trackId;
+        preparedId = pendingPreparedId;
+        pendingPreparedId = null;
         next.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mp) {

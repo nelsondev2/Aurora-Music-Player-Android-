@@ -4,6 +4,19 @@ Historial de versiones **publicadas** de Aurora Music Player.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 
+- **La música del móvil, sin copiarla** (`DeviceLibraryBridge.java` +
+  `js/device-library.js`): «Buscar música en el móvil» lee la biblioteca
+  del teléfono por MediaStore y guarda solo la ficha y el `content://`
+  del archivo original. La canción suena desde donde ya estaba, con
+  carátula (álbum o incrustada, 256 px), y nunca se duplica: el escaneo
+  descarta lo que ya está por id de MediaStore o por nombre + tamaño.
+  Si borras una pista de Aurora, el archivo sigue en el teléfono.
+  El audio de estas pistas va al motor nativo (`playUri` /
+  `prepareNextUri`), así que el relevo entre canciones sigue sin hueco,
+  y compartirlas comparte el archivo original. Permiso
+  `READ_MEDIA_AUDIO` (Android 13+) o `READ_EXTERNAL_STORAGE` (hasta
+  Android 12), pedido solo al usarlo.
+
 - **Compilación en CI sin Gradle**: `tools/build-apk.sh` hace con las
   herramientas del SDK (`aapt2`, `javac`, `d8`, `zipalign`, `apksigner`)
   lo que hace AIDE, y `.github/workflows/build-apk.yml` compila una APK

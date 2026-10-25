@@ -113,6 +113,33 @@ class AuroraBridge {
         return true;
     }
 
+    /**
+     * Comparte un archivo que YA existe (un content:// de MediaStore) sin
+     * copiarlo: se concede lectura temporal a la app que lo reciba.
+     */
+    @JavascriptInterface
+    public boolean shareUri(final String uri, final String name, final String mime) {
+        if (uri == null || uri.length() == 0) return false;
+        final String type = (mime == null || mime.length() == 0) ? "audio/*" : mime;
+        final String title = (name == null || name.length() == 0) ? "Aurora" : name;
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType(type);
+                    send.putExtra(Intent.EXTRA_STREAM, Uri.parse(uri));
+                    send.putExtra(Intent.EXTRA_SUBJECT, title);
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    activity.startActivity(Intent.createChooser(send, title));
+                } catch (Exception e) {
+                    Log.w(TAG, "shareUri: " + e);
+                }
+            }
+        });
+        return true;
+    }
+
     /** Nombres seguros: sin rutas ni caracteres de control. */
     private static String safeName(String name) {
         String base = (name == null || name.trim().length() == 0) ? "aurora" : name.trim();

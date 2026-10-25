@@ -686,6 +686,10 @@
               <svg class="ico" aria-hidden="true"><use href="#i-cloud-arrow-up"></use></svg>
               <span data-i18n="menu_load_music">Cargar música del dispositivo</span>
             </button>
+            <button class="menu-row" id="menuScanDevice">
+              <svg class="ico" aria-hidden="true"><use href="#i-magnifying-glass"></use></svg>
+              <span data-i18n="menu_scan_device">Buscar música en el móvil</span>
+            </button>
             <button class="menu-row" id="menuLoadFolder">
               <svg class="ico" aria-hidden="true"><use href="#i-file-arrow-up"></use></svg>
               <span data-i18n="menu_load_folder">Cargar carpeta completa</span>
@@ -1190,6 +1194,8 @@
   <script src="js/platform.js"></script>
   <!-- motor de reproducción nativo (MediaPlayer) con la cara de un <audio> -->
   <script src="js/native-audio.js"></script>
+  <!-- música del móvil vía MediaStore (sin copiarla) -->
+  <script src="js/device-library.js"></script>
   <script src="js/init.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/library.js"></script>

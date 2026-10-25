@@ -299,19 +299,33 @@ class NativeAudioElement {
     const token = (this._loadToken = (this._loadToken || 0) + 1);
 
     const run = async () => {
-      const ok = await NativeAudio.ensureUploaded(
-        trackId, NativeAudio.extFor(track), url, track._file || track.fileBlob || null);
-      if (token !== this._loadToken) return;
-      if (!ok) {
-        this._fail('no se pudo preparar el audio');
+      const N = window.AuroraNativePlayer;
+      if (!N) {
+        this._fail('sin motor nativo');
         return;
       }
-      const N = window.AuroraNativePlayer;
       let started = false;
-      try {
-        started = N.play(trackId, Math.round(startAt * 1000));
-      } catch (e) {
-        started = false;
+      if (track.deviceUri) {
+        // Pista del móvil: se reproduce el archivo original, sin copiarlo
+        // ni subirlo a la caché.
+        try {
+          started = N.playUri(trackId, track.deviceUri, Math.round(startAt * 1000));
+        } catch (e) {
+          started = false;
+        }
+      } else {
+        const ok = await NativeAudio.ensureUploaded(
+          trackId, NativeAudio.extFor(track), url, track._file || track.fileBlob || null);
+        if (token !== this._loadToken) return;
+        if (!ok) {
+          this._fail('no se pudo preparar el audio');
+          return;
+        }
+        try {
+          started = N.play(trackId, Math.round(startAt * 1000));
+        } catch (e) {
+          started = false;
+        }
       }
       if (!started) {
         this._fail('MediaPlayer no pudo abrir la pista');
@@ -343,6 +357,13 @@ class NativeAudioElement {
       if (!app._gaplessEnabled) return;
       const N = window.AuroraNativePlayer;
       if (!N) return;
+
+      // Pista del móvil: no hay nada que subir, se prepara por content://.
+      if (next.deviceUri && typeof N.prepareNextUri === 'function') {
+        try { N.prepareNextUri(next.id, next.deviceUri); } catch (e) {}
+        return;
+      }
+
       let ready = false;
       try { ready = !!(N.audioHas && N.audioHas(next.id)); } catch (e) { ready = false; }
       if (!ready) {

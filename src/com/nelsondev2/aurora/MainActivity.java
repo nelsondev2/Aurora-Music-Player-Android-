@@ -106,6 +106,34 @@ public class MainActivity extends Activity {
         w.addJavascriptInterface(new AuroraBridge(this), "AuroraAndroid");
         w.addJavascriptInterface(new AuroraMediaBridge(this), "AuroraMedia");
         w.addJavascriptInterface(new NativePlayerBridge(this), "AuroraNativePlayer");
+        w.addJavascriptInterface(new DeviceLibraryBridge(this), "AuroraDevice");
+    }
+
+    /**
+     * Permiso de lectura de audio para escanear la música del móvil.
+     * La respuesta se manda a la web (window.AuroraDeviceAccess).
+     */
+    void requestAudioPermission() {
+        try {
+            if (DeviceLibraryBridge.hasPermission(this)) {
+                WebApp.evalJs("window.AuroraDeviceAccess && window.AuroraDeviceAccess(true)");
+                return;
+            }
+            requestPermissions(new String[]{DeviceLibraryBridge.audioPermission()},
+                    DeviceLibraryBridge.REQ_AUDIO_PERMISSION);
+        } catch (Exception e) {
+            WebApp.evalJs("window.AuroraDeviceAccess && window.AuroraDeviceAccess(false)");
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == DeviceLibraryBridge.REQ_AUDIO_PERMISSION) {
+            boolean granted = results != null && results.length > 0 && results[0] == 0;
+            WebApp.evalJs("window.AuroraDeviceAccess && window.AuroraDeviceAccess("
+                    + (granted ? "true" : "false") + ")");
+        }
     }
 
     /**
@@ -213,8 +241,10 @@ public class MainActivity extends Activity {
                 webView.removeJavascriptInterface("AuroraAndroid");
             webView.removeJavascriptInterface("AuroraMedia");
             webView.removeJavascriptInterface("AuroraNativePlayer");
+            webView.removeJavascriptInterface("AuroraDevice");
                 webView.removeJavascriptInterface("AuroraMedia");
                 webView.removeJavascriptInterface("AuroraNativePlayer");
+                webView.removeJavascriptInterface("AuroraDevice");
                 webView.loadUrl("about:blank");
                 webView.destroy();
                 webView = null;

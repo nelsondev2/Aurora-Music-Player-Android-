@@ -20,6 +20,12 @@ servidor, sin cuenta y sin publicidad. Carga archivos locales
   desde el dispositivo, con metadatos, portadas y duración real. Todo
   queda guardado en el almacenamiento local de la app; sin red, sin
   cuenta y sin servidor.
+- **La música que ya tienes, sin copiarla**: «Buscar música en el móvil»
+  lee la biblioteca del teléfono por MediaStore y guarda solo la ficha
+  (título, artista, álbum, carátula) y el `content://` del archivo
+  original. Nada se duplica: la canción suena desde donde ya estaba, y
+  si la borras de Aurora el archivo sigue en el teléfono (vuelve a
+  aparecer en el siguiente escaneo).
 - **Letras sincronizadas**: archivos `.lrc` o letras incrustadas, con
   desplazamiento automático y pantalla de letras a lo grande.
 - **Listas para todo**: crea y edita listas, marca **Favoritos** y
@@ -125,6 +131,31 @@ En el navegador lo único que cambia es lo que aporta Android:
 «Compartir» descarga el archivo en vez de abrir el selector, y el
 botón atrás es el del navegador.
 
+## La música del móvil, sin copiarla
+
+La app no necesita que le pases los archivos: lee la biblioteca del
+teléfono por MediaStore y se queda con la ficha.
+
+- **`DeviceLibraryBridge.java`** (`window.AuroraDevice`) consulta
+  MediaStore por páginas de 200 (`scan(offset, limit)`) para que una
+  biblioteca de miles de canciones no acabe en una sola cadena de
+  JavaScript, y devuelve carátulas en JPEG de 256 px (`albumArt`).
+- **`js/device-library.js`** recorre las páginas, evita duplicados (por
+  id de MediaStore y por nombre + tamaño: una canción importada antes
+  copiándola no entra dos veces) y crea pistas con `deviceUri` en vez de
+  un `Blob`.
+- **Reproducción**: las pistas del móvil van al motor nativo con
+  `playUri(trackId, uri, ms)` y el relevo se prepara con
+  `prepareNextUri` — el archivo original se lee, nunca se copia a la
+  caché de la app. Con el motor web se avisa una vez: `content://` solo
+  suena con garantías en el motor del sistema.
+- **Permiso**: `READ_MEDIA_AUDIO` desde Android 13, `READ_EXTERNAL_STORAGE`
+  hasta Android 12. Se pide al pulsar «Buscar música en el móvil», nunca
+  al arrancar; si se deniega, la app sigue funcionando como siempre.
+- **Borrar** una pista del móvil olvida la ficha, no toca el archivo.
+- **Compartir** una pista del móvil comparte el `content://` original
+  (el receptor lee el archivo real, sin pasar por la memoria de Aurora).
+
 ## Cómo está montada
 
 ```
@@ -139,10 +170,12 @@ src/com/nelsondev2/aurora/
     NativeAudioStore.java        caché de audio en archivos, para MediaPlayer
     PlayQueue.java               ventana de la cola para cuando no hay página
     AuroraMediaBridge.java       puente JS ↔ Android del estado de reproducción
+    DeviceLibraryBridge.java     música del móvil por MediaStore (solo la ficha)
     WebApp.java                  comandos del sistema hacia el WebView
     ShareProvider.java           content:// de solo lectura para compartir
     Mime.java                    tipos MIME por extensión
 assets/www/                      la app (HTML + CSS + JS, sin build)
+    js/device-library.js         escaneo paginado del móvil y fichas sin copia
 res/                             iconos, tema y textos de Android
 tools/                           servidor local y comprobaciones
 ```

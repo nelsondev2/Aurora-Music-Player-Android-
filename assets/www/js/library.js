@@ -672,6 +672,16 @@ Object.assign(App, {
       if (!t) return;
       this.closeSheet('sheetTrackMenu');
       this.closeSheet('sheetMore');
+
+      // Pista del móvil (MediaStore): se comparte el archivo original, sin
+      // copiarlo ni leerlo entero para hacer un Blob.
+      if (t.deviceUri && window.AuroraAndroid && typeof window.AuroraAndroid.shareUri === 'function') {
+        const name = (t.fileName || (t.title || 'cancion') + '.mp3');
+        let ok = false;
+        try { ok = window.AuroraAndroid.shareUri(t.deviceUri, name, t.mime || 'audio/*'); } catch (e) {}
+        if (ok) return;
+      }
+
       this.toast(this.t('toast_preparing_share'));
 
       try {
@@ -817,6 +827,9 @@ Object.assign(App, {
       if (idx < 0) return;
       const wasCurrent = this.currentTrack && this.currentTrack.id === trackId;
       const t = this.tracks[idx];
+      //  Las pistas del móvil (MediaStore) no tienen copia en IndexedDB ni
+      // en la caché nativa: borrarlas solo olvida la ficha, el archivo sigue
+      // en el teléfono y vuelve a aparecer en el próximo escaneo.
       const cachedUrl = this._urlCache.get(trackId) || null;
       // El borrado de una pista se puede deshacer durante 8 s: mientras
       // tanto NO se revoca el objectURL ni se toca IndexedDB. Así el audio
@@ -1101,10 +1114,24 @@ Object.assign(App, {
       btn.innerHTML = '<svg class="ico" style="margin-right:8px" aria-hidden="true"><use href="#i-cloud-arrow-up"></use></svg><span></span>';
       btn.querySelector('span').textContent = this.t('load_music');
       btn.addEventListener('click', () => this.openFilePicker());
+      // En la app Android, además de cargar archivos, se puede buscar la
+      // música que ya está en el teléfono (no se copia, se enlaza).
+      let scanBtn = null;
+      if (typeof this.canScanDevice === 'function' && this.canScanDevice()) {
+        scanBtn = document.createElement('button');
+        scanBtn.className = 'primary-btn empty-cta empty-cta-ghost';
+        scanBtn.id = 'btnEmptyScanDevice';
+        scanBtn.type = 'button';
+        scanBtn.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-magnifying-glass"></use></svg><span></span>';
+        scanBtn.querySelector('span').textContent = this.t('menu_scan_device');
+        scanBtn.addEventListener('click', () => this.scanDeviceLibrary());
+      }
       const hint = document.createElement('p');
       hint.className = 'empty-hint';
       hint.textContent = this.t('empty_format_hint');
-      empty.append(icon, h2, p, btn, hint);
+      empty.append(icon, h2, p, btn);
+      if (scanBtn) empty.appendChild(scanBtn);
+      empty.appendChild(hint);
       empty.style.display = 'flex';
       // Ocultar secciones habituales (esta lista debe coincidir con la de
       // hideEmptyState; antes .np-volume quedaba oculto para siempre).
