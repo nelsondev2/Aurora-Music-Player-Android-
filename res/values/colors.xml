@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mismo fondo que la app web: el arranque no parpadea en blanco. -->
+    <color name="aurora_bg">#FF050509</color>
+</resources>

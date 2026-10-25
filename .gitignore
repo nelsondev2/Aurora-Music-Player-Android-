@@ -1,3 +1,14 @@
-# Artefacto generado por build-xdc.py
-*.xdc
+# Salida de AIDE / del compilador de Android
+bin/
+gen/
+build/
+*.apk
+*.ap_
+*.dex
+*.class
+local.properties
+.gradle/
+
+# Basura del sistema
 __pycache__/
+.DS_Store

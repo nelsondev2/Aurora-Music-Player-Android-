@@ -2,9 +2,33 @@
 
 Historial de versiones **publicadas** de Aurora Music Player.
 
-## Sin publicar
+## Sin publicar — 1.3.0 · Aurora se hace app de Android
 
-_(nada por ahora)_
+- **Deja de ser un WebXDC.** Fuera todo lo que ataba la app a Delta
+  Chat: el manifiesto `manifest.toml`, el empaquetador `build-xdc.py`,
+  el flujo de publicación del `.xdc`, la referencia a `webxdc.js`, el
+  selector de archivos del cliente (`importFiles`), el envío al chat
+  (`sendToChat`) y el aviso de primer arranque que explicaba el botón
+  atrás de la mensajería.
+- **Proyecto de AIDE, sin Gradle.** El repositorio ya es un proyecto
+  Android compilable en el propio teléfono: `AndroidManifest.xml`,
+  `src/`, `res/` y la app web en `assets/www`. Sin AndroidX ni
+  dependencias externas.
+- **La app se sirve desde `https://aurora.localhost`** en vez de
+  `file://`: origen seguro de verdad, así que IndexedDB (donde vive la
+  música), `localStorage` y `navigator.storage.persist()` funcionan y
+  sobreviven a cerrar la app.
+- **Selector de archivos del sistema** para los `<input type="file">`:
+  importar música, letras y portadas sigue igual, sin pedir permisos
+  de almacenamiento.
+- **Compartir con el selector de Android**: canciones, listas y letras
+  salen a cualquier app. El archivo cruza al lado nativo por trozos y
+  se comparte como `content://` de solo lectura.
+- **Botón atrás con criterio**: cierra la hoja abierta, sale de Letras
+  o manda la app al fondo si suena música, en vez de cortar la
+  reproducción.
+- Los enlaces externos («Código fuente») abren el navegador del
+  sistema, así que desaparece la URL en texto como sustituto.
 
 ## 1.2.5 — Más ligera, en 14 idiomas
 
@@ -229,12 +253,9 @@ verificado función a función:
 
 ### Limitaciones de esta versión
 
-- Cada copia del `.xdc` guarda su propia biblioteca: sin
-  sincronización entre copias/dispositivos ni copia de seguridad
-  integrada. Usa siempre la misma copia.
-- La reproducción se detiene al cerrar la app (límite de la
-  plataforma WebXDC, sin segundo plano tras cerrar la ventana).
-- Verificada en un Delta Chat real por el mantenedor (lista de
-  pruebas del INFORME §61, puntos 1–13, todos en verde; §62): se
-  publica como versión funcional completa; los fallos se recogen en
-  los *issues* de GitHub.
+- La biblioteca vive en el almacenamiento de la app: sin
+  sincronización entre dispositivos ni copia de seguridad integrada.
+- La reproducción se detiene si el sistema destruye la actividad (no
+  hay servicio en primer plano todavía).
+- Verificada a mano por el mantenedor antes de publicar; los fallos
+  se recogen en los *issues* de GitHub.

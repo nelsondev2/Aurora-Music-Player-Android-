@@ -1,8 +1,11 @@
-# Aurora Music Player
+# Aurora Music Player · Android
 
-Reproductor de música **offline-first** pensado para **WebXDC**: se comparte como archivo `.xdc` en un chat de Delta Chat y funciona sin red, sin cuenta y sin servidor. Carga archivos locales (MP3, M4A, FLAC, WAV, OGG, Opus), lee ID3 y letras LRC.
+Reproductor de música **offline-first** para Android: una app web
+completa (HTML, CSS y JavaScript propios) dentro de un WebView, sin
+servidor, sin cuenta y sin publicidad. Carga archivos locales
+(MP3, M4A, FLAC, WAV, OGG, Opus), lee ID3 y letras LRC.
 
-**Versión:** 1.2.0 · licencia MIT
+**Versión:** 1.3.0 · licencia MIT · minSdk 21 · sin dependencias
 
 > **Nota:** Aurora es un proyecto **generado con inteligencia
 > artificial**. Todo su código —y las traducciones de la
@@ -15,7 +18,7 @@ Reproductor de música **offline-first** pensado para **WebXDC**: se comparte co
 
 - **Tu música, sin nube**: importa MP3, M4A, FLAC, WAV, OGG y Opus
   desde el dispositivo, con metadatos, portadas y duración real. Todo
-  queda guardado localmente en la instancia del chat; sin red, sin
+  queda guardado en el almacenamiento local de la app; sin red, sin
   cuenta y sin servidor.
 - **Letras sincronizadas**: archivos `.lrc` o letras incrustadas, con
   desplazamiento automático y pantalla de letras a lo grande.
@@ -34,8 +37,9 @@ Reproductor de música **offline-first** pensado para **WebXDC**: se comparte co
 - **Estadísticas**: más reproducidas, artistas favoritos y tiempo de
   escucha (una reproducción solo cuenta cuando la canción suena
   entera).
-- **Comparte por el chat**: envía canciones, listas (`.m3u8`) y letras
-  con `sendToChat`, sin salir de Delta Chat.
+- **Comparte lo que quieras**: canciones, listas (`.m3u8`) y letras
+  salen por el selector «Compartir» de Android, listos para cualquier
+  app (mensajería, correo, unidades de nube…).
 - **Ordena y explora a tu manera**: cada lista se puede ordenar por
   título, artista, álbum o duración (además del orden por estrellas),
   y Biblioteca explora tu colección por Álbumes, Artistas y Géneros.
@@ -43,96 +47,112 @@ Reproductor de música **offline-first** pensado para **WebXDC**: se comparte co
 - **14 idiomas** (es, en, pt, zh, ja, fr, it, ru, de, uk, pl, tr, id,
   zh-TW), temas y colores de acento.
 
-## Empaquetar como .xdc (Delta Chat)
+## Compilar el APK con AIDE
 
-Requisito: Python 3 (solo biblioteca estándar, sin dependencias).
+El repositorio **es** el proyecto de AIDE: no hay Gradle, ni
+repositorios que descargar, ni dependencias externas (nada de
+AndroidX). Se compila offline con el propio compilador de AIDE.
+
+1. Copia esta carpeta al almacenamiento del teléfono (o clónala con
+   git desde AIDE).
+2. En AIDE: **Abrir proyecto → carpeta del proyecto**. AIDE reconoce
+   `AndroidManifest.xml` y propone sus SDK instalados.
+3. Pulsa **Run**: compila el APK y lo instala.
+
+Requisitos: AIDE 3.x o superior con un SDK de API 21 o mayor
+instalado. El resultado es `Aurora.apk`, sin permisos de
+almacenamiento (los archivos se eligen con el selector del sistema,
+que concede cada archivo concreto).
+
+### Probar la parte web en el ordenador
+
+La app entera vive en `assets/www` y funciona en cualquier navegador
+moderno:
 
 ```bash
-python3 build-xdc.py            # genera aurora-music-player.xdc
-python3 build-xdc.py --check    # valida el .xdc generado
+python3 tools/serve.py          # http://localhost:8000
+python3 tools/check.py          # comprobaciones antes de compilar
 ```
 
-El script comprueba antes de comprimir:
+En el navegador lo único que cambia es lo que aporta Android:
+«Compartir» descarga el archivo en vez de abrir el selector, y el
+botón atrás es el del navegador.
 
-- `index.html` en la raíz del ZIP
-- `manifest.toml` con `name` y `source_code_url`
-- `icon.png` cuadrado de 128–512 px
-- todas las rutas relativas y presentes en el paquete
-- ninguna carga remota (un `.xdc` no tiene red)
-- que ningún `webxdc.js` viaje en el paquete (lo inyecta el cliente)
+## Cómo está montada
 
-El resultado es un ZIP con compresión Deflate, **26 archivos y ~383 KB**, reproducible (mismo contenido → mismo SHA-256).
+```
+AndroidManifest.xml              proyecto de AIDE (sin Gradle)
+src/com/nelsondev2/aurora/
+    MainActivity.java            WebView, selector de archivos, botón atrás
+    AuroraWebClient.java         sirve assets/www desde https://aurora.localhost
+    AuroraBridge.java            puente JS ↔ Android (compartir por trozos)
+    ShareProvider.java           content:// de solo lectura para compartir
+    Mime.java                    tipos MIME por extensión
+assets/www/                      la app (HTML + CSS + JS, sin build)
+res/                             iconos, tema y textos de Android
+tools/                           servidor local y comprobaciones
+```
 
-### Probar en Delta Chat
+Tres decisiones que explican el resto:
 
-1. `python3 build-xdc.py`
-2. Adjunta `aurora-music-player.xdc` en un chat (o en «Mensajes guardados») y envíalo.
-3. Tócalo para abrirlo: la app arranca dentro del chat.
-4. Pulsa **+** y elige tus archivos de audio. Los datos quedan en esa instancia del `.xdc`.
-
-> **Cada copia del `.xdc` guarda su propia biblioteca.** Si reenvías el archivo se crea una instancia nueva y vacía: usa siempre la misma copia, porque tu música, tus listas y tus ajustes viven dentro de esa instancia.
-
-### Qué cambia dentro de Delta Chat
-
-- Los enlaces externos están bloqueados por el cliente: en «Acerca de» el enlace al código fuente se sustituye por la URL en texto.
-- El selector de carpetas se desactiva (se eligen archivos, no carpetas).
-- «Compartir» usa `sendToChat` para enviar audio, letras o listas al chat.
-- La API `window.webxdc` la inyecta el cliente: `index.html` referencia `webxdc.js` (ruta exacta) y ningún `webxdc.js` viaja en el `.xdc`, como manda la spec webxdc. Si el paquete llevara uno propio (p. ej. en `js/`), el cliente no lo reemplazaría y los envíos al chat se perderían en silencio.
+- **La app no se carga con `file://`.** En Chromium un `file://` es un
+  origen opaco, y ahí IndexedDB —donde vive toda la música— no es
+  fiable o se pierde al cerrar. `AuroraWebClient` intercepta
+  `https://aurora.localhost/…` y responde desde `assets/www`, así que
+  el WebView ve un origen seguro normal: IndexedDB, `localStorage` y
+  `navigator.storage.persist()` funcionan como en cualquier web.
+  Nada sale a la red: lo que no existe en assets devuelve un 404 local.
+- **Compartir sin AndroidX.** Android no deja enviar un `File` a otra
+  app, y `FileProvider` obligaría a arrastrar AndroidX. `ShareProvider`
+  son ochenta líneas de `ContentProvider` de solo lectura, y el
+  archivo cruza el puente por trozos de 512 KB en base64 para no
+  cargar un FLAC entero en memoria.
+- **El botón atrás pregunta a la web.** `MainActivity` evalúa
+  `window.AuroraAndroidBack()`, que cierra la hoja abierta, sale de
+  Letras o responde «sigue sonando» para que la app se vaya al fondo
+  sin cortar la música, en vez de matar la reproducción.
 
 ## Limitaciones conocidas
 
 Dichas en voz alta, para que nadie se lleve una sorpresa:
 
-- **Cada copia del `.xdc` guarda su propia biblioteca** (ya avisado
-  arriba): reenviar el archivo crea una instancia nueva y vacía. No
-  hay sincronización entre copias ni entre dispositivos, y no hay
-  copia de seguridad integrada: tu biblioteca vive en los datos de
-  esa instancia dentro de la app de mensajería.
-- **La música se detiene al cerrar la app.** Las WebXDC se ejecutan
-  dentro del cliente y este no ofrece reproducción en segundo plano
-  tras cerrar la ventana; es un límite de la plataforma, no un fallo.
-- **El espacio manda el dispositivo.** La música se guarda en el
-  almacenamiento web de la instancia: bibliotecas muy grandes pueden
-  chocar con la cuota del sistema, que Aurora no controla.
-- **Sin selector de carpetas en Delta Chat** (el cliente solo deja
-  elegir archivos sueltos); en navegador sí está disponible.
+- **La música se detiene al cerrar la app desde recientes o al
+  destruirse la actividad.** No hay servicio en primer plano todavía:
+  si sales con el botón atrás la reproducción continúa, pero si
+  Android reclama memoria, se acaba.
+- **El espacio manda el dispositivo.** La biblioteca vive en el
+  almacenamiento web del WebView; una biblioteca enorme puede chocar
+  con la cuota del sistema.
+- **Sin selector de carpetas en Android** (la plataforma no lo
+  ofrece): se eligen archivos sueltos o varios a la vez.
+- **Los archivos importados no se copian**: se guardan dentro de la
+  app, así que borrar los datos de Aurora (o desinstalarla) borra su
+  biblioteca. Los archivos originales de tu dispositivo no se tocan.
 - Las traducciones las mantiene el proyecto: si tu idioma suena raro,
   un aviso en los *issues* se agradece.
 
 ## Reportar un problema
 
-En los [*issues* de GitHub](https://github.com/nelsondev2/Aurora-Music-Player/issues)
+En los [*issues* de GitHub](https://github.com/nelsondev2/Aurora-Music-Player-Android-/issues)
 (en español o inglés). Ayuda mucho incluir:
 
 - la versión de Aurora (Ajustes → Acerca de),
-- tu dispositivo y la versión de Delta Chat,
+- tu dispositivo, la versión de Android y el WebView instalado,
 - los pasos para reproducir el fallo, y qué esperabas que pasara.
-
-## Ejecutar en un navegador
-
-No hay build ni dependencias. Abre `index.html` o sirve la carpeta:
-
-```bash
-python3 -m http.server 8000
-# http://localhost:8000
-```
-
-En navegador no hay API webxdc (la referencia a `webxdc.js` no resuelve): las exportaciones se descargan como archivos y la selección de archivos usa el selector del navegador. Para simular Delta Chat, el simulador oficial `webxdc-dev` o el `webxdc.js` de Hello funcionan sin tocar el paquete.
 
 ## Contenido
 
 | Ruta | Qué es |
 |---|---|
-| `index.html` | Markup de la app (vistas, hojas, sprite de iconos) |
-| `css/styles.css` | Estilos, temas y acentos (toda la CSS vive en `css/`) |
-| `js/data.js` | Traducciones (14 idiomas) y utilidades de datos |
-| `js/storage.js` | Persistencia en IndexedDB |
-| `js/uploader.js` | Lectura de archivos, ID3 y LRC |
-| `js/` | Todo el JavaScript propio: módulos de la app (audio, UI, listas, letras, ajustes…) |
-| `assets/` | Fuente Outfit, iconos y jsmediatags (`assets/js/`) |
-| `build-xdc.py` | Empaquetado y validación del `.xdc` |
-| `manifest.toml`, `icon.png` | Metadatos e icono del WebXDC |
-| `README.md`, `LICENSE` | Documentación y licencia |
-| `CHANGELOG.md` | Historial de versiones publicadas |
-
-El repositorio contiene únicamente la aplicación y su empaquetador: no incluye servidor Node, suite de pruebas, CI ni dependencias externas. Antes de empaquetar, `build-xdc.py` valida el paquete contra las reglas de Delta Chat.
+| `assets/www/index.html` | Markup de la app (vistas, hojas, sprite de iconos) |
+| `assets/www/css/styles.css` | Estilos, temas y acentos |
+| `assets/www/js/data.js` | Traducciones (14 idiomas) y utilidades de datos |
+| `assets/www/js/storage.js` | Persistencia en IndexedDB |
+| `assets/www/js/uploader.js` | Lectura de archivos, ID3 y LRC |
+| `assets/www/js/platform.js` | Puente con Android (compartir, botón atrás) |
+| `assets/www/js/` | Módulos de la app (audio, UI, listas, letras, ajustes…) |
+| `assets/www/fonts/`, `assets/www/icon.png` | Fuente Outfit (OFL) e icono |
+| `src/` | Código Java de la app Android |
+| `res/` | Recursos de Android (iconos, tema, textos) |
+| `tools/serve.py`, `tools/check.py` | Desarrollo en local y verificación |
+| `README.md`, `LICENSE`, `CHANGELOG.md` | Documentación, licencia e historial |
