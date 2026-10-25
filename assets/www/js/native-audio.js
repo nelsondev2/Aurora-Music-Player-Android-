@@ -10,8 +10,9 @@
  *  hueco (setNextMediaPlayer).
  *
  *  Lo que NO puede hacer un motor nativo: Web Audio. Sin el elemento real
- *  no hay ecualizador, ni visualizador, ni crossfade. Por eso el motor
- *  nativo es opcional (Ajustes → Motor de audio) y la app avisa.
+ *  no hay ecualizador ni crossfade; la app dibuja una onda animada de
+ *  cortesía, pero no reactiva al sonido. Por eso el motor nativo es
+ *  opcional (Ajustes → Motor de audio) y la app avisa.
  *
  *  Si algo falla —una pista que el sistema no puede decodificar, la
  *  subida cortada— el llamador puede volver al motor del WebView.

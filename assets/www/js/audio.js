@@ -1383,20 +1383,6 @@ Object.assign(App, {
     },
 
     startVisualizer() {
-      // Sin analizador (motor nativo) no hay onda que dibujar: una pasada
-      // en reposo y fuera, para que el lienzo no quede en blanco.
-      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) {
-        if (this._visRafId || this._visTimer) return;
-        const canvasIdle = document.getElementById('visualizerCanvas');
-        if (canvasIdle) {
-          const ctxIdle = canvasIdle.getContext('2d');
-          if (ctxIdle && typeof this._drawVisualizerIdle === 'function') {
-            this._fitVisualizerCanvas(canvasIdle);
-            this._drawVisualizerIdle(canvasIdle, ctxIdle);
-          }
-        }
-        return;
-      }
       //  en portada a pantalla completa la onda se muestra
       // aunque el ajuste sea «apagado» (sin cambiar la preferencia).
       if (this.visualizerMode === 'off' && !this._coverFs) return;
@@ -1593,19 +1579,35 @@ Object.assign(App, {
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
-      if (!this.analyser || !this.freqData) {
-        return;
-      }
+      const nativeEngine = typeof this.isNativeAudio === 'function' && this.isNativeAudio();
+      if (!nativeEngine && (!this.analyser || !this.freqData)) return;
       const dt = (typeof dtMs === 'number' && dtMs > 0) ? Math.min(100, dtMs) : 33;
       const cols = this._visColors();
 
-      //  único modo: la onda fluida (las barras tapaban el cover).
-      // Buffer temporal propio (fftSize muestras; antes se reusaba
-      // el de frecuencias, la mitad de largo: onda pobre y dentada).
-      if (!this._visTimeData || (this.analyser.fftSize && this._visTimeData.length !== this.analyser.fftSize)) {
-        this._visTimeData = new Uint8Array(this.analyser.fftSize || this.freqData.length);
+      // El motor Web usa muestras reales del AnalyserNode. MediaPlayer no
+      // expone esas muestras al WebView: allí se genera una onda animada
+      // suave para que el visualizador no quede congelado.
+      if (!this._visTimeData || (!nativeEngine && this.analyser.fftSize
+          && this._visTimeData.length !== this.analyser.fftSize)) {
+        this._visTimeData = new Uint8Array(nativeEngine ? 2048 : (this.analyser.fftSize || this.freqData.length));
       }
-      this.analyser.getByteTimeDomainData(this._visTimeData);
+      if (nativeEngine) {
+        this._visNativeClock = (this._visNativeClock || 0) + dt;
+        const phase = this._visNativeClock * 0.0025;
+        const envelope = 0.42 + 0.20 * (0.5 + 0.5 * Math.sin(phase * 1.3));
+        const length = this._visTimeData.length;
+        for (let i = 0; i < length; i++) {
+          const x = i / (length - 1);
+          const signal = envelope * (
+            0.58 * Math.sin(x * Math.PI * 8 + phase)
+            + 0.27 * Math.sin(x * Math.PI * 19 - phase * 1.6)
+            + 0.15 * Math.sin(x * Math.PI * 31 + phase * 0.7)
+          );
+          this._visTimeData[i] = Math.max(0, Math.min(255, Math.round(128 + signal * 120)));
+        }
+      } else {
+        this.analyser.getByteTimeDomainData(this._visTimeData);
+      }
       const cssW = canvas.clientWidth || Math.round(w / 2);
       const count = Math.max(64, Math.min(140, Math.round(cssW / 4)));
       const pts = this._visWavePoints(this._visTimeData, count, dt);

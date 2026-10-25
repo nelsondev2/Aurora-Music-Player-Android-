@@ -4,6 +4,15 @@ Historial de versiones **publicadas** de Aurora Music Player.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 
+- **La onda del visualizador se mueve con el motor nativo.** Antes, ese
+  motor solo pintaba una onda estática porque `MediaPlayer` no entrega
+  muestras de audio al WebView. Ahora la onda se anima mientras suena;
+  es decorativa, no una lectura de frecuencias. Con el motor Web sigue
+  reaccionando al audio real.
+- **Pausa al retirar auriculares.** `PlaybackService` escucha
+  `ACTION_AUDIO_BECOMING_NOISY` y manda una pausa coordinada al reproductor
+  cuando se desconectan auriculares cableados o Bluetooth; el receptor se
+  desregistra al destruir el servicio.
 - **«No deja añadir más de una canción del almacenamiento a la lista»,
   arreglado por los dos lados.**
   - **La causa que estaba en la app:** mientras una importación seguía

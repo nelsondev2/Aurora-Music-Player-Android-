@@ -5,8 +5,10 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.AudioManager;
@@ -80,6 +82,7 @@ public class PlaybackService extends Service {
     private MediaSession session;
     private AudioManager audioManager;
     private PowerManager.WakeLock wakeLock;
+    private BroadcastReceiver noisyReceiver;
     private boolean focused;
 
     // ------------------------------------------------------------ estático
@@ -163,6 +166,41 @@ public class PlaybackService extends Service {
 
     // ----------------------------------------------------------- ciclo vida
 
+    /** Pausa al desconectar auriculares para evitar que el audio salga por el altavoz. */
+    private void registerNoisyReceiver() {
+        noisyReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent != null
+                        && AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())
+                        && sPlaying) {
+                    command("pause");
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+        try {
+            if (Build.VERSION.SDK_INT >= 33) {
+                // API 33 exige declarar si el receptor dinámico es exportado.
+                registerReceiver(noisyReceiver, filter, 4 /* RECEIVER_NOT_EXPORTED */);
+            } else {
+                registerReceiver(noisyReceiver, filter);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "no se pudo registrar la pausa al retirar auriculares: " + e);
+            noisyReceiver = null;
+        }
+    }
+
+    private void unregisterNoisyReceiver() {
+        if (noisyReceiver == null) return;
+        try {
+            unregisterReceiver(noisyReceiver);
+        } catch (Exception ignored) {
+        }
+        noisyReceiver = null;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -175,6 +213,7 @@ public class PlaybackService extends Service {
         }
         createChannel();
         createSession();
+        registerNoisyReceiver();
         // Con la página cerrada, el final de una canción lo resuelve la
         // copia de la cola que mantiene Java.
         NativePlayer player = NativePlayerBridge.get(this);
@@ -217,6 +256,7 @@ public class PlaybackService extends Service {
 
     @Override
     public void onDestroy() {
+        unregisterNoisyReceiver();
         NativePlayerBridge.releaseAll();
         releaseFocus();
         releaseWakeLock();

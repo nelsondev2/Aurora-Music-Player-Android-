@@ -46,8 +46,8 @@ servidor, sin cuenta y sin publicidad. Carga archivos locales
   apagado.
 - **Sigue sonando fuera de la app**: reproducción en segundo plano con
   notificación y carátula, controles en la pantalla de bloqueo y en los
-  auriculares, y foco de audio (si entra una llamada, Aurora se pausa
-  sola).
+  auriculares, y foco de audio (si entra una llamada o se desconectan
+  auriculares, Aurora se pausa sola).
 - **Motor de audio del sistema**: el sonido lo pone Android
   (MediaPlayer), así que la música aguanta aunque el WebView desaparezca
   y el paso de una pista a la siguiente no tiene hueco. Se puede cambiar
@@ -287,7 +287,8 @@ audio** (se aplica en la siguiente reproducción):
 | Quién pone el sonido | `MediaPlayer` (Java) | `<audio>` + Web Audio (WebView) |
 | Si el WebView muere | **la música sigue** | se corta |
 | Relevo entre pistas | sin hueco (`setNextMediaPlayer`) | sin hueco o con fundido |
-| Ecualizador / visualizador | no | **sí** |
+| Ecualizador | no | **sí** |
+| Visualizador | onda animada (no reacciona al sonido) | **sí, en tiempo real** |
 | Fundidos (crossfade) | no | **sí** |
 | Normalización de volumen | no | **sí** |
 
@@ -433,8 +434,10 @@ Dichas en voz alta, para que nadie se lleve una sorpresa:
   siguientes diez pistas tal como estaban al cerrar la app; si se acaban,
   la música se detiene. Reordenar, cambiar de lista o activar aleatorio
   necesita la app abierta.
-- **El motor del sistema no tiene ecualizador ni visualizador.** Son
-  Web Audio; para tenerlos hay que elegir el motor de la app en Ajustes.
+- **El motor del sistema no ofrece visualización del audio en tiempo
+  real ni ecualizador.** La onda se anima mientras reproduce, pero no
+  analiza el sonido; para el visualizador reactivo y el ecualizador,
+  elige el motor de la app en Ajustes.
 - **La caché del motor nativo ocupa disco aparte.** Duplica el audio que
   está sonando (hasta 1 GB, con poda automática), además de la copia de
   la biblioteca en IndexedDB.
