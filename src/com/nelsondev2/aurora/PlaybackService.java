@@ -184,9 +184,9 @@ public class PlaybackService extends Service {
                 onTrackEnded();
             }
         });
-        player.setOnTrackChangedListener(new NativePlayer.OnEndedListener() {
+        player.setOnTrackChangedListener(new NativePlayer.OnTrackChangedListener() {
             @Override
-            public void onEnded(String trackId) {
+            public void onTrackChanged(String trackId) {
                 onNativeTrackChanged(trackId);
             }
         });

@@ -95,9 +95,25 @@ fi
 # literal entre comillas y falla en silencio, que es peor).
 newest() { compgen -G "$1" | sort -V | tail -1; }
 
-BUILD_TOOLS="$(newest "$ANDROID_HOME/build-tools/*")"
+# Las betas y las RC del SDK no valen para publicar: compilan contra una
+# plataforma que aún cambia (y los runners de CI traen alguna). Se
+# descartan por nombre; si solo quedan preestrenos, se usa el que haya.
+stable() {
+  compgen -G "$1" | { grep -Ev -- '-(beta|alpha|rc|preview|dev)' || true; } | sort -V | tail -1
+}
+
+BUILD_TOOLS="$(stable "$ANDROID_HOME/build-tools/*")"
+[ -n "$BUILD_TOOLS" ] || BUILD_TOOLS="$(newest "$ANDROID_HOME/build-tools/*")"
 [ -n "$BUILD_TOOLS" ] || die "no hay build-tools en $ANDROID_HOME"
-PLATFORM="$(newest "$ANDROID_HOME/platforms/android-*")"
+
+# Se compila contra la plataforma del targetSdk si está instalada (es la
+# que se ha probado con el manifiesto); si no, la estable más nueva.
+if [ -f "$ANDROID_HOME/platforms/android-$TARGET_SDK/android.jar" ]; then
+  PLATFORM="$ANDROID_HOME/platforms/android-$TARGET_SDK"
+else
+  PLATFORM="$(stable "$ANDROID_HOME/platforms/android-*")"
+  [ -n "$PLATFORM" ] || PLATFORM="$(newest "$ANDROID_HOME/platforms/android-*")"
+fi
 [ -n "$PLATFORM" ] || die "no hay ninguna plataforma en $ANDROID_HOME/platforms"
 
 AAPT2="$BUILD_TOOLS/aapt2"
@@ -112,7 +128,7 @@ for tool in javac keytool zip unzip; do
 done
 [ -f "$PLATFORM/android.jar" ] || die "no encuentro $PLATFORM/android.jar"
 
-say "SDK:         $PLATFORM"
+say "SDK:         $(basename "$PLATFORM")"
 say "build-tools: $(basename "$BUILD_TOOLS")"
 say "minSdk:      $MIN_SDK · targetSdk: $TARGET_SDK"
 

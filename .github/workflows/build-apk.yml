@@ -80,7 +80,11 @@ jobs:
             exit 1
           fi
           yes | "$SM" --licenses > /dev/null 2>&1 || true
-          "$SM" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          # Se instala la plataforma del targetSdk (33) para compilar
+          # siempre contra la misma: la imagen del runner trae betas
+          # (android-37.2-beta3) y no queremos que el APK dependa de cuál
+          # toque ese día.
+          "$SM" "platforms;android-33" "build-tools;34.0.0" > /dev/null
 
       - name: Compilar
         run: |

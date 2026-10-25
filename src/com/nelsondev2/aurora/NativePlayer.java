@@ -50,11 +50,21 @@ final class NativePlayer {
         void onEnded(String trackId);
     }
 
+    /**
+     * El relevo ya sonó: MediaPlayer pasó solo a la pista preparada. Son
+     * dos avisos distintos (una pista que acaba y una que empieza sola),
+     * así que son dos interfaces: con una sola no había manera de
+     * suscribirse al cambio de pista.
+     */
+    interface OnTrackChangedListener {
+        void onTrackChanged(String trackId);
+    }
+
     private OnEndedListener endedListener;
-    private OnEndedListener changedListener;
+    private OnTrackChangedListener changedListener;
 
     /** El relevo ya sonó: la cola nativa mueve su cursor. */
-    void setOnTrackChangedListener(OnEndedListener listener) {
+    void setOnTrackChangedListener(OnTrackChangedListener listener) {
         this.changedListener = listener;
     }
 

@@ -160,7 +160,7 @@ class DeviceLibraryBridge {
                 if (cursor.moveToPosition(start)) {
                     do {
                         JSONObject item = read(cursor);
-                        if (item != null) items.add(item);
+                        if (item != null) items.put(item);
                     } while (items.length() < size && cursor.moveToNext());
                 }
             }

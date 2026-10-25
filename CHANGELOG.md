@@ -4,6 +4,13 @@ Historial de versiones **publicadas** de Aurora Music Player.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 
+- **La compilación en CI está comprobada de verdad**: el primer intento
+  falló con cuatro errores de `javac` que aquí no se veían (dos métodos
+  `isPlaying()`, un aviso de relevo con el método equivocado, `JSONArray.add`
+  y un `Uri` sin importar). Ya están arreglados, se compila contra la
+  plataforma del `targetSdk` (no contra la beta que traiga el runner) y
+  `tools/check.py` ahora caza las dos familias: métodos duplicados en una
+  clase y clases conocidas usadas sin importar.
 - **La música del móvil, sin copiarla** (`DeviceLibraryBridge.java` +
   `js/device-library.js`): «Buscar música en el móvil» lee la biblioteca
   del teléfono por MediaStore y guarda solo la ficha y el `content://`

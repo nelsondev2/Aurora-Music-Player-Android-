@@ -2,6 +2,7 @@ package com.nelsondev2.aurora;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;

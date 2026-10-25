@@ -235,7 +235,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         // Si el reproductor nativo está sonando, la música NO depende del
         // WebView: se deja el servicio (y su notificación) en pie.
-        if (NativePlayerBridge.isPlaying()) {
+        if (NativePlayerBridge.isCurrentlyPlaying()) {
             WebApp.detach();
             if (webView != null) {
                 webView.removeJavascriptInterface("AuroraAndroid");

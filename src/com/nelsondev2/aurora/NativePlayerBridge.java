@@ -50,7 +50,8 @@ class NativePlayerBridge {
         return queue;
     }
 
-    static synchronized boolean isPlaying() {
+    /** Para el lado Java (MainActivity, servicio): ¿suena algo ahora? */
+    static synchronized boolean isCurrentlyPlaying() {
         return player != null && player.isPlaying();
     }
 

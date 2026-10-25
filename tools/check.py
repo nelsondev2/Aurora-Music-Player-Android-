@@ -9,6 +9,8 @@ Verifica, sin dependencias externas:
   · que el XML está bien formado,
   · que todo lo que carga index.html existe y ningún script sobra,
   · que los recursos R.* usados en Java existen,
+  · que ningún archivo declara dos métodos iguales ni usa una clase
+    conocida sin importarla (lo que javac rechaza y aquí no se ve),
   · que los puentes Java ↔ JS (compartir y reproducción) casan,
   · que las claves de traducción usadas existen en data.js,
   · que no ha vuelto a colarse nada de la etapa WebXDC/Delta Chat.
@@ -168,6 +170,89 @@ def check_java_resources():
               % (len(strings), len(colors), len(drawables)))
 
 
+# ------------------------------------------------------------- forma del Java
+# Lo que javac caza y un análisis de sintaxis no: dos métodos con la misma
+# firma en la misma clase, o usar una clase sin importarla. Las dos cosas
+# rompieron la compilación real (isPlaying() duplicado y Uri sin import).
+IMPORTANTES = {
+    "Uri": "android.net.Uri",
+    "Intent": "android.content.Intent",
+    "Context": "android.content.Context",
+    "Cursor": "android.database.Cursor",
+    "Bitmap": "android.graphics.Bitmap",
+    "BitmapFactory": "android.graphics.BitmapFactory",
+    "JSONObject": "org.json.JSONObject",
+    "JSONArray": "org.json.JSONArray",
+    "Base64": "android.util.Base64",
+    "Log": "android.util.Log",
+    "Build": "android.os.Build",
+    "Handler": "android.os.Handler",
+    "Looper": "android.os.Looper",
+    "MediaPlayer": "android.media.MediaPlayer",
+    "MediaMetadataRetriever": "android.media.MediaMetadataRetriever",
+    "MediaStore": "android.provider.MediaStore",
+    "Notification": "android.app.Notification",
+    "NotificationChannel": "android.app.NotificationChannel",
+    "PendingIntent": "android.app.PendingIntent",
+    "MediaSession": "android.media.session.MediaSession",
+    "ContentUris": "android.content.ContentUris",
+    "AudioManager": "android.media.AudioManager",
+    "PowerManager": "android.os.PowerManager",
+    "ComponentName": "android.content.ComponentName",
+}
+
+
+def check_java_shapes():
+    """Dos cosas que javac rechaza y que aquí se pueden ver sin compilar."""
+    fuentes = sorted(glob.glob(os.path.join(SRC, "*.java")))
+    metodos = 0
+    for path in fuentes:
+        code = read(path)
+        base = os.path.basename(path)
+        lineas = code.splitlines()
+
+        # Métodos declarados al primer nivel de la clase (4 espacios):
+        # mismo nombre y mismos parámetros dos veces = no compila.
+        vistos = {}
+        for num, linea in enumerate(lineas, 1):
+            # Exactamente 4 espacios: los métodos de las clases anónimas
+            # van más adentro y no compiten con los de la clase.
+            m = re.match(r"^ {4}(?! )(?:@\w+\s+)?(?:(?:public|private|protected|static|final|"
+                         r"synchronized|native|abstract)\s+)*[\w<>\[\]., ?]+\s+"
+                         r"(\w+)\s*\(([^)]*)\)\s*(?:throws [\w., ]+)?\{", linea)
+            if not m:
+                continue
+            nombre = m.group(1)
+            if nombre in ("if", "for", "while", "switch", "catch", "synchronized"):
+                continue
+            tipos = []
+            for param in m.group(2).split(","):
+                param = param.strip()
+                if not param:
+                    continue
+                partes = param.replace("final ", "").split()
+                tipos.append(partes[-1].split("[")[0] if partes else "")
+            firma = nombre + "(" + ",".join(tipos) + ")"
+            metodos += 1
+            if firma in vistos:
+                fail("%s declara %s dos veces (líneas %d y %d)"
+                     % (base, firma, vistos[firma], num))
+            else:
+                vistos[firma] = num
+
+        # Clases conocidas usadas sin importar (y que no son de este paquete).
+        imports = set(re.findall(r"^import\s+([\w.]+);", code, re.M))
+        propias = set(re.findall(r"\b(?:class|interface|enum)\s+(\w+)", code))
+        for simbolo, completo in IMPORTANTES.items():
+            if simbolo in propias or completo in imports:
+                continue
+            if re.search(r"(?<![\w.\"'])" + simbolo + r"\s*\.", code):
+                fail("%s usa %s. pero no importa %s" % (base, simbolo, completo))
+
+    ok.append("%d archivos Java sin métodos duplicados ni clases sin importar (%d métodos)"
+              % (len(fuentes), metodos))
+
+
 # -------------------------------------------------------------------- puente
 def check_bridge():
     """Los métodos @JavascriptInterface y los que llama platform.js deben casar."""
@@ -287,6 +372,7 @@ def main():
     check_xml()
     check_assets()
     check_java_resources()
+    check_java_shapes()
     check_bridge()
     check_i18n()
     check_no_webxdc()
