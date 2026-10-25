@@ -259,8 +259,28 @@ def check_no_webxdc():
         ok.append("sin rastro de WebXDC/Delta Chat")
 
 
+# --------------------------------------------------------------------- ci
+def check_ci():
+    """El workflow de compilación y el script tienen que seguir casando."""
+    script = os.path.join(ROOT, "tools", "build-apk.sh")
+    workflow = os.path.join(ROOT, ".github", "workflows", "build-apk.yml")
+    if not os.path.isfile(workflow):
+        warn("no hay workflow de compilación (.github/workflows/build-apk.yml)")
+        return
+    if not os.access(script, os.X_OK):
+        fail("tools/build-apk.sh no es ejecutable (chmod +x)")
+    texto = read(workflow)
+    if "tools/build-apk.sh" not in texto:
+        fail("el workflow no llama a tools/build-apk.sh")
+    for bandera in ("--min-sdk", "--out"):
+        if bandera not in texto:
+            fail("el workflow no pasa %s al script" % bandera)
+    ok.append("workflow de compilación enlazado con tools/build-apk.sh")
+
+
 def main():
     check_android_project()
+    check_ci()
     check_xml()
     check_assets()
     check_java_resources()

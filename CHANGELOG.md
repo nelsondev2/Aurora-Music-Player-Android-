@@ -4,6 +4,15 @@ Historial de versiones **publicadas** de Aurora Music Player.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 
+- **Compilación en CI sin Gradle**: `tools/build-apk.sh` hace con las
+  herramientas del SDK (`aapt2`, `javac`, `d8`, `zipalign`, `apksigner`)
+  lo que hace AIDE, y `.github/workflows/build-apk.yml` compila una APK
+  por tramo de Android (minSdk 21 / 26 / 33) y las publica como
+  artefactos firmados para probar. Un job extra abre la APK universal y
+  verifica manifiesto, DEX, app web, densidades y que no haya código
+  nativo: como no lo hay, una sola APK vale para todas las arquitecturas.
+
+
 - **El audio lo pone Android** (`NativePlayer.java`, sobre `MediaPlayer`):
   la música sigue sonando aunque el WebView desaparezca, y la pista
   siguiente se prepara por adelantado con `setNextMediaPlayer`, así que

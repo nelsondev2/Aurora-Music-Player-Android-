@@ -74,6 +74,43 @@ Requisitos: AIDE 3.x o superior con un SDK de compilación 26 o mayor
 almacenamiento (los archivos se eligen con el selector del sistema,
 que concede cada archivo concreto).
 
+### Compilar sin AIDE (CI o portátil)
+
+`tools/build-apk.sh` hace lo mismo que AIDE pero desde la línea de
+comandos: `aapt2 → javac → d8 → zipalign → apksigner`, sin Gradle ni
+dependencias que descargar.
+
+```bash
+tools/build-apk.sh                      # build/aurora-minSdk21.apk
+tools/build-apk.sh --min-sdk 26         # variante para Android 8+
+tools/build-apk.sh --out /tmp/a.apk --unsigned
+```
+
+Necesita `ANDROID_HOME` con build-tools y una plataforma, y un JDK.
+
+**Sobre las arquitecturas:** la app no lleva código nativo (ni `.so`, ni
+NDK, ni jniLibs), así que **una sola APK sirve para arm64-v8a,
+armeabi-v7a, x86 y x86_64**: el WebView, el MediaPlayer y el resto los
+pone el sistema. Por eso el workflow `.github/workflows/build-apk.yml`
+compila por **tramos de Android**, que es lo que sí cambia de un móvil a
+otro, y deja tres artefactos firmados listos para instalar:
+
+| Artefacto | Sirve para |
+|---|---|
+| `aurora-minSdk21` | todo móvil con Android 5.0+ (cualquier ABI) |
+| `aurora-minSdk26` | Android 8.0+ |
+| `aurora-minSdk33` | Android 13+ |
+
+Un segundo job (`Cobertura de la APK`) abre la APK universal y comprueba
+lo que de verdad importa: que están el manifiesto, `resources.arsc`,
+`classes.dex` y la app web; que no aparece ninguna librería nativa (si
+algún día aparece, el job falla y avisa de que habría que repartir por
+ABI); y qué densidades de pantalla lleva dentro.
+
+Para probar en el móvil: pestaña **Actions → Compilar APK →** el run
+más reciente **→ Artifacts**, descarga el zip del tramo que
+corresponda a tu Android, descomprime e instala el `.apk`.
+
 ### Probar la parte web en el ordenador
 
 La app entera vive en `assets/www` y funciona en cualquier navegador
@@ -250,4 +287,6 @@ En los [*issues* de GitHub](https://github.com/nelsondev2/Aurora-Music-Player-An
 | `src/` | Código Java de la app Android |
 | `res/` | Recursos de Android (iconos, tema, textos) |
 | `tools/serve.py`, `tools/check.py` | Desarrollo en local y verificación |
+| `tools/build-apk.sh` | Compila el APK sin Gradle (SDK + JDK) |
+| `.github/workflows/` | Comprobaciones y compilación del APK en CI |
 | `README.md`, `LICENSE`, `CHANGELOG.md` | Documentación, licencia e historial |
