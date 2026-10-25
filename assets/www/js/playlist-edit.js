@@ -562,7 +562,9 @@ Object.assign(App, {
       });
       const existing = new Map();
       this._pickDeviceItems.forEach(it => {
-        const key = (it.fileName && !it.deviceId) ? this._dupKey(it.fileName, it.size || 0) : null;
+        // Por id de MediaStore y, si no, por nombre + tamaño: una canción
+        // importada antes copiando el archivo no debe entrar dos veces.
+        const key = it.fileName ? this._dupKey(it.fileName, it.size || 0) : null;
         const t = byDevice.get(String(it.id)) || (key ? byKey.get(key) : null);
         if (t) existing.set(String(it.id), t);
       });
