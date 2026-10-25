@@ -100,6 +100,7 @@ src/com/nelsondev2/aurora/
     NativePlayer.java            MediaPlayer con relevo preparado (gapless)
     NativePlayerBridge.java      puente JS ↔ Android del motor nativo
     NativeAudioStore.java        caché de audio en archivos, para MediaPlayer
+    PlayQueue.java               ventana de la cola para cuando no hay página
     AuroraMediaBridge.java       puente JS ↔ Android del estado de reproducción
     WebApp.java                  comandos del sistema hacia el WebView
     ShareProvider.java           content:// de solo lectura para compartir
@@ -154,6 +155,21 @@ un gesto. En Android 13+ la primera reproducción pide permiso para
 mostrar notificaciones; si se niega, la música suena igual, sin controles
 en la cortina.
 
+### La cola también, sin la app abierta
+
+La cola de verdad vive en la web (aleatorio, repetir, listas que se
+reordenan solas), pero Java guarda una **ventana** de ella —la pista
+actual y las diez siguientes, con título, artista, álbum y duración— en
+`PlayQueue.java`. La web la empuja cada vez que cambia, deduplicada, así
+que no cuesta nada mantenerla al día.
+
+Gracias a esa ventana, con la app cerrada siguen funcionando «siguiente»,
+«anterior», el avance automático al terminar una canción y la
+notificación con la carátula correcta (se guardan las últimas ocho
+portadas vistas). Si la ventana se agota, la reproducción se detiene: es
+preferible a que suene algo que no toca. Al volver a la app, la web manda
+otra vez y todo recupera su sitio.
+
 ## Motor de audio: sistema o app
 
 La app sabe reproducir de dos maneras y se elige en **Ajustes → Motor de
@@ -189,10 +205,10 @@ letras y la interfaz no saben —ni necesitan saber— cuál está sonando.
 
 Dichas en voz alta, para que nadie se lleve una sorpresa:
 
-- **La cola sigue viviendo en la web.** Con el motor del sistema la
-  música aguanta que el WebView desaparezca, pero «siguiente/anterior» y
-  el resto de la lógica de la cola necesitan la página: sin WebView solo
-  quedan play/pausa desde la notificación.
+- **Sin página, la cola es una copia congelada.** Java reproduce las
+  siguientes diez pistas tal como estaban al cerrar la app; si se acaban,
+  la música se detiene. Reordenar, cambiar de lista o activar aleatorio
+  necesita la app abierta.
 - **El motor del sistema no tiene ecualizador ni visualizador.** Son
   Web Audio; para tenerlos hay que elegir el motor de la app en Ajustes.
 - **La caché del motor nativo ocupa disco aparte.** Duplica el audio que

@@ -19,6 +19,9 @@ import android.os.PowerManager;
 import android.util.Base64;
 import android.util.Log;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
  * Reproducción en segundo plano: servicio en primer plano + MediaSession.
  *
@@ -64,6 +67,16 @@ public class PlaybackService extends Service {
 
     private static PlaybackService live;
 
+    /** Carátulas vistas, por pista: al avanzar sin página hay que tener algo
+     *  que enseñar en la notificación. Ocho es de sobra y no pesa. */
+    private static final Map<String, Bitmap> artworkCache =
+            new LinkedHashMap<String, Bitmap>(8, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Bitmap> eldest) {
+                    return size() > 8;
+                }
+            };
+
     private MediaSession session;
     private AudioManager audioManager;
     private PowerManager.WakeLock wakeLock;
@@ -95,9 +108,14 @@ public class PlaybackService extends Service {
     }
 
     /** dataUrl «data:image/...;base64,XYZ» del álbum, ya recortada en la web. */
-    static void artwork(String dataUrl) {
+    static void artwork(String trackId, String dataUrl) {
         Bitmap bitmap = decodeArtwork(dataUrl);
         if (bitmap == null) return;
+        if (trackId != null && trackId.length() > 0) {
+            synchronized (artworkCache) {
+                artworkCache.put(trackId, bitmap);
+            }
+        }
         sArtwork = bitmap;
         PlaybackService service = live;
         if (service != null) service.applyState();
@@ -157,6 +175,21 @@ public class PlaybackService extends Service {
         }
         createChannel();
         createSession();
+        // Con la página cerrada, el final de una canción lo resuelve la
+        // copia de la cola que mantiene Java.
+        NativePlayer player = NativePlayerBridge.get(this);
+        player.setOnEndedListener(new NativePlayer.OnEndedListener() {
+            @Override
+            public void onEnded(String trackId) {
+                onTrackEnded();
+            }
+        });
+        player.setOnTrackChangedListener(new NativePlayer.OnEndedListener() {
+            @Override
+            public void onEnded(String trackId) {
+                onNativeTrackChanged(trackId);
+            }
+        });
         // Hay que entrar en primer plano en los primeros segundos de vida
         // del servicio o Android lo mata.
         startForeground(NOTIFICATION_ID, buildNotification());
@@ -181,9 +214,13 @@ public class PlaybackService extends Service {
                 NativePlayerBridge.pauseIfPlaying();
                 WebApp.mediaCommand("pause");
             } else if (ACTION_NEXT.equals(action)) {
-                WebApp.mediaCommand("next");
+                // Con página manda la web (sabe de aleatorio y listas);
+                // sin página, la cola nativa.
+                if (WebApp.attached()) WebApp.mediaCommand("next");
+                else stepQueue(true);
             } else if (ACTION_PREV.equals(action)) {
-                WebApp.mediaCommand("prev");
+                if (WebApp.attached()) WebApp.mediaCommand("prev");
+                else stepQueue(false);
             }
         }
         return START_NOT_STICKY; // sin WebView no hay nada que reanudar
@@ -217,6 +254,74 @@ public class PlaybackService extends Service {
         // mandar comandos.
         if (!sPlaying) stopSelf();
         super.onTaskRemoved(rootIntent);
+    }
+
+    // --------------------------------------------------------- cola nativa
+
+    /** Fin de pista sin página: ¿queda algo en la cola? Pues suena. */
+    private void onTrackEnded() {
+        if (WebApp.attached()) return; // la web ya se encarga (y avisará)
+        stepQueue(true);
+    }
+
+    /** Relevo gapless: la cola mueve su cursor y la notificación se entera. */
+    private void onNativeTrackChanged(String trackId) {
+        PlayQueue queue = NativePlayerBridge.queue();
+        if (trackId != null) queue.moveTo(trackId);
+        if (WebApp.attached()) return; // la web actualizará todo al volver
+        PlayQueue.Entry entry = queue.current();
+        if (entry == null) return;
+        sTitle = entry.title;
+        sArtist = entry.artist;
+        sAlbum = entry.album;
+        sDurationMs = entry.durationMs;
+        sPositionMs = 0;
+        keepOrReplaceArtwork(entry.id);
+        applyState();
+    }
+
+    /** Siguiente o anterior pedidos desde el sistema con la página cerrada. */
+    private void stepQueue(boolean forward) {
+        PlayQueue queue = NativePlayerBridge.queue();
+        PlayQueue.Entry entry = forward ? queue.next() : queue.previous();
+        if (entry == null) return;
+        playEntry(entry);
+    }
+
+    /** Reproduce una entrada de la cola nativa y deja lista la siguiente. */
+    private void playEntry(PlayQueue.Entry entry) {
+        if (entry == null) return;
+        PlayQueue queue = NativePlayerBridge.queue();
+        queue.moveTo(entry.id);
+
+        sTitle = entry.title;
+        sArtist = entry.artist;
+        sAlbum = entry.album;
+        sDurationMs = entry.durationMs;
+        sPositionMs = 0;
+        sPlaying = true;
+        keepOrReplaceArtwork(entry.id);
+        applyState();
+
+        NativePlayer player = NativePlayerBridge.get(this);
+        player.play(entry.id, 0);
+
+        // Si la siguiente ya está en la caché, que MediaPlayer la prepare:
+        // así el relevo no tiene hueco aunque no haya página que lo pida.
+        PlayQueue.Entry following = queue.next();
+        if (following != null && player.hasTrack(following.id)) {
+            player.prepareNext(following.id);
+        }
+    }
+
+    private void keepOrReplaceArtwork(String trackId) {
+        Bitmap cached = null;
+        if (trackId != null) {
+            synchronized (artworkCache) {
+                cached = artworkCache.get(trackId);
+            }
+        }
+        sArtwork = cached;
     }
 
     // -------------------------------------------------------------- sesión

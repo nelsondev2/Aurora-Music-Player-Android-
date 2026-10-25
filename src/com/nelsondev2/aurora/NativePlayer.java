@@ -42,6 +42,23 @@ final class NativePlayer {
     private boolean released;
     private float volume = 1f;
 
+    /** Quien quiera reaccionar al final de una pista sin relevo preparado. */
+    interface OnEndedListener {
+        void onEnded(String trackId);
+    }
+
+    private OnEndedListener endedListener;
+    private OnEndedListener changedListener;
+
+    /** El relevo ya sonó: la cola nativa mueve su cursor. */
+    void setOnTrackChangedListener(OnEndedListener listener) {
+        this.changedListener = listener;
+    }
+
+    void setOnEndedListener(OnEndedListener listener) {
+        this.endedListener = listener;
+    }
+
     private final Runnable ticker = new Runnable() {
         @Override
         public void run() {
@@ -336,12 +353,26 @@ final class NativePlayer {
                         put(event, "duration", duration());
                         emit(event);
                         if (wantPlay) startPlayer(incoming);
+                        if (changedListener != null) {
+                            try {
+                                changedListener.onTrackChanged(incomingId);
+                            } catch (Exception e) {
+                                Log.w(TAG, "onTrackChanged: " + e);
+                            }
+                        }
                         return;
                     }
                     handler.removeCallbacks(ticker);
                     JSONObject event = new JSONObject();
                     put(event, "event", "ended");
                     emit(event);
+                    if (endedListener != null) {
+                        try {
+                            endedListener.onEnded(currentId);
+                        } catch (Exception e) {
+                            Log.w(TAG, "onEnded: " + e);
+                        }
+                    }
                 }
             };
 

@@ -1,6 +1,6 @@
 package com.nelsondev2.aurora;
 
-import android.app.Activity;
+import android.content.Context;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 
@@ -20,16 +20,18 @@ class NativePlayerBridge {
     private static final String TAG = "AuroraNativeBridge";
 
     private static NativePlayer player;
+    /** Cola mínima para cuando no hay página (la web la mantiene al día). */
+    private static final PlayQueue queue = new PlayQueue();
 
-    private final Activity activity;
+    private final Context context;
 
-    NativePlayerBridge(Activity activity) {
-        this.activity = activity;
+    NativePlayerBridge(Context context) {
+        this.context = context;
     }
 
-    /** Instancia perezosa: el MediaPlayer no se crea hasta que hace falta. */
-    static synchronized NativePlayer get(Activity activity) {
-        if (player == null) player = new NativePlayer(activity);
+    /** Instancia perezosa y única: el MediaPlayer no se crea hasta que hace falta. */
+    static synchronized NativePlayer get(Context context) {
+        if (player == null) player = new NativePlayer(context);
         return player;
     }
 
@@ -44,6 +46,10 @@ class NativePlayerBridge {
         }
     }
 
+    static PlayQueue queue() {
+        return queue;
+    }
+
     static synchronized boolean isPlaying() {
         return player != null && player.isPlaying();
     }
@@ -53,7 +59,7 @@ class NativePlayerBridge {
     }
 
     private NativePlayer player() {
-        return get(activity);
+        return get(context);
     }
 
     // -------------------------------------------------- subida de la pista
@@ -103,6 +109,21 @@ class NativePlayerBridge {
             if (player != null) player.forget(trackId);
             return true;
         } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Ventana de la cola: la pista actual y las siguientes, con los datos
+     * que la notificación necesita. La web la empuja cada vez que cambia.
+     */
+    @JavascriptInterface
+    public boolean queueSet(String json, int currentIndex) {
+        try {
+            queue.set(json, currentIndex);
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "queueSet: " + e);
             return false;
         }
     }

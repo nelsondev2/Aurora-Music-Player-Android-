@@ -24,6 +24,12 @@ Historial de versiones **publicadas** de Aurora Music Player.
   vuelve al motor del WebView.
 - La notificación, el foco de audio y el botón de auriculares también
   pausan el motor nativo, aunque la página ya no exista.
+- **La cola sigue funcionando con la app cerrada**: la web empuja a
+  `PlayQueue.java` una ventana de la pista actual y las diez siguientes
+  (título, artista, álbum, duración), deduplicada. Con eso «siguiente»,
+  «anterior», el avance automático al terminar y la carátula de la
+  notificación (últimas ocho portadas en memoria) siguen vivos sin
+  página. Si la ventana se agota, la reproducción se detiene.
 
 ## Sin publicar — 1.3.0 · Aurora se hace app de Android
 

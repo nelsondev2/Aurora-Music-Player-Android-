@@ -777,6 +777,9 @@ Object.assign(App, {
     },
 
     renderQueue() {
+      // La cola nativa se mantiene al día también cuando cambia sin que
+      // cambie lo que suena (reordenar, aleatorio, lista sincronizada).
+      if (typeof this.syncNativeQueue === 'function') this.syncNativeQueue();
       const ul = document.getElementById('queueList');
       if (!ul) return;
       ul.innerHTML = '';

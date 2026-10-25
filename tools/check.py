@@ -62,6 +62,7 @@ def check_android_project():
         "src/com/nelsondev2/aurora/NativePlayer.java",
         "src/com/nelsondev2/aurora/NativePlayerBridge.java",
         "src/com/nelsondev2/aurora/NativeAudioStore.java",
+        "src/com/nelsondev2/aurora/PlayQueue.java",
         "src/com/nelsondev2/aurora/PlaybackService.java",
         "src/com/nelsondev2/aurora/WebApp.java",
         "src/com/nelsondev2/aurora/ShareProvider.java",

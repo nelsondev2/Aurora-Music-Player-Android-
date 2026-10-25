@@ -170,6 +170,7 @@ Object.assign(App, {
         this._nativeMediaArtId = null;
         try { M.mediaStop(); } catch (e) {}
       }
+      if (typeof this.syncNativeQueue === 'function') this.syncNativeQueue();
       return;
     }
 
@@ -190,6 +191,7 @@ Object.assign(App, {
       playing ? 1 : 0, Math.round(dur * 1000), Math.round(pos * 1000)].join('\u0001');
     if (sig !== this._nativeMediaSig) {
       this._nativeMediaSig = sig;
+      if (typeof this.syncNativeQueue === 'function') this.syncNativeQueue();
       try {
         M.mediaUpdate(t.title || '', t.artist || '', t.album || '',
           playing, Math.round(dur * 1000), Math.round(pos * 1000));
@@ -206,11 +208,78 @@ Object.assign(App, {
           ? this._renderArtwork(t, 512) : '';
       } catch (e) { art = ''; }
       if (art && art.indexOf('data:image/') === 0 && art.length < 2500000) {
-        try { M.mediaArtwork(art); } catch (e) {}
+        try { M.mediaArtwork(t.id, art); } catch (e) {}
       } else {
         try { M.mediaClearArtwork(); } catch (e) {}
       }
     }
+  }
+});
+
+/* =====================================================================
+ *  Cola nativa (Android)
+ *  Con la app cerrada, Java no puede preguntar qué viene después: se le
+ *  deja una ventana de la cola con lo justo para la notificación (título,
+ *  artista, álbum, duración). Este empuje va deduplicado y solo manda
+ *  una ventana corta, no la cola entera.
+ * ===================================================================== */
+
+Object.assign(App, {
+  /* Cuántas pistas por delante viajan a Java. Diez cubren de sobra una
+   * sesión con la pantalla apagada; si se acaban, la reproducción se
+   * detiene con la última, que es mejor que sonar «otra cosa». */
+  NATIVE_QUEUE_WINDOW: 10,
+
+  _nativeQueueSig: null,
+
+  /* Empuja a Android la pista actual y las siguientes. */
+  syncNativeQueue() {
+    const N = window.AuroraNativePlayer;
+    if (!N || typeof N.queueSet !== 'function') return;
+    if (!Array.isArray(this.queue) || !this.queue.length) {
+      if (this._nativeQueueSig !== '') {
+        this._nativeQueueSig = '';
+        try { N.queueSet('', -1); } catch (e) {}
+      }
+      return;
+    }
+
+    const byId = this.trackMap ? this.trackMap() : null;
+    const find = (id) => {
+      if (byId && byId.get) {
+        const t = byId.get(id);
+        if (t) return t;
+      }
+      return this.tracks.find(t => t.id === id) || null;
+    };
+
+    // La ventana empieza en la pista actual: Java solo necesita saber qué
+    // poner después, no revisar la cola entera.
+    let start = Math.max(0, Math.min(this.queueIdx, this.queue.length - 1));
+    const curId = this.currentTrack ? this.currentTrack.id : this.queue[start];
+    const pos = this.queue.indexOf(curId);
+    if (pos >= 0) start = pos;
+
+    const slice = this.queue.slice(start, start + this.NATIVE_QUEUE_WINDOW);
+    const tracks = [];
+    for (const id of slice) {
+      const t = find(id);
+      if (!t) continue;
+      tracks.push({
+        id: t.id,
+        title: t.title || '',
+        artist: t.artist || '',
+        album: t.album || '',
+        duration: Math.round((t.duration || 0) * 1000)
+      });
+    }
+    if (!tracks.length) return;
+
+    const payload = JSON.stringify({ repeat: this.repeat || 'off', tracks: tracks });
+    const sig = (this.repeat || 'off') + '\u0001' + tracks.map(t => t.id).join(',') + '\u0001' + tracks[0].id;
+    if (sig === this._nativeQueueSig) return;
+    this._nativeQueueSig = sig;
+    try { N.queueSet(payload, 0); } catch (e) {}
   }
 });
 

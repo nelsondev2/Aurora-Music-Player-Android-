@@ -46,10 +46,10 @@ class AuroraMediaBridge {
                 Math.round(durationMs), Math.round(positionMs));
     }
 
-    /** Carátula como data URL (data:image/jpeg;base64,…). */
+    /** Carátula como data URL (data:image/jpeg;base64,…) y su pista. */
     @JavascriptInterface
-    public void mediaArtwork(String dataUrl) {
-        PlaybackService.artwork(dataUrl);
+    public void mediaArtwork(String trackId, String dataUrl) {
+        PlaybackService.artwork(trackId, dataUrl);
     }
 
     @JavascriptInterface
