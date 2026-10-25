@@ -3596,6 +3596,125 @@ const I18N = {
     'zh-TW': '已下載'
   },
   /* ---- Añadir pistas a una lista (selección múltiple) ---- */
+  pick_src_library: {
+    es: 'Biblioteca',
+    en: 'Library',
+    pt: 'Biblioteca',
+    zh: '资料库',
+    ja: 'ライブラリ',
+    fr: 'Bibliothèque',
+    it: 'Libreria',
+    ru: 'Библиотека',
+    de: 'Bibliothek',
+    uk: 'Бібліотека',
+    pl: 'Biblioteka',
+    tr: 'Kitaplık',
+    id: 'Pustaka',
+    'zh-TW': '資料庫'
+  },
+
+  pick_src_device: {
+    es: 'Del móvil',
+    en: 'On this phone',
+    pt: 'Do telemóvel',
+    zh: '手机中的音乐',
+    ja: '端末内',
+    fr: 'Sur le téléphone',
+    it: 'Sul telefono',
+    ru: 'На телефоне',
+    de: 'Auf dem Handy',
+    uk: 'На телефоні',
+    pl: 'W telefonie',
+    tr: 'Telefonda',
+    id: 'Di ponsel',
+    'zh-TW': '手機中的音樂'
+  },
+
+  pick_upload_files: {
+    es: 'Subir archivos del móvil…',
+    en: 'Upload files from the phone…',
+    pt: 'Carregar ficheiros do telemóvel…',
+    zh: '从手机上传文件…',
+    ja: '端末からファイルを追加…',
+    fr: 'Importer des fichiers du téléphone…',
+    it: 'Carica file dal telefono…',
+    ru: 'Загрузить файлы с телефона…',
+    de: 'Dateien vom Handy hinzufügen…',
+    uk: 'Завантажити файли з телефона…',
+    pl: 'Dodaj pliki z telefonu…',
+    tr: 'Telefondan dosya ekle…',
+    id: 'Unggah berkas dari ponsel…',
+    'zh-TW': '從手機上傳檔案…'
+  },
+
+  pick_available_device: {
+    es: 'X canciones del móvil para añadir',
+    en: 'X songs on this phone to add',
+    pt: 'X canções do telemóvel para adicionar',
+    zh: '手机中有 X 首可添加',
+    ja: '端末内に追加できる曲：X',
+    fr: 'X titres sur le téléphone à ajouter',
+    it: 'X brani sul telefono da aggiungere',
+    ru: 'На телефоне доступно треков: X',
+    de: 'X Titel auf dem Handy verfügbar',
+    uk: 'На телефоні доступно треків: X',
+    pl: 'W telefonie dostępnych utworów: X',
+    tr: 'Telefonda eklenebilir X parça',
+    id: 'X lagu di ponsel untuk ditambahkan',
+    'zh-TW': '手機中有 X 首可新增'
+  },
+
+  pick_device_new: {
+    es: 'se añadirá',
+    en: 'will be added',
+    pt: 'será adicionada',
+    zh: '将添加',
+    ja: '追加されます',
+    fr: 'sera ajouté',
+    it: 'verrà aggiunto',
+    ru: 'будет добавлено',
+    de: 'wird hinzugefügt',
+    uk: 'буде додано',
+    pl: 'zostanie dodane',
+    tr: 'eklenecek',
+    id: 'akan ditambahkan',
+    'zh-TW': '將新增'
+  },
+
+  toast_import_queued: {
+    es: 'X archivos en cola: se añadirán al terminar la importación actual',
+    en: 'X files queued: they will be added when the current import finishes',
+    pt: 'X ficheiros em fila: serão adicionados no fim da importação atual',
+    zh: 'X 个文件已排队，当前导入结束后会添加',
+    ja: 'X 件を予約しました。現在の取り込みが終わると追加します',
+    fr: 'X fichiers en attente : ils seront ajoutés à la fin de l\'importation en cours',
+    it: 'X file in coda: verranno aggiunti al termine dell\'importazione attuale',
+    ru: 'Файлов в очереди: X. Будут добавлены после текущего импорта',
+    de: 'X Dateien vorgemerkt: sie werden nach dem laufenden Import hinzugefügt',
+    uk: 'Файлів у черзі: X. Будуть додані після поточного імпорту',
+    pl: 'W kolejce plików: X. Zostaną dodane po zakończeniu bieżącego importu',
+    tr: 'X dosya sıraya alındı: mevcut içe aktarma bitince eklenecek',
+    id: 'X berkas dalam antrean: ditambahkan setelah impor saat ini selesai',
+    'zh-TW': 'X 個檔案已排隊，目前匯入結束後會新增'
+  },
+
+  settings_webview: {
+    es: 'WebView',
+    en: 'WebView',
+    pt: 'WebView',
+    zh: 'WebView',
+    ja: 'WebView',
+    fr: 'WebView',
+    it: 'WebView',
+    ru: 'WebView',
+    de: 'WebView',
+    uk: 'WebView',
+    pl: 'WebView',
+    tr: 'WebView',
+    id: 'WebView',
+    'zh-TW': 'WebView'
+  },
+
   add_tracks_btn: {
     es: 'Añadir pistas', en: 'Add tracks', pt: 'Adicionar faixas',
     zh: '添加曲目', ja: '曲を追加', fr: 'Ajouter des titres',

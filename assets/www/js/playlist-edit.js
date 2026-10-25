@@ -483,6 +483,11 @@ Object.assign(App, {
   /* Ids marcados en la hoja (Set de cadenas). */
   _pickIds: null,
   _pickQuery: '',
+  /* 'library' (lo que ya está en la app) o 'device' (MediaStore). */
+  _pickSource: 'library',
+  _pickDeviceItems: null,   // fichas de MediaStore del último escaneo
+  _pickDeviceExisting: null, // id de MediaStore → pista que ya está
+  _pickDeviceLoading: false,
 
   openAddTracksPicker(playlistId) {
     const id = playlistId || this._editingPlaylistId;
@@ -492,31 +497,150 @@ Object.assign(App, {
     this._pickIds = new Set();
     this._pickItems = [];
     this._pickQuery = '';
+    this._pickSource = 'library';
     const input = document.getElementById('pickSearch');
     if (input) input.value = '';
+    const srcs = document.getElementById('pickSources');
+    if (srcs) srcs.style.display = this.canScanDevice() ? '' : 'none';
+    this._updatePickSourceButtons();
     this.renderPickTracks();
     this.openSheet('sheetPickTracks');
   },
 
-  /* Pistas que aún no están en la lista, filtradas por el buscador. */
+  /* Cambia entre «Biblioteca» y «Del móvil». */
+  setPickSource(src) {
+    const next = src === 'device' ? 'device' : 'library';
+    if (next === this._pickSource) return;
+    this._pickSource = next;
+    //  Lo marcado pertenece a la fuente anterior: se empieza de cero (si
+    //  no, el pie diría «Añadir 7» mezclando dos listas distintas).
+    this._pickIds = new Set();
+    this._pickQuery = '';
+    const input = document.getElementById('pickSearch');
+    if (input) input.value = '';
+    this._updatePickSourceButtons();
+    if (next === 'device') {
+      this.loadPickDevice();
+      return;
+    }
+    this.renderPickTracks();
+  },
+
+  _updatePickSourceButtons() {
+    const lib = document.getElementById('pickSrcLibrary');
+    const dev = document.getElementById('pickSrcDevice');
+    if (lib) lib.classList.toggle('is-active', this._pickSource !== 'device');
+    if (dev) dev.classList.toggle('is-active', this._pickSource === 'device');
+  },
+
+  /*  Lee la música del móvil por MediaStore (sin copiar nada) para poder
+   *  marcar varias canciones a la vez. Es el camino que no depende del
+   *  selector de archivos del sistema ni del soporte de «multiple» del
+   *  WebView. */
+  async loadPickDevice() {
+    if (!this.canScanDevice || !this.canScanDevice()) return;
+    const st = (typeof DeviceLibrary !== 'undefined' && DeviceLibrary.status) ? DeviceLibrary.status() : null;
+    if (st && st.granted === false) {
+      // El permiso se pide y la respuesta vuelve por onDeviceAccess.
+      this._pendingPickDevice = true;
+      this.toast(this.t('device_permission_ask'));
+      DeviceLibrary.requestAccess();
+      return;
+    }
+    this._pickDeviceLoading = true;
+    this.renderPickTracks();
+    try {
+      const res = await DeviceLibrary.scanAll();
+      this._pickDeviceItems = res.items || [];
+      // Qué hay ya en la biblioteca: se reutiliza la pista en vez de
+      // duplicarla (mismo criterio que el escaneo completo).
+      const byDevice = new Map();
+      const byKey = new Map();
+      (this.tracks || []).forEach(t => {
+        if (t.deviceId) byDevice.set(String(t.deviceId), t);
+        if (t.fileName) byKey.set(this._dupKey(t.fileName, t.fileSize), t);
+      });
+      const existing = new Map();
+      this._pickDeviceItems.forEach(it => {
+        const key = (it.fileName && !it.deviceId) ? this._dupKey(it.fileName, it.size || 0) : null;
+        const t = byDevice.get(String(it.id)) || (key ? byKey.get(key) : null);
+        if (t) existing.set(String(it.id), t);
+      });
+      this._pickDeviceExisting = existing;
+    } catch (e) {
+      this._pickDeviceItems = [];
+      this._pickDeviceExisting = new Map();
+      this.toast(this.t('device_scan_failed'), 'danger');
+    }
+    this._pickDeviceLoading = false;
+    this.renderPickTracks();
+  },
+
+  /* ¿Esta ficha de MediaStore ya vive en la biblioteca? */
+  _pickDeviceTrack(item) {
+    const map = this._pickDeviceExisting;
+    return (map && map.get(String(item.id))) || null;
+  },
+
+  /*  Pistas que aún no están en la lista, filtradas por el buscador.
+   *  Devuelve entradas homogéneas para las dos fuentes:
+   *    { id, title, artist, album, track }   (track = objeto de la app)
+   *  En «del móvil» track es la pista ya importada o null si es nueva. */
   _pickCandidates() {
     const pl = this.playlists.find(p => p.id === this._pickPlaylistId);
     if (!pl) return [];
     const inList = new Set(pl.trackIds || []);
     const q = (this._pickQuery || '').trim().toLowerCase();
     const norm = (s) => String(s || '').toLowerCase();
-    const items = this.tracks.filter(t => t && !inList.has(t.id));
-    const filtered = q
-      ? items.filter(t => norm(t.title).indexOf(q) >= 0 || norm(t.artist).indexOf(q) >= 0 ||
-          norm(t.album).indexOf(q) >= 0)
-      : items;
+    const coincide = (title, artist, album) => !q ||
+      norm(title).indexOf(q) >= 0 || norm(artist).indexOf(q) >= 0 || norm(album).indexOf(q) >= 0;
+
+    let entradas = [];
+    if (this._pickSource === 'device') {
+      const items = this._pickDeviceItems || [];
+      entradas = items.map(it => {
+        const track = this._pickDeviceTrack(it);
+        return {
+          id: 'dev-' + it.id,
+          title: it.title || (it.fileName || '').replace(/\.[^.]+$/, '') || '—',
+          artist: it.artist || '',
+          album: it.album || '',
+          track: track
+        };
+      }).filter(e => {
+        // Lo que ya está EN ESTA lista no se vuelve a ofrecer.
+        if (e.track && inList.has(e.track.id)) return false;
+        return coincide(e.title, e.artist, e.album);
+      });
+    } else {
+      entradas = this.tracks
+        .filter(t => t && !inList.has(t.id) && coincide(t.title, t.artist, t.album))
+        .map(t => ({
+          id: t.id,
+          title: t.title || '—',
+          artist: t.artist || '',
+          album: t.album || '',
+          track: t
+        }));
+    }
+
     // Orden alfabético estable: buscar en una lista desordenada es peor.
-    return filtered.slice().sort((a, b) => norm(a.title).localeCompare(norm(b.title)));
+    return entradas.slice().sort((a, b) => norm(a.title).localeCompare(norm(b.title)));
   },
 
   renderPickTracks() {
     const ul = document.getElementById('pickTracksList');
     if (!ul) return;
+    if (this._pickSource === 'device' && this._pickDeviceLoading) {
+      ul.innerHTML = '';
+      const li = document.createElement('li');
+      li.className = 'pick-row is-empty';
+      li.textContent = this.t('device_scanning');
+      ul.appendChild(li);
+      this._pickItems = [];
+      this.updatePickFooter();
+      return;
+    }
     const items = this._pickCandidates();
     //  Lo marcado se conserva aunque el buscador lo esconda: buscar otra
     //  canción no puede deshacer la selección anterior. El pie cuenta todo
@@ -526,17 +650,18 @@ Object.assign(App, {
       ul.innerHTML = '';
       const li = document.createElement('li');
       li.className = 'pick-row is-empty';
-      li.textContent = this._pickQuery ? this.t('pick_none') : this.t('pick_none_left');
+      li.textContent = this._pickQuery ? this.t('pick_none')
+        : (this._pickSource === 'device' ? this.t('device_empty') : this.t('pick_none_left'));
       ul.appendChild(li);
       this.updatePickFooter();
       return;
     }
-    const makeRow = (t) => {
+    const makeRow = (e) => {
       const li = document.createElement('li');
-      li.className = 'pick-row' + (this._pickIds.has(t.id) ? ' is-picked' : '');
-      li.dataset.id = t.id;
+      li.className = 'pick-row' + (this._pickIds.has(e.id) ? ' is-picked' : '');
+      li.dataset.id = e.id;
       li.setAttribute('role', 'checkbox');
-      li.setAttribute('aria-checked', this._pickIds.has(t.id) ? 'true' : 'false');
+      li.setAttribute('aria-checked', this._pickIds.has(e.id) ? 'true' : 'false');
       li.innerHTML = `
         <span class="pick-check" aria-hidden="true"><svg class="ico"><use href="#i-check"></use></svg></span>
         <div class="row-cover"><canvas width="144" height="144"></canvas></div>
@@ -544,11 +669,17 @@ Object.assign(App, {
           <div class="row-title"></div>
           <div class="row-sub"></div>
         </div>`;
-      li.querySelector('.row-title').textContent = t.title || '—';
-      li.querySelector('.row-sub').textContent = t.artist || this.t('unknown_artist');
+      li.querySelector('.row-title').textContent = e.title;
+      const sub = e.artist || this.t('unknown_artist');
+      li.querySelector('.row-sub').textContent = e.track ? sub
+        : sub + ' · ' + this.t('pick_device_new');
       const cv = li.querySelector('canvas');
-      if (cv && typeof this.drawRowCover === 'function') this.drawRowCover(cv, t);
-      li.addEventListener('click', () => this.togglePickTrack(t.id));
+      if (cv && typeof this.drawRowCover === 'function') {
+        // Sin pista todavía (música del móvil): portada geométrica con el
+        // título, para no ir a buscar la carátula de cada fila.
+        this.drawRowCover(cv, e.track || { id: e.id, title: e.title, album: e.album });
+      }
+      li.addEventListener('click', () => this.togglePickTrack(e.id));
       return li;
     };
     // Lista virtual a partir de 80 filas: con 3.000 canciones, pintarlas
@@ -557,7 +688,7 @@ Object.assign(App, {
       this.fillVirtualList(ul, items, makeRow, { threshold: 80, rowHeight: 64 });
     } else {
       ul.innerHTML = '';
-      items.forEach(t => ul.appendChild(makeRow(t)));
+      items.forEach(e => ul.appendChild(makeRow(e)));
     }
     this.updatePickFooter();
   },
@@ -599,7 +730,10 @@ Object.assign(App, {
       //  Se reutiliza lo que ya calculó la última pintura: recalcular aquí
       //  ordenaba la biblioteca entera a cada casilla marcada.
       const total = (this._pickItems || []).length;
-      count.textContent = total === 0 ? '' : this.t('pick_available').replace('X', String(total));
+      count.textContent = total === 0 ? ''
+        : (this._pickSource === 'device'
+          ? this.t('pick_available_device').replace('X', String(total))
+          : this.t('pick_available').replace('X', String(total)));
     }
   },
 
@@ -608,6 +742,16 @@ Object.assign(App, {
     const pl = this.playlists.find(p => p.id === this._pickPlaylistId);
     const ids = this._pickIds ? Array.from(this._pickIds) : [];
     if (!pl || !ids.length) return;
+    //  Música del móvil: la ficha se crea (o se reutiliza) aquí y no hay
+    //  archivos que procesar, así que se añaden todas al instante.
+    if (this._pickSource === 'device') {
+      this._pickIds = new Set();
+      this.closeSheet('sheetPickTracks');
+      if (typeof this.addDeviceTracksToPlaylist === 'function') {
+        await this.addDeviceTracksToPlaylist(ids, pl);
+      }
+      return;
+    }
     pl.trackIds = Array.isArray(pl.trackIds) ? pl.trackIds : [];
     let added = 0;
     ids.forEach(id => {

@@ -242,6 +242,67 @@ Object.assign(App, {
 });
 
 /* =====================================================================
+ *  Diagnóstico del WebView
+ *  Un WebView viejo (o el de fábrica de un Android antiguo, que nunca se
+ *  actualiza) explica fallos que no se reproducen en otro teléfono: por
+ *  eso la versión se enseña en Ajustes → Acerca de, y aquí se comprueba
+ *  una sola vez si al motor le falta algo básico.
+ * ===================================================================== */
+
+Object.assign(App, {
+  /* Rellena la línea «WebView» de Acerca de y devuelve el texto. */
+  fillWebViewInfo() {
+    const B = window.AuroraAndroid;
+    let info = '';
+    if (B && typeof B.webViewInfo === 'function') {
+      try { info = String(B.webViewInfo() || ''); } catch (e) { info = ''; }
+    }
+    if (!info) {
+      const ua = navigator.userAgent || '';
+      const m = /Chrom(?:e|ium)\/([0-9.]+)/.exec(ua);
+      info = (m ? m[1] : '?') + ' · ' + (ua || 'sin agente de usuario');
+    }
+    this.webViewInfo = info;
+    const line = document.getElementById('aboutWebViewLine');
+    const out = document.getElementById('aboutWebView');
+    if (line && out) {
+      out.textContent = info;
+      line.style.display = '';
+    }
+    return info;
+  },
+
+  /* ¿Le falta al motor algo que la app da por hecho? Se avisa una vez en
+   * consola (y en Ajustes se puede leer la versión). Silencioso si todo
+   * está: no ensucia la experiencia normal. */
+  checkRuntime() {
+    const falta = [];
+    const pruebas = [
+      ['Promise', typeof Promise !== 'undefined'],
+      ['Map', typeof Map !== 'undefined'],
+      ['Set', typeof Set !== 'undefined'],
+      ['Object.assign', typeof Object.assign === 'function'],
+      ['Array.from', typeof Array.from === 'function'],
+      ['Array.prototype.includes', typeof Array.prototype.includes === 'function'],
+      ['Element.prototype.closest',
+        typeof Element !== 'undefined' && typeof Element.prototype.closest === 'function'],
+      ['Blob', typeof Blob !== 'undefined'],
+      ['URL.createObjectURL',
+        typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'],
+      ['indexedDB', typeof indexedDB !== 'undefined'],
+      ['FileReader', typeof FileReader !== 'undefined']
+    ];
+    pruebas.forEach(([nombre, hay]) => { if (!hay) falta.push(nombre); });
+    this._runtimeMissing = falta;
+    if (falta.length) {
+      console.warn('[Aurora] al WebView le faltan cosas: ' + falta.join(', ')
+        + ' (' + this.fillWebViewInfo() + ')');
+    }
+    return falta;
+  }
+});
+
+/* =====================================================================
  *  Cola nativa (Android)
  *  Con la app cerrada, Java no puede preguntar qué viene después: se le
  *  deja una ventana de la cola con lo justo para la notificación (título,

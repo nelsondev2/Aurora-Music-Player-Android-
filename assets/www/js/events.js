@@ -525,6 +525,27 @@ Object.assign(App, {
           }, 180);
         });
       }
+      //  Fuente de la hoja de selección: biblioteca o música del móvil.
+      //  «Del móvil» no usa el selector de archivos del sistema, así que se
+      //  pueden marcar varias canciones de una vez aunque el WebView no
+      //  soporte bien el «multiple» del <input type="file">.
+      const pickSrcLib = document.getElementById('pickSrcLibrary');
+      if (pickSrcLib) pickSrcLib.addEventListener('click', () => {
+        if (typeof this.setPickSource === 'function') this.setPickSource('library');
+      });
+      const pickSrcDev = document.getElementById('pickSrcDevice');
+      if (pickSrcDev) pickSrcDev.addEventListener('click', () => {
+        if (typeof this.setPickSource === 'function') this.setPickSource('device');
+      });
+      //  Archivos sueltos que no estén en MediaStore: selector del sistema,
+      //  con la lista como destino.
+      const btnPickUpload = document.getElementById('btnPickUpload');
+      if (btnPickUpload) btnPickUpload.addEventListener('click', () => {
+        const dest = this._pickPlaylistId || this._editingPlaylistId;
+        if (!dest) return;
+        this.closeSheet('sheetPickTracks');
+        this.openFilePicker(false, dest);
+      });
       // Subir canciones directamente a la playlist desde el almacenamiento
       const btnUploadToPl = document.getElementById('btnUploadToPlaylist');
       if (btnUploadToPl) btnUploadToPl.addEventListener('click', () => {

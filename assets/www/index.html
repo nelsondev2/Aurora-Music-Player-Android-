@@ -549,11 +549,21 @@
             </button>
           </header>
           <div class="sheet-body">
+            <!-- Dos fuentes: lo que ya está en la biblioteca y lo que hay
+                 en el móvil (MediaStore). La segunda no pasa por el
+                 selector de archivos del sistema, así que se pueden marcar
+                 varias canciones de una vez aunque el WebView sea antiguo
+                 y no respete el «multiple» del <input type="file">. -->
+            <div class="pick-srcs" id="pickSources" style="display:none">
+              <button class="pick-src is-active" id="pickSrcLibrary" type="button" data-i18n="pick_src_library">Biblioteca</button>
+              <button class="pick-src" id="pickSrcDevice" type="button" data-i18n="pick_src_device">Del móvil</button>
+            </div>
             <label class="field">
               <input type="search" id="pickSearch" data-i18n-ph="pick_tracks_search" data-i18n-aria="pick_tracks_search" aria-label="Buscar en la biblioteca" placeholder="Buscar en la biblioteca" />
             </label>
             <p class="pick-count" id="pickCount"></p>
             <ul class="track-list" id="pickTracksList"></ul>
+            <button class="ghost-btn pick-upload" id="btnPickUpload" type="button" data-i18n="pick_upload_files">Subir archivos del móvil…</button>
           </div>
           <footer class="sheet-footer">
             <button class="primary-btn" id="btnPickConfirm" type="button" disabled>
@@ -930,6 +940,7 @@
             <h4 class="section-title" data-i18n="settings_about">Acerca de</h4>
             <div class="about-block">
               <p class="about-line"><span data-i18n="settings_version">Versión</span> <strong id="aboutVersion">1.4.0</strong></p>
+              <p class="about-line" id="aboutWebViewLine" style="display:none"><span data-i18n="settings_webview">WebView</span> <strong id="aboutWebView">—</strong></p>
               <p class="about-line" data-i18n="settings_license">Licencia MIT</p>
               <a class="menu-row" id="aboutSource" href="https://github.com/nelsondev2/Aurora-Music-Player" target="_blank" rel="noopener">
                 <svg class="ico" aria-hidden="true"><use href="#i-arrow-up-right-from-square"></use></svg>
@@ -1215,6 +1226,9 @@
   </div>
 
   <!-- jsmediatags para leer metadatos ID3 (embebido localmente, sin CDN) -->
+  <!-- Lo PRIMERO: rellena lo que el WebView del teléfono no traiga
+       (incluye lo que usan los demás scripts, así que va antes que todos). -->
+  <script src="js/polyfills.js"></script>
   <script src="js/jsmediatags.min.js"></script>
   <script src="js/data.js"></script>
   <script src="js/storage.js"></script>

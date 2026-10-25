@@ -4,6 +4,28 @@ Historial de versiones **publicadas** de Aurora Music Player.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 
+- **«No deja añadir más de una canción del almacenamiento a la lista»,
+  arreglado por los dos lados.**
+  - **La causa que estaba en la app:** mientras una importación seguía
+    en marcha (`_importing`), la siguiente selección se **descartaba**
+    con un aviso («Procesando X archivos…») y esos archivos no entraban
+    nunca. En un móvil lento, con una tanda de FLAC decodificándose,
+    la segunda selección se perdía para siempre. Ahora se **apunta en
+    una cola** (`_importQueue`) y arranca sola al terminar la anterior.
+  - **La causa que estaba en el sistema:** el `<input type="file"
+    multiple>` depende del WebView y del selector del teléfono. Nuevo
+    **«Añadir pistas → Del móvil»**: lista la música del teléfono
+    (MediaStore) con casillas, se marcan varias y entran todas de golpe,
+    sin copiar archivos y sin pasar por el selector del sistema. Las que
+    ya están en la biblioteca se reutilizan (sin duplicar fichas) y solo
+    se importan las elegidas. Se mantienen «Subir archivos del móvil…» y
+    «Subir canciones» para lo que no esté en MediaStore.
+- **Diagnóstico del WebView**: Ajustes → Acerca de enseña la versión
+  (`105.0.5195.136 · Android 9 · API 28`) y al arrancar se comprueba una
+  vez qué le falta al motor. `js/polyfills.js` (ES5, se carga el primero)
+  rellena `includes`, `closest`, `Object.assign`, `Array.from`,
+  `padStart`, `Promise.finally`… para que los WebView intermedios no den
+  fallos raros.
 - **Auditoría de los cuatro fallos reportados en el móvil** (y sus
   arreglos, con la causa raíz de cada uno):
   - **Añadir varias canciones a la vez a una lista**: nuevo botón

@@ -4470,6 +4470,42 @@ html.aurora-wide .toast {
 }
 .pick-check .ico { width: 15px; height: 15px; }
 
+/* Selector de fuente de la hoja «Añadir pistas»: biblioteca o música del
+   móvil. Dos pastillas, la activa con el acento: sin ambigüedad de dónde
+   sale lo que se está marcando. */
+.pick-srcs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pick-srcs::-webkit-scrollbar { display: none; }
+.pick-src {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pick-src.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg, #050509);
+  font-weight: 600;
+}
+/* Archivos sueltos que no estén en MediaStore: acción secundaria. */
+.pick-upload {
+  width: 100%;
+  margin-top: 12px;
+  justify-content: center;
+}
+
 /* CTA secundaria del estado vacío (buscar la música del móvil): misma
    forma que la principal, sin relleno, para no competir con ella. */
 .empty-cta-ghost {

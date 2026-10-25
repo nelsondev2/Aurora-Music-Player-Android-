@@ -298,11 +298,125 @@ Object.assign(App, {
     if (typeof this.syncNativeQueue === 'function') this.syncNativeQueue();
   },
 
+  /*  Añade a una lista canciones concretas del móvil (las marcadas en la
+   *  hoja «Añadir pistas → Del móvil»). Las que ya están en la
+   *  biblioteca se reutilizan —sin duplicar— y las nuevas se guardan como
+   *  ficha con su content://, igual que un escaneo, pero solo las
+   *  elegidas: nada de importar 3.000 canciones para meter cinco. */
+  async addDeviceTracksToPlaylist(selectedIds, playlist) {
+    const pl = playlist || this.playlists.find(p => p.id === this._pickPlaylistId);
+    if (!pl || !selectedIds || !selectedIds.length) return;
+    pl.trackIds = Array.isArray(pl.trackIds) ? pl.trackIds : [];
+    const inList = new Set(pl.trackIds);
+
+    // Índice de lo que ya hay, por id de MediaStore y por nombre+tamaño.
+    const byDevice = new Map();
+    const byKey = new Map();
+    for (const t of this.tracks) {
+      if (t.deviceId) byDevice.set(String(t.deviceId), t);
+      if (t.fileName) byKey.set(this._dupKey(t.fileName, t.fileSize), t);
+    }
+
+    const items = this._pickDeviceItems || [];
+    const nuevos = [];      // {track, item} que hay que guardar
+    let repetidas = 0;
+    let added = 0;
+
+    for (const key of selectedIds) {
+      const mediaId = String(key).replace(/^dev-/, '');
+      const item = items.find(it => String(it.id) === mediaId);
+      let track = byDevice.get(mediaId) || null;
+      if (!track && item) {
+        const ficha = DeviceLibrary.toTrack(item);
+        const dup = ficha.fileName ? byKey.get(this._dupKey(ficha.fileName, ficha.fileSize)) : null;
+        track = dup || ficha;
+        if (!dup) {
+          nuevos.push({ track: ficha, item: item });
+          byDevice.set(mediaId, ficha);
+          if (ficha.fileName) byKey.set(this._dupKey(ficha.fileName, ficha.fileSize), ficha);
+        }
+      }
+      if (!track) { repetidas++; continue; }
+      if (inList.has(track.id)) { repetidas++; continue; }
+      inList.add(track.id);
+      pl.trackIds.push(track.id);
+      added++;
+    }
+
+    // Carátulas: una por álbum y con tope, como el escaneo completo.
+    if (nuevos.length) {
+      const albums = new Map();
+      for (const { item } of nuevos) {
+        if (item.albumId && !albums.has(String(item.albumId))) albums.set(String(item.albumId), item);
+      }
+      let done = 0;
+      for (const [albumId, item] of albums) {
+        if (done >= 8) break; // unas pocas: aquí prima la rapidez
+        const art = DeviceLibrary.albumArt(albumId, item.id);
+        if (art) {
+          for (const entry of nuevos) {
+            if (String(entry.item.albumId) === albumId) {
+              entry.track.cover = art;
+              entry.track.coverIsImage = true;
+              entry.track.coverThumb = art;
+              entry.track.coverThumbLg = art;
+            }
+          }
+        }
+        done++;
+      }
+      const pistas = nuevos.map(n => n.track);
+      this.tracks.push(...pistas);
+      try {
+        if (typeof this.persistTracksBatch === 'function') await this.persistTracksBatch(pistas);
+        else for (const t of pistas) await this.persistTrack(t);
+      } catch (e) {
+        console.warn('[Aurora] no se pudieron guardar las pistas del móvil:', e);
+      }
+      // A la cola, como cualquier alta (sin robar la canción actual).
+      if (!this.queue.length) this.queue = this.tracks.map(t => t.id);
+      else {
+        for (const t of pistas) if (this.queue.indexOf(t.id) < 0) this.queue.push(t.id);
+      }
+    }
+
+    if (typeof this._invalidatePlaylistCover === 'function') this._invalidatePlaylistCover(pl);
+    try { await this.persistPlaylist(pl); } catch (e) {}
+
+    try { this.renderPlaylists(); } catch (e) {}
+    try { this.renderQueue(); } catch (e) {}
+    try { if (typeof this.renderHome === 'function') this.renderHome(); } catch (e) {}
+    try { if (typeof this.updateChrome === 'function') this.updateChrome(); } catch (e) {}
+    if (this._editingPlaylistId === pl.id && typeof this.renderEditPlaylist === 'function') {
+      this.renderEditPlaylist();
+    }
+    // Si esa lista es la que está sonando, la cola se entera sin cortar.
+    if (this.playContext && this.playContext.type === 'playlist' && this.playContext.id === pl.id) {
+      if (typeof this._syncQueueWithPlaylist === 'function') this._syncQueueWithPlaylist();
+      if (typeof this.syncNativeQueue === 'function') this.syncNativeQueue();
+    }
+    if (!this.isNativeAudio() && !this._deviceEngineWarned) {
+      this._deviceEngineWarned = true;
+      this.toast(this.t('device_needs_native'));
+    }
+    let msg = this.t('toast_pick_added').replace('X', String(added));
+    if (repetidas > 0) msg += ' · ' + this.t('toast_import_dupes_short').replace('X', String(repetidas));
+    this.toast(msg);
+    if (typeof this.saveSession === 'function') this.saveSession();
+  },
+
   /* Respuesta del permiso (la llama MainActivity). */
   onDeviceAccess(granted) {
     if (!granted) {
       this._pendingDeviceScan = null;
+      this._pendingPickDevice = false;
       this.toast(this.t('device_permission_denied'), 'danger');
+      return;
+    }
+    // Venía de la hoja «Añadir pistas → Del móvil».
+    if (this._pendingPickDevice) {
+      this._pendingPickDevice = false;
+      if (typeof this.loadPickDevice === 'function') this.loadPickDevice();
       return;
     }
     const target = this._pendingDeviceScan || null;

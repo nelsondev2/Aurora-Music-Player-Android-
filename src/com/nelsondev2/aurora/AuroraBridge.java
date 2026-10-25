@@ -1,6 +1,7 @@
 package com.nelsondev2.aurora;
 
 import android.app.Activity;
+import android.os.Build;
 import android.content.Intent;
 import android.net.Uri;
 import android.util.Base64;
@@ -35,6 +36,42 @@ class AuroraBridge {
 
     AuroraBridge(Activity activity) {
         this.activity = activity;
+    }
+
+    /**
+     *  Qué WebView está usando la app, como texto para Ajustes → Acerca de.
+     *
+     *  Es el dato que faltaba cuando algo falla solo en un teléfono: un
+     *  WebView viejo (o el de fábrica, congelado en Android 5/6) explica
+     *  comportamientos que no se reproducen en otro sitio. Devuelve, por
+     *  ejemplo: «105.0.5195.136 · Android 9 · API 28».
+     */
+    @JavascriptInterface
+    public String webViewInfo() {
+        String pkg = "";
+        if (Build.VERSION.SDK_INT >= 26) {
+            try {
+                android.content.pm.PackageInfo pi = android.webkit.WebView.getCurrentWebViewPackage();
+                if (pi != null) pkg = pi.versionName == null ? "" : pi.versionName;
+            } catch (Exception e) {
+                pkg = "";
+            }
+        }
+        if (pkg.length() == 0) {
+            // Hasta API 25 no hay getCurrentWebViewPackage(): se saca del
+            // agente de usuario del WebView por defecto.
+            try {
+                String ua = android.webkit.WebSettings.getDefaultUserAgent(activity);
+                java.util.regex.Matcher m = java.util.regex.Pattern
+                        .compile("Chrome/([0-9.]+)").matcher(ua == null ? "" : ua);
+                if (m.find()) pkg = m.group(1);
+            } catch (Exception e) {
+                pkg = "";
+            }
+        }
+        String android = Build.VERSION.RELEASE == null ? "?" : Build.VERSION.RELEASE;
+        return (pkg.length() == 0 ? "?" : pkg) + " · Android " + android
+                + " · API " + Build.VERSION.SDK_INT;
     }
 
     /** Abre (o reinicia) el archivo temporal donde llegarán los trozos. */

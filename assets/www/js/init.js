@@ -44,6 +44,13 @@ Object.assign(App, {
       if (window.NativeAudio && typeof window.NativeAudio.refresh === 'function') {
         try { window.NativeAudio.refresh(); } catch (e) {}
       }
+      //  Diagnóstico del WebView: si el motor del móvil es viejo, tener su
+      //  versión a mano (Ajustes → Acerca de) y el detalle en consola es lo
+      //  que permite distinguir «fallo de la app» de «WebView antiguo».
+      try {
+        if (typeof this.checkRuntime === 'function') this.checkRuntime();
+        if (typeof this.fillWebViewInfo === 'function') this.fillWebViewInfo();
+      } catch (e) {}
       this.audio = this.isNativeAudio()
         ? window.NativeAudio.get()
         : document.getElementById('audioEl');

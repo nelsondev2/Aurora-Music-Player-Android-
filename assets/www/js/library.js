@@ -66,10 +66,20 @@ Object.assign(App, {
         return;
       }
       // Dos importaciones simultáneas (arrastrar + selector, o doble toque)
-      // mutaban `tracks` a la vez y duplicaban pistas. Una sola a la vez.
+      // mutaban `tracks` a la vez y duplicaban pistas. Una sola a la vez,
+      // pero la segunda YA NO SE TIRA: se apunta y arranca al terminar la
+      // primera. Antes se descartaba con un aviso («Procesando X archivos»)
+      // y la selección se perdía para siempre: en un móvil lento, con una
+      // importación de fondo, parecía que «no deja añadir más de una
+      // canción» porque la segunda tanda nunca entraba.
       if (this._importing) {
-        //  la clave lleva una X por sustituir (nº de archivos).
-        this.toast(this.t('toast_processing_files').replace('X', String(fileList.length)));
+        this._importQueue = this._importQueue || [];
+        this._importQueue.push({
+          files: Array.from(fileList),
+          dir: !!fromDirectory,
+          dest: targetPlaylistId || null
+        });
+        this.toast(this.t('toast_import_queued').replace('X', String(fileList.length)));
         return;
       }
       this._importing = true;
@@ -265,7 +275,26 @@ Object.assign(App, {
       } finally {
         this._importing = false;
         this.hideImportOverlay();
+        this._drainImportQueue();
       }
+    },
+
+    /* Arranca la siguiente importación apuntada, si la hay. Se llama al
+     * terminar cada una (y no antes: dos a la vez duplicaban pistas). */
+    _drainImportQueue() {
+      if (this._importing) return;
+      const queue = this._importQueue;
+      if (!queue || !queue.length) return;
+      const next = queue.shift();
+      if (!next) return;
+      setTimeout(() => {
+        try {
+          this.handleFileInput(next.files, next.dir, next.dest);
+        } catch (e) {
+          console.warn('[Aurora] importación en cola:', e);
+          this._drainImportQueue();
+        }
+      }, 0);
     },
 
     /* Libera todos los objectURL de audio (al cerrar la pestaña). */

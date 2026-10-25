@@ -32,7 +32,9 @@ servidor, sin cuenta y sin publicidad. Carga archivos locales
   deja que la app mantenga sola «Mi Música» (lo añadido fuera de
   listas). Para llenar una lista hay **«Añadir pistas»**: una hoja con
   buscador, casillas y «seleccionar todo» que añade **muchas canciones
-  de una vez** (las que ya están en la lista no se repiten). Todas las listas —Favoritos incluida— **se ordenan solas
+  de una vez** (las que ya están en la lista no se repiten), desde la
+  biblioteca o **directamente del móvil**. Lo que se importa queda en
+  cola si hay otra importación en marcha: nada se pierde. Todas las listas —Favoritos incluida— **se ordenan solas
   por tus estrellas**: las mejores arriba, las sin nota al final, y
   la cola suena en ese mismo orden.
 - **Estrellas de 1 a 5** en el menú de cada canción, en el reproductor
@@ -169,6 +171,27 @@ teléfono por MediaStore y se queda con la ficha.
 - **Borrar** una pista del móvil olvida la ficha, no toca el archivo.
 - **Compartir** una pista del móvil comparte el `content://` original
   (el receptor lee el archivo real, sin pasar por la memoria de Aurora).
+
+### Añadir varias canciones del móvil a una lista
+
+Dentro de una lista, **«Añadir pistas» → Del móvil** enseña la música
+del teléfono (MediaStore) con casillas: se marcan las que se quieran y
+entran **todas a la vez**, sin copiar los archivos y sin depender del
+selector de archivos del sistema. Es el camino recomendado cuando el
+WebView del teléfono es antiguo: el `<input type="file" multiple>` de la
+web depende de que ese motor y el selector del sistema se pongan de
+acuerdo, y con un WebView viejo muchas veces solo devuelven un archivo.
+
+Las pistas que ya están en la biblioteca se reutilizan (no se duplican)
+y las nuevas se guardan como ficha con su `content://`, igual que un
+escaneo completo pero solo con las elegidas.
+
+Para archivos sueltos que no estén en MediaStore sigue estando
+**«Subir archivos del móvil…»**, y **«Subir canciones»** en la cabecera
+de la lista. Ahora, si ya hay una importación en marcha, la siguiente
+selección **se apunta y arranca al terminar** (antes se descartaba con
+un aviso y esa tanda se perdía para siempre: parecía que la app «no
+dejaba añadir más de una canción»).
 
 ## Cómo está montada
 
@@ -382,6 +405,26 @@ pausa/play/siguiente desde la notificación, pérdida de foco, fin de
 pista sin recargas, reconciliación al volver a la app, subidas en serie y
 la selección múltiple de pistas.
 
+## Si algo falla solo en tu teléfono
+
+Aurora vive dentro del **WebView** de Android, y ese motor no lo
+actualiza la app: lo pone el sistema (o el fabricante). Un WebView
+antiguo explica fallos que no se reproducen en ningún otro sitio.
+
+Por eso **Ajustes → Acerca de** enseña la versión exacta, por ejemplo
+`105.0.5195.136 · Android 9 · API 28`. Si algo se comporta raro, ese
+dato es lo primero que hay que mirar (y el que conviene copiar en un
+aviso de error).
+
+Además, `js/polyfills.js` se carga antes que todo lo demás y rellena las
+funciones que a un WebView intermedio le falten (`includes`, `closest`,
+`Object.assign`, `Array.from`, `padStart`…), así que los huecos pequeños
+no se convierten en fallos raros. Lo que no se puede rellenar es el
+lenguaje: la app usa `async`/`await`, que pide Chrome 55 o superior. Con
+un WebView anterior la app no arranca (se queda en la pantalla de
+carga); actualizar «Android System WebView» desde Play Store lo
+soluciona.
+
 ## Limitaciones conocidas
 
 Dichas en voz alta, para que nadie se lleve una sorpresa:
@@ -399,7 +442,9 @@ Dichas en voz alta, para que nadie se lleve una sorpresa:
   almacenamiento web del WebView; una biblioteca enorme puede chocar
   con la cuota del sistema.
 - **Sin selector de carpetas en Android** (la plataforma no lo
-  ofrece): se eligen archivos sueltos o varios a la vez.
+  ofrece): se eligen archivos sueltos o varios a la vez. Cuántos
+  archivos acepta el selector del sistema depende del WebView del
+  teléfono; si solo deja uno, usa **«Añadir pistas → Del móvil»**.
 - **Los archivos importados no se copian**: se guardan dentro de la
   app, así que borrar los datos de Aurora (o desinstalarla) borra su
   biblioteca. Los archivos originales de tu dispositivo no se tocan.
@@ -424,6 +469,7 @@ En los [*issues* de GitHub](https://github.com/nelsondev2/Aurora-Music-Player-An
 | `assets/www/js/data.js` | Traducciones (14 idiomas) y utilidades de datos |
 | `assets/www/js/storage.js` | Persistencia en IndexedDB |
 | `assets/www/js/uploader.js` | Lectura de archivos, ID3 y LRC |
+| `assets/www/js/polyfills.js` | Rellenos para WebView antiguos (se carga primero) |
 | `assets/www/js/platform.js` | Puente con Android (compartir, botón atrás, notificación) |
 | `assets/www/js/native-audio.js` | Motor nativo con la cara de un `<audio>` |
 | `assets/www/js/` | Módulos de la app (audio, UI, listas, letras, ajustes…) |
