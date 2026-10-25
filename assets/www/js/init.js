@@ -26,7 +26,21 @@ Object.assign(App, {
       if (this._initStarted) return;
       this._initStarted = true;
       this.tracks = [];
-      this.audio = document.getElementById('audioEl');
+      // Motor de audio. El nativo (MediaPlayer) es el de por defecto cuando
+      // la app lo ofrece: la música sigue sonando si el WebView muere y el
+      // relevo entre pistas no tiene hueco. El del WebView sigue entero
+      // para quien quiera ecualizador, visualizador o fundidos.
+      this._engine = 'web';
+      if (window.NativeAudio && window.NativeAudio.available) {
+        try {
+          this.setAudioEngine(window.NativeAudio.preferred ? 'native' : 'web');
+        } catch (e) {
+          this._engine = 'web';
+        }
+      }
+      this.audio = this.isNativeAudio()
+        ? window.NativeAudio.get()
+        : document.getElementById('audioEl');
       this.audio.volume = this.volume;
 
       this.buildEqualizer();
@@ -355,6 +369,14 @@ Object.assign(App, {
       //  el fallo no se traga en silencio (borrado fantasma).
       try { await window.AuroraStorage.deleteTrack(trackId); }
       catch (e) { console.warn('[Aurora] No se pudo borrar la pista de IndexedDB:', e); }
+      // La caché del motor nativo guarda una copia para MediaPlayer: si la
+      // pista desaparece, el archivo también (si no, ocuparía disco para
+      // siempre sin aparecer en ninguna parte).
+      try {
+        if (window.AuroraNativePlayer && typeof window.AuroraNativePlayer.audioRemove === 'function') {
+          window.AuroraNativePlayer.audioRemove(trackId);
+        }
+      } catch (e) {}
     },
 
     async persistPlaylist(pl) {

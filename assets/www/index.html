@@ -838,6 +838,12 @@
               <button class="xfade-opt" type="button" data-xfade="6">6s</button>
               <button class="xfade-opt" type="button" data-xfade="12">12s</button>
             </div>
+            <p class="settings-label" data-i18n="settings_engine">Motor de audio</p>
+            <div class="xfade-opts" id="engineOpts" role="group" data-i18n-aria="settings_engine" aria-label="Motor de audio">
+              <button class="xfade-opt" type="button" data-engine="native" data-i18n="settings_engine_native">Sistema</button>
+              <button class="xfade-opt" type="button" data-engine="web" data-i18n="settings_engine_web">App</button>
+            </div>
+            <p class="settings-hint" data-i18n="settings_engine_hint">El motor del sistema reproduce aunque la app se cierre y no deja huecos entre canciones. El de la app permite ecualizador, visualizador y fundidos.</p>
             <label class="settings-row" for="toggleNormalize">
               <span data-i18n="settings_norm_volume">Normalizar volumen</span>
               <input type="checkbox" id="toggleNormalize" />
@@ -886,7 +892,7 @@
             <p class="settings-hint" data-i18n="settings_sleep_fade">El temporizador sleep hace un fade-out de 10 s al apagar.</p>
             <h4 class="section-title" data-i18n="settings_about">Acerca de</h4>
             <div class="about-block">
-              <p class="about-line"><span data-i18n="settings_version">Versión</span> <strong id="aboutVersion">1.3.0</strong></p>
+              <p class="about-line"><span data-i18n="settings_version">Versión</span> <strong id="aboutVersion">1.4.0</strong></p>
               <p class="about-line" data-i18n="settings_license">Licencia MIT</p>
               <a class="menu-row" id="aboutSource" href="https://github.com/nelsondev2/Aurora-Music-Player" target="_blank" rel="noopener">
                 <svg class="ico" aria-hidden="true"><use href="#i-arrow-up-right-from-square"></use></svg>
@@ -1182,6 +1188,8 @@
   <script src="js/state.js"></script>
   <!-- puente con la app Android (compartir archivos, botón atrás) -->
   <script src="js/platform.js"></script>
+  <!-- motor de reproducción nativo (MediaPlayer) con la cara de un <audio> -->
+  <script src="js/native-audio.js"></script>
   <script src="js/init.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/library.js"></script>

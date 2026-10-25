@@ -2,6 +2,8 @@ package com.nelsondev2.aurora;
 
 import android.webkit.WebView;
 
+import org.json.JSONObject;
+
 import java.lang.ref.WeakReference;
 
 /**
@@ -43,6 +45,23 @@ final class WebApp {
                 }
             }
         });
+    }
+
+    /**
+     * Evento del reproductor nativo hacia la web
+     * (window.AuroraNativePlayerEvent en assets/www/js/native-audio.js).
+     * Un JSON es, además, un literal válido de JavaScript.
+     */
+    static void emitNativeEvent(JSONObject event) {
+        if (event == null) return;
+        evalJs("if(window.AuroraNativePlayerEvent){try{window.AuroraNativePlayerEvent("
+                + event.toString() + ");}catch(e){}}");
+    }
+
+    /** ¿Sigue habiendo una página a la que hablar? */
+    static boolean attached() {
+        WeakReference<WebView> holder = ref;
+        return holder != null && holder.get() != null;
     }
 
     /**

@@ -811,6 +811,9 @@ Object.assign(App, {
       document.querySelectorAll('[data-transition]').forEach(b => {
         b.classList.toggle('active', b.dataset.transition === mode);
       });
+      document.querySelectorAll('[data-engine]').forEach(b => {
+        b.classList.toggle('active', b.dataset.engine === (this._engine || 'web'));
+      });
       const xfRow = document.getElementById('xfadeOpts');
       if (xfRow) xfRow.hidden = mode !== 'crossfade';
       document.querySelectorAll('[data-xfade]').forEach(b => {

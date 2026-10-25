@@ -59,6 +59,9 @@ def check_android_project():
         "src/com/nelsondev2/aurora/AuroraWebClient.java",
         "src/com/nelsondev2/aurora/AuroraBridge.java",
         "src/com/nelsondev2/aurora/AuroraMediaBridge.java",
+        "src/com/nelsondev2/aurora/NativePlayer.java",
+        "src/com/nelsondev2/aurora/NativePlayerBridge.java",
+        "src/com/nelsondev2/aurora/NativeAudioStore.java",
         "src/com/nelsondev2/aurora/PlaybackService.java",
         "src/com/nelsondev2/aurora/WebApp.java",
         "src/com/nelsondev2/aurora/ShareProvider.java",
@@ -166,10 +169,14 @@ def check_java_resources():
 # -------------------------------------------------------------------- puente
 def check_bridge():
     """Los métodos @JavascriptInterface y los que llama platform.js deben casar."""
-    js = read(os.path.join(WWW, "js", "platform.js"))
+    # Módulos que hablan con los puentes: platform.js (compartir, media),
+    # native-audio.js (motor nativo) e init.js (limpieza de la caché).
+    js = "".join(read(os.path.join(WWW, "js", name))
+                 for name in ("platform.js", "native-audio.js", "init.js"))
     pairs = [
         ("AuroraAndroid", "B", "AuroraBridge.java"),
         ("AuroraMedia", "M", "AuroraMediaBridge.java"),
+        ("AuroraNativePlayer", "N", "NativePlayerBridge.java"),
     ]
     main = read(os.path.join(SRC, "MainActivity.java"))
 

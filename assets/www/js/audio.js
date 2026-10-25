@@ -16,6 +16,9 @@ Object.assign(App, {
      * ============================================================ */
     initAudioGraph() {
       if (this.audioCtx) return;
+      // Con el motor nativo no hay elemento de verdad al que enganchar el
+      // grafo: ecualizador, analizador y fundidos no existen.
+      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) return;
       try {
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return;
@@ -892,6 +895,9 @@ Object.assign(App, {
     },
 
     async applyNormalization(track) {
+      // La normalización es ganancia de Web Audio: sin grafo no hay nada
+      // que normalizar (el volumen lo manda el motor nativo).
+      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) return;
       const t = track || this.currentTrack;
       if (!this._normalizeVolume) {
         this._normGain = 1;
@@ -1339,6 +1345,20 @@ Object.assign(App, {
     },
 
     startVisualizer() {
+      // Sin analizador (motor nativo) no hay onda que dibujar: una pasada
+      // en reposo y fuera, para que el lienzo no quede en blanco.
+      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) {
+        if (this._visRafId || this._visTimer) return;
+        const canvasIdle = document.getElementById('visualizerCanvas');
+        if (canvasIdle) {
+          const ctxIdle = canvasIdle.getContext('2d');
+          if (ctxIdle && typeof this._drawVisualizerIdle === 'function') {
+            this._fitVisualizerCanvas(canvasIdle);
+            this._drawVisualizerIdle(canvasIdle, ctxIdle);
+          }
+        }
+        return;
+      }
       //  en portada a pantalla completa la onda se muestra
       // aunque el ajuste sea «apagado» (sin cambiar la preferencia).
       if (this.visualizerMode === 'off' && !this._coverFs) return;

@@ -159,7 +159,7 @@
     /* Utilidades */
     _wired: {},
     _lastError: null,
-    VERSION: '1.3.0',
+    VERSION: '1.4.0',
     _marqueeEnabled: true,
     /*  sin _vinylEnabled (modo vinilo retirado). */
     _showRemaining: false, //  la duración total alterna a «tiempo restante» al tocarla

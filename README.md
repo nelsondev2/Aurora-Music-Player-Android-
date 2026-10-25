@@ -38,6 +38,11 @@ servidor, sin cuenta y sin publicidad. Carga archivos locales
   notificación y carátula, controles en la pantalla de bloqueo y en los
   auriculares, y foco de audio (si entra una llamada, Aurora se pausa
   sola).
+- **Motor de audio del sistema**: el sonido lo pone Android
+  (MediaPlayer), así que la música aguanta aunque el WebView desaparezca
+  y el paso de una pista a la siguiente no tiene hueco. Se puede cambiar
+  al motor de la app (Web Audio) desde Ajustes, que es el que trae
+  ecualizador, visualizador y fundidos.
 - **Estadísticas**: más reproducidas, artistas favoritos y tiempo de
   escucha (una reproducción solo cuenta cuando la canción suena
   entera).
@@ -92,6 +97,9 @@ src/com/nelsondev2/aurora/
     AuroraWebClient.java         sirve assets/www desde https://aurora.localhost
     AuroraBridge.java            puente JS ↔ Android (compartir por trozos)
     PlaybackService.java         segundo plano: MediaSession, notificación, foco
+    NativePlayer.java            MediaPlayer con relevo preparado (gapless)
+    NativePlayerBridge.java      puente JS ↔ Android del motor nativo
+    NativeAudioStore.java        caché de audio en archivos, para MediaPlayer
     AuroraMediaBridge.java       puente JS ↔ Android del estado de reproducción
     WebApp.java                  comandos del sistema hacia el WebView
     ShareProvider.java           content:// de solo lectura para compartir
@@ -146,15 +154,50 @@ un gesto. En Android 13+ la primera reproducción pide permiso para
 mostrar notificaciones; si se niega, la música suena igual, sin controles
 en la cortina.
 
+## Motor de audio: sistema o app
+
+La app sabe reproducir de dos maneras y se elige en **Ajustes → Motor de
+audio** (se aplica en la siguiente reproducción):
+
+| | Motor del sistema (por defecto) | Motor de la app |
+|---|---|---|
+| Quién pone el sonido | `MediaPlayer` (Java) | `<audio>` + Web Audio (WebView) |
+| Si el WebView muere | **la música sigue** | se corta |
+| Relevo entre pistas | sin hueco (`setNextMediaPlayer`) | sin hueco o con fundido |
+| Ecualizador / visualizador | no | **sí** |
+| Fundidos (crossfade) | no | **sí** |
+| Normalización de volumen | no | **sí** |
+
+El motor nativo es el de por defecto porque es el que hace que la música
+no dependa de la página. Para que `MediaPlayer` pueda leer las pistas, la
+web le manda el audio por trozos la primera vez que suena cada canción y
+queda en una caché de archivos (`filesDir/audio`, tope 1 GB, se vacía
+sola por antigüedad; borrar una pista de la biblioteca borra también su
+archivo). Esa caché es la contrapartida: la biblioteca sigue viviendo en
+IndexedDB y el motor nativo guarda además una copia temporal de lo que
+suena.
+
+Si una pista falla tres veces seguidas en el motor nativo (un códec que
+el sistema no reconoce), la app avisa y vuelve sola al motor del WebView.
+
+Los dos motores se presentan a la app igual: `js/native-audio.js` expone
+un objeto que se comporta como el `<audio>` (mismos eventos
+`timeupdate`, `ended`, `error`…), así que la cola, las estadísticas, las
+letras y la interfaz no saben —ni necesitan saber— cuál está sonando.
+
 ## Limitaciones conocidas
 
 Dichas en voz alta, para que nadie se lleve una sorpresa:
 
-- **El reproductor no es nativo.** El servicio en primer plano mantiene
-  el proceso vivo en segundo plano, pero el audio lo sigue poniendo el
-  WebView: si Android mata el proceso por memoria o cierras la tarea
-  desde «recientes», la reproducción se corta. Un reproductor nativo
-  (MediaPlayer/ExoPlayer con la cola en Java) sería el paso siguiente.
+- **La cola sigue viviendo en la web.** Con el motor del sistema la
+  música aguanta que el WebView desaparezca, pero «siguiente/anterior» y
+  el resto de la lógica de la cola necesitan la página: sin WebView solo
+  quedan play/pausa desde la notificación.
+- **El motor del sistema no tiene ecualizador ni visualizador.** Son
+  Web Audio; para tenerlos hay que elegir el motor de la app en Ajustes.
+- **La caché del motor nativo ocupa disco aparte.** Duplica el audio que
+  está sonando (hasta 1 GB, con poda automática), además de la copia de
+  la biblioteca en IndexedDB.
 - **El espacio manda el dispositivo.** La biblioteca vive en el
   almacenamiento web del WebView; una biblioteca enorme puede chocar
   con la cuota del sistema.
@@ -184,7 +227,8 @@ En los [*issues* de GitHub](https://github.com/nelsondev2/Aurora-Music-Player-An
 | `assets/www/js/data.js` | Traducciones (14 idiomas) y utilidades de datos |
 | `assets/www/js/storage.js` | Persistencia en IndexedDB |
 | `assets/www/js/uploader.js` | Lectura de archivos, ID3 y LRC |
-| `assets/www/js/platform.js` | Puente con Android (compartir, botón atrás) |
+| `assets/www/js/platform.js` | Puente con Android (compartir, botón atrás, notificación) |
+| `assets/www/js/native-audio.js` | Motor nativo con la cara de un `<audio>` |
 | `assets/www/js/` | Módulos de la app (audio, UI, listas, letras, ajustes…) |
 | `assets/www/fonts/`, `assets/www/icon.png` | Fuente Outfit (OFL) e icono |
 | `src/` | Código Java de la app Android |

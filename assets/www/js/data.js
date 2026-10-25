@@ -3595,6 +3595,83 @@ const I18N = {
     id: 'Diunduh',
     'zh-TW': '已下載'
   },
+  /* ---- Motor de audio (reproductor nativo / del WebView) ---- */
+  settings_engine: {
+    es: 'Motor de audio', en: 'Audio engine', pt: 'Motor de áudio',
+    zh: '音频引擎', ja: 'オーディオエンジン', fr: 'Moteur audio',
+    it: 'Motore audio', ru: 'Аудиодвижок',
+    de: 'Audio-Engine',
+    uk: 'Аудіодвижок',
+    pl: 'Silnik audio',
+    tr: 'Ses motoru',
+    id: 'Mesin audio',
+    'zh-TW': '音訊引擎'
+  },
+  settings_engine_native: {
+    es: 'Sistema', en: 'System', pt: 'Sistema',
+    zh: '系统', ja: 'システム', fr: 'Système',
+    it: 'Sistema', ru: 'Система',
+    de: 'System',
+    uk: 'Система',
+    pl: 'System',
+    tr: 'Sistem',
+    id: 'Sistem',
+    'zh-TW': '系統'
+  },
+  settings_engine_web: {
+    es: 'App', en: 'App', pt: 'App',
+    zh: '应用', ja: 'アプリ', fr: 'App',
+    it: 'App', ru: 'Приложение',
+    de: 'App',
+    uk: 'Застосунок',
+    pl: 'Aplikacja',
+    tr: 'Uygulama',
+    id: 'Aplikasi',
+    'zh-TW': '應用'
+  },
+  settings_engine_hint: {
+    es: 'El motor del sistema reproduce aunque la app se cierre y no deja huecos entre canciones. El de la app permite ecualizador, visualizador y fundidos.',
+    en: 'The system engine keeps playing even if the app closes and leaves no gaps between songs. The app engine allows the equalizer, visualizer and crossfades.',
+    pt: 'O motor do sistema continua a tocar mesmo que a app feche e não deixa pausas entre canções. O da app permite equalizador, visualizador e fundidos.',
+    zh: '系统引擎在应用关闭后仍可播放，歌曲之间没有空隙。应用引擎支持均衡器、可视化器和淡入淡出。',
+    ja: 'システムエンジンはアプリを閉じても再生を続け、曲間に隙間がありません。アプリのエンジンはイコライザー、ビジュアライザー、クロスフェードが使えます。',
+    fr: 'Le moteur système continue même si l\'app se ferme et ne laisse pas de blanc entre les morceaux. Celui de l\'app permet l\'égaliseur, le visualiseur et les fondus.',
+    it: 'Il motore di sistema continua anche se l\'app si chiude e non lascia vuoti tra i brani. Quello dell\'app consente equalizzatore, visualizzatore e dissolvenze.',
+    ru: 'Системный движок продолжает играть даже после закрытия приложения и не оставляет пауз между песнями. Движок приложения даёт эквалайзер, визуализатор и плавные переходы.',
+    de: 'Die System-Engine spielt weiter, auch wenn die App geschlossen wird, und lässt keine Lücken zwischen Songs. Die App-Engine erlaubt Equalizer, Visualizer und Überblendungen.',
+    uk: 'Системний рушій грає далі навіть після закриття застосунку й не лишає пауз між піснями. Рушій застосунку дає еквалайзер, візуалізатор і плавні переходи.',
+    pl: 'Silnik systemowy gra dalej nawet po zamknięciu aplikacji i nie zostawia przerw między utworami. Silnik aplikacji daje korektor, wizualizator i przenikanie.',
+    tr: 'Sistem motoru uygulama kapansa da çalmaya devam eder ve şarkılar arasında boşluk bırakmaz. Uygulama motoru ekolayzer, görselleştirici ve geçişlere izin verir.',
+    id: 'Mesin sistem tetap memutar meski aplikasi ditutup dan tidak menyisakan jeda antarlagu. Mesin aplikasi memungkinkan ekualiser, visualisator, dan crossfade.',
+    'zh-TW': '系統引擎在應用關閉後仍可播放，歌曲之間沒有空隙。應用引擎支援等化器、視覺化與淡入淡出。'
+  },
+  engine_needs_reload: {
+    es: 'Se aplicará en la próxima reproducción', en: 'Applies on the next playback', pt: 'Aplica-se na próxima reprodução',
+    zh: '将在下次播放时生效', ja: '次回の再生から適用されます', fr: 'S\'applique à la prochaine lecture',
+    it: 'Si applica alla prossima riproduzione', ru: 'Применится при следующем воспроизведении',
+    de: 'Gilt ab der nächsten Wiedergabe',
+    uk: 'Застосується з наступного відтворення',
+    pl: 'Zadziała przy następnym odtwarzaniu',
+    tr: 'Bir sonraki oynatmada geçerli olur',
+    id: 'Berlaku pada pemutaran berikutnya',
+    'zh-TW': '將於下次播放時生效'
+  },
+  engine_fallback: {
+    es: 'El motor del sistema no pudo con estas pistas; vuelvo al reproductor de la app',
+    en: 'The system engine could not handle these tracks; switching back to the app player',
+    pt: 'O motor do sistema não conseguiu com estas faixas; volto ao reprodutor da app',
+    zh: '系统引擎无法处理这些曲目，已切回应用播放器',
+    ja: 'システムエンジンで再生できませんでした。アプリのプレーヤーに戻します',
+    fr: 'Le moteur système n\'a pas pu lire ces pistes ; retour au lecteur de l\'app',
+    it: 'Il motore di sistema non ce l\'ha fatta con questi brani; torno al lettore dell\'app',
+    ru: 'Системный движок не справился с этими треками; возвращаюсь к плееру приложения',
+    de: 'Die System-Engine kam mit diesen Titeln nicht zurecht; zurück zum App-Player',
+    uk: 'Системний рушій не впорався з цими треками; повертаюся до плеєра застосунку',
+    pl: 'Silnik systemowy nie poradził sobie z tymi utworami; wracam do odtwarzacza aplikacji',
+    tr: 'Sistem motoru bu parçalarla baş edemedi; uygulama oynatıcısına dönüyorum',
+    id: 'Mesin sistem tidak sanggup dengan trek ini; kembali ke pemutar aplikasi',
+    'zh-TW': '系統引擎無法處理這些曲目，已切回應用播放器'
+  },
   time_toggle_remaining: {
     es: 'Duración / tiempo restante', en: 'Duration / time remaining', pt: 'Duração / tempo restante',
     zh: '时长 / 剩余时间', ja: '長さ / 残り時間', fr: 'Durée / temps restant',

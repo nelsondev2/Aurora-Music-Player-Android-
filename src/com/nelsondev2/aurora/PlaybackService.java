@@ -167,17 +167,31 @@ public class PlaybackService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && intent.getAction() != null) {
             String action = intent.getAction();
-            if (ACTION_TOGGLE.equals(action)) WebApp.mediaCommand(sPlaying ? "pause" : "play");
-            else if (ACTION_PLAY.equals(action)) WebApp.mediaCommand("play");
-            else if (ACTION_PAUSE.equals(action)) WebApp.mediaCommand("pause");
-            else if (ACTION_NEXT.equals(action)) WebApp.mediaCommand("next");
-            else if (ACTION_PREV.equals(action)) WebApp.mediaCommand("prev");
+            // Primero la web (es quien sabe qué suena y qué viene después);
+            // si la página ya no existe, play/pausa aún se atiende en el
+            // motor nativo, que no depende de ella.
+            if (ACTION_TOGGLE.equals(action)) {
+                WebApp.mediaCommand(sPlaying ? "pause" : "play");
+                if (!WebApp.attached()) {
+                    if (sPlaying) NativePlayerBridge.pauseIfPlaying();
+                }
+            } else if (ACTION_PLAY.equals(action)) {
+                WebApp.mediaCommand("play");
+            } else if (ACTION_PAUSE.equals(action)) {
+                NativePlayerBridge.pauseIfPlaying();
+                WebApp.mediaCommand("pause");
+            } else if (ACTION_NEXT.equals(action)) {
+                WebApp.mediaCommand("next");
+            } else if (ACTION_PREV.equals(action)) {
+                WebApp.mediaCommand("prev");
+            }
         }
         return START_NOT_STICKY; // sin WebView no hay nada que reanudar
     }
 
     @Override
     public void onDestroy() {
+        NativePlayerBridge.releaseAll();
         releaseFocus();
         releaseWakeLock();
         if (session != null) {
@@ -387,6 +401,10 @@ public class PlaybackService extends Service {
                     if (change == AudioManager.AUDIOFOCUS_LOSS
                             || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
                         focused = false;
+                        // Se pausa por las dos vías: el reproductor nativo
+                        // (que sigue vivo aunque el WebView no) y la web,
+                        // que es quien actualiza la interfaz.
+                        NativePlayerBridge.pauseIfPlaying();
                         WebApp.mediaCommand("pause");
                     } else if (change == AudioManager.AUDIOFOCUS_GAIN) {
                         focused = true;

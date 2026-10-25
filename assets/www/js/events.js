@@ -267,6 +267,15 @@ Object.assign(App, {
       });
       //  un solo control de transición (Corte / Sin pausa /
       // Fundido) en vez de interruptor gapless + botones de fundido.
+      document.querySelectorAll('[data-engine]').forEach(b => {
+        b.addEventListener('click', () => {
+          if (typeof this.setAudioEngine !== 'function') return;
+          const chosen = b.dataset.engine === 'web' ? 'web' : 'native';
+          if (chosen === this._engine) return;
+          this.setAudioEngine(chosen);
+          this.toast(this.t('engine_needs_reload'));
+        });
+      });
       document.querySelectorAll('[data-transition]').forEach(b => {
         b.addEventListener('click', () => this.setTransitionMode(b.dataset.transition));
       });

@@ -2,6 +2,29 @@
 
 Historial de versiones **publicadas** de Aurora Music Player.
 
+## Sin publicar — 1.4.0 · Reproductor nativo
+
+- **El audio lo pone Android** (`NativePlayer.java`, sobre `MediaPlayer`):
+  la música sigue sonando aunque el WebView desaparezca, y la pista
+  siguiente se prepara por adelantado con `setNextMediaPlayer`, así que
+  el relevo entre canciones no tiene hueco.
+- **Dos motores, elegibles en Ajustes → Motor de audio**: el del sistema
+  (por defecto: aguanta el cierre de la app y hace gapless) y el de la
+  app (Web Audio: ecualizador, visualizador, fundidos y normalización).
+  El cambio se aplica en la siguiente reproducción.
+- **`js/native-audio.js`**: el motor nativo se presenta a la app con la
+  cara del `<audio>` (mismos `timeupdate`, `ended`, `error`), así que
+  cola, letras, estadísticas e interfaz no cambian.
+- **Caché de audio en archivos** (`NativeAudioStore.java`): la web manda
+  la pista por trozos de 512 KB la primera vez que suena; queda en
+  `filesDir/audio` con tope de 1 GB y poda por antigüedad. Borrar una
+  pista de la biblioteca borra también su archivo.
+- **Vuelta atrás automática**: tras tres fallos seguidos del motor
+  nativo con las mismas pistas (códec no reconocido), la app avisa y
+  vuelve al motor del WebView.
+- La notificación, el foco de audio y el botón de auriculares también
+  pausan el motor nativo, aunque la página ya no exista.
+
 ## Sin publicar — 1.3.0 · Aurora se hace app de Android
 
 - **Deja de ser un WebXDC.** Fuera todo lo que ataba la app a Delta

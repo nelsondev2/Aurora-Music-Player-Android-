@@ -10,8 +10,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.nelsondev2.aurora"
-    android:versionCode="130"
-    android:versionName="1.3.0">
+    android:versionCode="140"
+    android:versionName="1.4.0">
 
     <uses-sdk
         android:minSdkVersion="21"

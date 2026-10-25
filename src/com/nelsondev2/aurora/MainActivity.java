@@ -105,6 +105,7 @@ public class MainActivity extends Activity {
         });
         w.addJavascriptInterface(new AuroraBridge(this), "AuroraAndroid");
         w.addJavascriptInterface(new AuroraMediaBridge(this), "AuroraMedia");
+        w.addJavascriptInterface(new NativePlayerBridge(this), "AuroraNativePlayer");
     }
 
     /**
@@ -204,9 +205,25 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        // Sin WebView no hay música: el servicio no debe quedarse con una
-        // notificación que ya no responde a nada.
+        // Si el reproductor nativo está sonando, la música NO depende del
+        // WebView: se deja el servicio (y su notificación) en pie.
+        if (NativePlayerBridge.isPlaying()) {
+            WebApp.detach();
+            if (webView != null) {
+                webView.removeJavascriptInterface("AuroraAndroid");
+            webView.removeJavascriptInterface("AuroraMedia");
+            webView.removeJavascriptInterface("AuroraNativePlayer");
+                webView.removeJavascriptInterface("AuroraMedia");
+                webView.removeJavascriptInterface("AuroraNativePlayer");
+                webView.loadUrl("about:blank");
+                webView.destroy();
+                webView = null;
+            }
+            super.onDestroy();
+            return;
+        }
         PlaybackService.shutdown(this);
+        NativePlayerBridge.releaseAll();
         WebApp.detach();
         if (webView != null) {
             webView.removeJavascriptInterface("AuroraAndroid");
