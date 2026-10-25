@@ -1,0 +1,3 @@
+# Artefacto generado por build-xdc.py
+*.xdc
+__pycache__/

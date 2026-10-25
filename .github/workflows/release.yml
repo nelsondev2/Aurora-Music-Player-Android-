@@ -1,0 +1,116 @@
+# =====================================================================
+#  Release .xdc — Aurora Music Player
+#  Empaqueta la app como WebXDC y publica el GitHub Release con el
+#  .xdc adjunto, listo para enviar a Delta Chat.
+#
+#  Cómo se usa:
+#    · Automático: al empujar una etiqueta de versión (v1.2.0, …)
+#      se construye y se crea el release de esa etiqueta.
+#    · Manual: pestaña Actions → «Release .xdc» → Run workflow,
+#      indicando la etiqueta (sirve para reparar una subida:
+#      si el release ya existe, el .xdc se vuelve a adjuntar).
+#
+#  El .xdc lo genera y valida build-xdc.py (solo Python estándar);
+#  si la validación falla, no hay release.
+# =====================================================================
+
+name: Release .xdc
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Etiqueta a publicar (p. ej. v1.2.0)'
+        required: true
+        default: 'v1.2.0'
+
+# Crear releases y subir adjuntos exige escribir en el repo.
+permissions:
+  contents: write
+
+# Dos lanzamientos sobre la misma referencia no deben pisarse.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Empaquetar y publicar
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolver la etiqueta de versión
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            TAG="${{ inputs.tag }}"
+          fi
+          case "$TAG" in
+            v*.*.*) ;;
+            *) echo "::error::Etiqueta no válida: «$TAG» (se esperaba algo como v1.2.0)"; exit 1 ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Publicando $TAG desde ${GITHUB_SHA}"
+
+      - name: Comprobar que la versión está en el CHANGELOG
+        shell: bash
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          VERSION="${TAG#v}"
+          if ! grep -q "^## ${VERSION} " CHANGELOG.md; then
+            echo "::error::El CHANGELOG no tiene sección «## ${VERSION} …»: documéntala antes de etiquetar."
+            exit 1
+          fi
+
+      - name: Empaquetar y validar el .xdc
+        run: python3 build-xdc.py
+
+      - name: Preparar el adjunto del release
+        run: |
+          cp aurora-music-player.xdc Aurora-Music-Player.xdc
+          ls -la Aurora-Music-Player.xdc
+          sha256sum Aurora-Music-Player.xdc
+
+      - name: Extraer las notas desde el CHANGELOG
+        shell: bash
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          VERSION="${TAG#v}"
+          awk -v hdr="## ${VERSION}" '
+            index($0, hdr) == 1 { cap = 1 }
+            cap && /^## / && index($0, hdr) != 1 { exit }
+            cap { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "Aurora Music Player ${TAG}" > release-notes.md
+          fi
+          cat release-notes.md
+
+      - name: Crear el release (o re-adjuntar si ya existe)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "El release $TAG ya existe: se sustituye el .xdc adjunto."
+            gh release upload "$TAG" Aurora-Music-Player.xdc --clobber
+          else
+            gh release create "$TAG" Aurora-Music-Player.xdc \
+              --title "Aurora Music Player $TAG" \
+              --notes-file release-notes.md
+          fi
