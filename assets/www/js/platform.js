@@ -2,6 +2,13 @@
  *  js/platform.js — Aurora Music Player
  *  Puente con la app Android (WebView) y adaptación al contenedor.
  *
+ *  Además de compartir archivos, este módulo alimenta la reproducción en
+ *  segundo plano: cada cambio de pista o de play/pausa viaja a
+ *  window.AuroraMedia (AuroraMediaBridge.java → PlaybackService), que
+ *  mantiene viva la app, publica la notificación con controles y pide el
+ *  foco de audio. Los botones de la notificación, de la pantalla de
+ *  bloqueo y de los auriculares vuelven por window.AuroraMediaCommand.
+ *
  *  La app nativa inyecta el objeto `AuroraAndroid` (ver
  *  src/com/nelsondev2/aurora/AuroraBridge.java) con cuatro métodos:
  *
@@ -131,4 +138,98 @@ window.AuroraAndroidBack = function () {
   } catch (e) {
     return 'exit';
   }
+};
+
+/* =====================================================================
+ *  Reproducción en segundo plano (Android)
+ *  Ruido cero en navegador: si no existe window.AuroraMedia, todo esto
+ *  no hace nada.
+ * ===================================================================== */
+
+Object.assign(App, {
+  /* ¿Hay servicio de reproducción nativo? */
+  hasNativeMedia() {
+    const M = window.AuroraMedia;
+    return !!(M && typeof M.mediaUpdate === 'function' &&
+      typeof M.mediaStart === 'function');
+  },
+
+  /* Manda a Android lo que está sonando.
+   * Se llama desde updatePlayUI(), renderCurrentTrack() y seekToTime():
+   * el estado ya está calculado y aquí solo se compara con lo último
+   * enviado, así que repetir la llamada no cuesta ni una ida al puente. */
+  syncNativeMedia() {
+    if (!this.hasNativeMedia()) return;
+    const M = window.AuroraMedia;
+    const t = this.currentTrack;
+
+    if (!t) {
+      if (this._nativeMediaOn) {
+        this._nativeMediaOn = false;
+        this._nativeMediaSig = null;
+        this._nativeMediaArtId = null;
+        try { M.mediaStop(); } catch (e) {}
+      }
+      return;
+    }
+
+    const playing = !!this.isPlaying;
+    const dur = this.audio && isFinite(this.audio.duration) && this.audio.duration > 0
+      ? this.audio.duration : (t.duration || 0);
+    const pos = this.audio && isFinite(this.audio.currentTime) ? this.audio.currentTime : 0;
+
+    // El servicio se levanta en la primera reproducción, no al abrir una
+    // pista en pausa: así no aparece una notificación muda al arrancar.
+    if (playing && !this._nativeMediaOn) {
+      this._nativeMediaOn = true;
+      try { M.mediaStart(); } catch (e) {}
+    }
+    if (!this._nativeMediaOn) return;
+
+    const sig = [t.id, t.title || '', t.artist || '', t.album || '',
+      playing ? 1 : 0, Math.round(dur * 1000), Math.round(pos * 1000)].join('\u0001');
+    if (sig !== this._nativeMediaSig) {
+      this._nativeMediaSig = sig;
+      try {
+        M.mediaUpdate(t.title || '', t.artist || '', t.album || '',
+          playing, Math.round(dur * 1000), Math.round(pos * 1000));
+      } catch (e) {}
+    }
+
+    // Carátula: solo cuando cambia de pista (decodificar una imagen no es
+    // gratis). Una portada enorme se omite antes que atascar el puente.
+    if (this._nativeMediaArtId !== t.id) {
+      this._nativeMediaArtId = t.id;
+      let art = '';
+      try {
+        art = (typeof this._renderArtwork === 'function')
+          ? this._renderArtwork(t, 512) : '';
+      } catch (e) { art = ''; }
+      if (art && art.indexOf('data:image/') === 0 && art.length < 2500000) {
+        try { M.mediaArtwork(art); } catch (e) {}
+      } else {
+        try { M.mediaClearArtwork(); } catch (e) {}
+      }
+    }
+  }
+});
+
+/* Comandos que llegan desde el sistema (notificación, bloqueo, auriculares).
+ * PlaybackService los manda con WebApp.mediaCommand(). */
+window.AuroraMediaCommand = function (cmd) {
+  try {
+    const name = String(cmd || '');
+    if (!window.App) return;
+    if (name === 'play') {
+      if (App.currentTrack && !App.isPlaying) App.togglePlay(true);
+    } else if (name === 'pause') {
+      if (App.isPlaying) App.togglePlay(false);
+    } else if (name === 'next') {
+      if (typeof App.next === 'function') App.next();
+    } else if (name === 'prev') {
+      if (typeof App.prev === 'function') App.prev();
+    } else if (name === 'stop') {
+      if (App.isPlaying) App.togglePlay(false);
+    }
+  } catch (e) {}
 };

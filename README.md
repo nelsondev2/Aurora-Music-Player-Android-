@@ -34,6 +34,10 @@ servidor, sin cuenta y sin publicidad. Carga archivos locales
   A-B, «Reproducir desde…» con su contexto, reproducción continua
   (gapless/crossfade), ecualizador, visualizador y temporizador de
   apagado.
+- **Sigue sonando fuera de la app**: reproducción en segundo plano con
+  notificación y carátula, controles en la pantalla de bloqueo y en los
+  auriculares, y foco de audio (si entra una llamada, Aurora se pausa
+  sola).
 - **Estadísticas**: más reproducidas, artistas favoritos y tiempo de
   escucha (una reproducción solo cuenta cuando la canción suena
   entera).
@@ -59,8 +63,9 @@ AndroidX). Se compila offline con el propio compilador de AIDE.
    `AndroidManifest.xml` y propone sus SDK instalados.
 3. Pulsa **Run**: compila el APK y lo instala.
 
-Requisitos: AIDE 3.x o superior con un SDK de API 21 o mayor
-instalado. El resultado es `Aurora.apk`, sin permisos de
+Requisitos: AIDE 3.x o superior con un SDK de compilación 26 o mayor
+(el minSdk de la app es 21; la notificación de reproducción usa
+`NotificationChannel`, que necesita API 26 para compilar). El resultado es `Aurora.apk`, sin permisos de
 almacenamiento (los archivos se eligen con el selector del sistema,
 que concede cada archivo concreto).
 
@@ -86,6 +91,9 @@ src/com/nelsondev2/aurora/
     MainActivity.java            WebView, selector de archivos, botón atrás
     AuroraWebClient.java         sirve assets/www desde https://aurora.localhost
     AuroraBridge.java            puente JS ↔ Android (compartir por trozos)
+    PlaybackService.java         segundo plano: MediaSession, notificación, foco
+    AuroraMediaBridge.java       puente JS ↔ Android del estado de reproducción
+    WebApp.java                  comandos del sistema hacia el WebView
     ShareProvider.java           content:// de solo lectura para compartir
     Mime.java                    tipos MIME por extensión
 assets/www/                      la app (HTML + CSS + JS, sin build)
@@ -112,14 +120,41 @@ Tres decisiones que explican el resto:
   Letras o responde «sigue sonando» para que la app se vaya al fondo
   sin cortar la música, en vez de matar la reproducción.
 
+## Reproducción en segundo plano
+
+El audio sigue viviendo en el WebView (la app es una sola página), pero
+`PlaybackService` lo protege: es un servicio en primer plano que mantiene
+el proceso vivo mientras suena, publica la notificación con carátula y
+controles, expone la sesión a la pantalla de bloqueo y a los auriculares
+(`MediaSession`), pide el foco de audio —si entra una llamada, la música
+se pausa— y sostiene un wake lock parcial para que el sueño del
+dispositivo no la corte.
+
+El estado viaja en los dos sentidos:
+
+- **Web → Android:** cada cambio de pista, play/pausa o salto llama a
+  `window.AuroraMedia` (`AuroraMediaBridge`), que actualiza notificación y
+  sesión. Se deduplica en `js/platform.js`, así que repetir llamadas no
+  cuesta nada.
+- **Android → Web:** los botones de la notificación, del bloqueo y de los
+  auriculares ejecutan `window.AuroraMediaCommand('play' | 'pause' |
+  'next' | 'prev')`, que llama a la app de siempre.
+
+En pausa el servicio suelta el primer plano: nada suena, así que el
+sistema puede reclamar el proceso y la notificación se puede descartar con
+un gesto. En Android 13+ la primera reproducción pide permiso para
+mostrar notificaciones; si se niega, la música suena igual, sin controles
+en la cortina.
+
 ## Limitaciones conocidas
 
 Dichas en voz alta, para que nadie se lleve una sorpresa:
 
-- **La música se detiene al cerrar la app desde recientes o al
-  destruirse la actividad.** No hay servicio en primer plano todavía:
-  si sales con el botón atrás la reproducción continúa, pero si
-  Android reclama memoria, se acaba.
+- **El reproductor no es nativo.** El servicio en primer plano mantiene
+  el proceso vivo en segundo plano, pero el audio lo sigue poniendo el
+  WebView: si Android mata el proceso por memoria o cierras la tarea
+  desde «recientes», la reproducción se corta. Un reproductor nativo
+  (MediaPlayer/ExoPlayer con la cola en Java) sería el paso siguiente.
 - **El espacio manda el dispositivo.** La biblioteca vive en el
   almacenamiento web del WebView; una biblioteca enorme puede chocar
   con la cuota del sistema.

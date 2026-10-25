@@ -5,8 +5,11 @@
 
 Verifica, sin dependencias externas:
   · que el proyecto Android tiene lo que AIDE espera,
-  · que todo lo que carga index.html existe,
-  · que ningún script quedó huérfano ni sin cargar,
+  · que el manifest y las clases Java coinciden,
+  · que el XML está bien formado,
+  · que todo lo que carga index.html existe y ningún script sobra,
+  · que los recursos R.* usados en Java existen,
+  · que los puentes Java ↔ JS (compartir y reproducción) casan,
   · que las claves de traducción usadas existen en data.js,
   · que no ha vuelto a colarse nada de la etapa WebXDC/Delta Chat.
 
@@ -46,46 +49,66 @@ def check_android_project():
     required = [
         "AndroidManifest.xml",
         "res/values/strings.xml",
+        "res/values/colors.xml",
+        "res/values/styles.xml",
+        "res/drawable/ic_stat_aurora.xml",
         "res/mipmap-mdpi/ic_launcher.png",
         "res/mipmap-xxxhdpi/ic_launcher.png",
         "assets/www/index.html",
         "src/com/nelsondev2/aurora/MainActivity.java",
         "src/com/nelsondev2/aurora/AuroraWebClient.java",
         "src/com/nelsondev2/aurora/AuroraBridge.java",
+        "src/com/nelsondev2/aurora/AuroraMediaBridge.java",
+        "src/com/nelsondev2/aurora/PlaybackService.java",
+        "src/com/nelsondev2/aurora/WebApp.java",
         "src/com/nelsondev2/aurora/ShareProvider.java",
         "src/com/nelsondev2/aurora/Mime.java",
     ]
-    for rel in required:
-        if not os.path.isfile(os.path.join(ROOT, rel)):
-            fail("falta %s" % rel)
-    if not errors:
+    missing = [rel for rel in required if not os.path.isfile(os.path.join(ROOT, rel))]
+    for rel in missing:
+        fail("falta %s" % rel)
+    if not missing:
         ok.append("estructura del proyecto Android completa")
 
-    # Las clases declaradas en el manifest deben existir.
     manifest = read(os.path.join(ROOT, "AndroidManifest.xml"))
     for name in re.findall(r'android:name="\.([A-Za-z0-9_]+)"', manifest):
-        path = os.path.join(SRC, name + ".java")
-        if not os.path.isfile(path):
+        if not os.path.isfile(os.path.join(SRC, name + ".java")):
             fail("el manifest declara .%s y no existe %s.java" % (name, name))
     for pkg in re.findall(r'package="([^"]+)"', manifest):
         if not os.path.isdir(os.path.join(ROOT, "src", *pkg.split("."))):
             fail("el package del manifest (%s) no casa con src/" % pkg)
     ok.append("manifest y clases Java coinciden")
 
+    # Servicio en primer plano: sin permisos no arranca en Android 9+.
+    if "foregroundServiceType" in manifest:
+        for perm in ("FOREGROUND_SERVICE", "WAKE_LOCK"):
+            if perm not in manifest:
+                fail("el servicio en primer plano necesita el permiso %s" % perm)
 
-# ------------------------------------------------------------------- assets
+
+# ----------------------------------------------------------------------- xml
+def check_xml():
+    paths = [os.path.join(ROOT, "AndroidManifest.xml")]
+    paths += glob.glob(os.path.join(ROOT, "res", "**", "*.xml"), recursive=True)
+    for path in paths:
+        try:
+            ET.parse(path)
+        except Exception as exc:
+            fail("%s no es XML válido: %s" % (os.path.relpath(path, ROOT), exc))
+    ok.append("%d archivos XML bien formados" % len(paths))
+
+
+# -------------------------------------------------------------------- assets
 def check_assets():
-    index_path = os.path.join(WWW, "index.html")
-    html = read(index_path)
+    html = read(os.path.join(WWW, "index.html"))
 
     scripts = re.findall(r'<script[^>]+src="([^"]+)"', html)
     links = re.findall(r'<link[^>]+href="([^"]+)"', html)
     local = [r for r in scripts + links if not re.match(r"^(?:[a-z]+:|//|#)", r)]
-    for ref in sorted(local):
+    for ref in sorted(set(local)):
         if not os.path.isfile(os.path.join(WWW, ref)):
             fail("index.html referencia «%s» y no existe" % ref)
 
-    # Todo módulo de js/ debe estar cargado y todo lo cargado debe existir.
     loaded = {os.path.basename(r) for r in local if r.startswith("js/")}
     published = {n for n in os.listdir(os.path.join(WWW, "js")) if n.endswith(".js")}
     for missing in sorted(loaded - published):
@@ -93,25 +116,89 @@ def check_assets():
     for orphan in sorted(published - loaded):
         fail("assets/www/js/%s no lo carga index.html" % orphan)
 
-    # platform.js define el puente que usa el resto: debe ir tras state.js
     order = [os.path.basename(r) for r in scripts if r.startswith("js/")]
     if "platform.js" in order and "state.js" in order:
         if order.index("platform.js") < order.index("state.js"):
             fail("platform.js debe cargarse después de state.js")
-        if "main.js" in order and order.index("platform.js") > order.index("main.js"):
+    if "platform.js" in order and "main.js" in order:
+        if order.index("platform.js") > order.index("main.js"):
             fail("platform.js debe cargarse antes de main.js")
 
     if "webxdc.js" in html:
         fail("index.html sigue cargando webxdc.js")
 
-    ok.append("%d recursos de index.html verificados" % len(local))
+    ok.append("%d recursos de index.html verificados" % len(set(local)))
+
+
+# ---------------------------------------------------------------- recursos
+def check_java_resources():
+    """R.string / R.drawable / R.mipmap / R.color usados en Java deben existir."""
+    strings_xml = read(os.path.join(ROOT, "res", "values", "strings.xml"))
+    strings = set(re.findall(r'<string name="([^"]+)"', strings_xml))
+    colors_xml = read(os.path.join(ROOT, "res", "values", "colors.xml"))
+    colors = set(re.findall(r'<color name="([^"]+)"', colors_xml))
+
+    drawables = set()
+    folders = glob.glob(os.path.join(ROOT, "res", "drawable*"))
+    folders += glob.glob(os.path.join(ROOT, "res", "mipmap*"))
+    for folder in folders:
+        for name in os.listdir(folder):
+            drawables.add(os.path.splitext(name)[0])
+
+    # Solo R.* propios: «android.R.drawable.x» lo pone el sistema.
+    for path in glob.glob(os.path.join(SRC, "*.java")):
+        code = read(path)
+        base = os.path.basename(path)
+        for name in set(re.findall(r"(?<![\w.])R\.string\.(\w+)", code)):
+            if name not in strings:
+                fail("%s usa R.string.%s y no está en strings.xml" % (base, name))
+        for name in set(re.findall(r"(?<![\w.])R\.(?:drawable|mipmap)\.(\w+)", code)):
+            if name not in drawables:
+                fail("%s usa R.drawable.%s y no existe el recurso" % (base, name))
+        for name in set(re.findall(r"(?<![\w.])R\.color\.(\w+)", code)):
+            if name not in colors:
+                fail("%s usa R.color.%s y no está en colors.xml" % (base, name))
+
+    ok.append("%d textos, %d colores y %d iconos de Android existen"
+              % (len(strings), len(colors), len(drawables)))
+
+
+# -------------------------------------------------------------------- puente
+def check_bridge():
+    """Los métodos @JavascriptInterface y los que llama platform.js deben casar."""
+    js = read(os.path.join(WWW, "js", "platform.js"))
+    pairs = [
+        ("AuroraAndroid", "B", "AuroraBridge.java"),
+        ("AuroraMedia", "M", "AuroraMediaBridge.java"),
+    ]
+    main = read(os.path.join(SRC, "MainActivity.java"))
+
+    for window_name, var, java_file in pairs:
+        java = read(os.path.join(SRC, java_file))
+        exported = set(re.findall(
+            r"@JavascriptInterface\s+public\s+[\w<>\[\]]+\s+(\w+)\s*\(", java))
+        used = set(re.findall(r"\b" + var + r"\.(\w+)\s*\(", js))
+        for name in sorted(used - exported):
+            fail("platform.js llama a %s.%s y Java no lo expone" % (window_name, name))
+        for name in sorted(exported - used):
+            if name not in js:
+                fail("%s expone %s y platform.js no lo usa" % (java_file, name))
+        if exported and not (used - exported):
+            ok.append("puente %s: %s" % (window_name, ", ".join(sorted(exported))))
+        if '"%s"' % window_name not in main:
+            fail("MainActivity no inyecta window.%s" % window_name)
+
+    # Los comandos del sistema (notificación, auriculares) los atiende la web.
+    if "AuroraMediaCommand" not in js:
+        fail("platform.js no define window.AuroraMediaCommand")
+    if "mediaCommand" not in read(os.path.join(SRC, "WebApp.java")):
+        fail("WebApp.java no envía comandos a la web")
 
 
 # ---------------------------------------------------------------------- i18n
 def check_i18n():
     data = read(os.path.join(WWW, "js", "data.js"))
-    start = data.index("const I18N = {")
-    block = data[start:]
+    block = data[data.index("const I18N = {"):]
     keys = set(re.findall(r"^  ([a-zA-Z0-9_]+):\s*\{", block, re.M))
 
     used = set()
@@ -121,11 +208,10 @@ def check_i18n():
         code = read(os.path.join(WWW, "js", name))
         used.update(re.findall(r"\.t\('([a-zA-Z0-9_]+)'\)", code))
         used.update(re.findall(r'this\.t\("([a-zA-Z0-9_]+)"\)', code))
-    # «key» es el parámetro de t(key) citado en un comentario: no es una clave.
-    used.discard("key")
-
     html = read(os.path.join(WWW, "index.html"))
     used.update(re.findall(r'data-i18n(?:-aria)?="([a-zA-Z0-9_]+)"', html))
+    # «key» es el parámetro de t(key) citado en un comentario: no es una clave.
+    used.discard("key")
 
     for key in sorted(used - keys):
         fail("clave de traducción «%s» usada y no definida en data.js" % key)
@@ -134,26 +220,7 @@ def check_i18n():
     if unused:
         warn("%d claves de traducción sin usar (no rompen nada): %s"
              % (len(unused), ", ".join(unused[:8]) + ("…" if len(unused) > 8 else "")))
-
     ok.append("%d claves de traducción en uso, todas definidas" % len(used))
-
-
-# -------------------------------------------------------------------- puente
-def check_bridge():
-    """Los métodos @JavascriptInterface y los que llama platform.js deben casar."""
-    java = read(os.path.join(SRC, "AuroraBridge.java"))
-    exported = set(re.findall(
-        r"@JavascriptInterface\s+public\s+[\w<>\[\]]+\s+(\w+)\s*\(", java))
-    js = read(os.path.join(WWW, "js", "platform.js"))
-    used = set(re.findall(r"\bB\.(\w+)\s*\(", js))
-
-    for name in sorted(used - exported):
-        fail("platform.js llama a AuroraAndroid.%s y Java no lo expone" % name)
-    for name in sorted(exported - used):
-        if name not in js:
-            fail("AuroraBridge expone %s y platform.js no lo usa" % name)
-    if exported and used and not (used - exported):
-        ok.append("puente Java ↔ JS: %s" % ", ".join(sorted(exported)))
 
 
 # --------------------------------------------------------------- webxdc-off
@@ -164,7 +231,7 @@ def check_no_webxdc():
     targets = []
     for base, _dirs, files in os.walk(WWW):
         targets += [os.path.join(base, f) for f in files]
-    targets += [os.path.join(ROOT, "AndroidManifest.xml")]
+    targets.append(os.path.join(ROOT, "AndroidManifest.xml"))
     for base, _dirs, files in os.walk(SRC):
         targets += [os.path.join(base, f) for f in files if f.endswith(".java")]
     # El CHANGELOG queda fuera a propósito: su entrada 1.3.0 explica
@@ -184,30 +251,17 @@ def check_no_webxdc():
         ok.append("sin rastro de WebXDC/Delta Chat")
 
 
-# ----------------------------------------------------------------------- xml
-def check_xml():
-    """XML bien formado: aapt se atraganta con un comentario mal escrito."""
-    paths = [os.path.join(ROOT, "AndroidManifest.xml")]
-    paths += glob.glob(os.path.join(ROOT, "res", "**", "*.xml"), recursive=True)
-    for path in paths:
-        try:
-            ET.parse(path)
-        except Exception as exc:  # ParseError
-            fail("%s no es XML válido: %s" % (os.path.relpath(path, ROOT), exc))
-    if paths:
-        ok.append("%d archivos XML bien formados" % len(paths))
-
-
 def main():
     check_android_project()
     check_xml()
     check_assets()
+    check_java_resources()
     check_bridge()
     check_i18n()
     check_no_webxdc()
 
     for line in ok:
-        print("  ok   " + line)
+        print("  ok    " + line)
     for line in warnings:
         print("  aviso " + line)
     if errors:

@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Aurora</string>
+
+    <!-- Notificación de reproducción -->
+    <string name="notification_channel_playback">Reproducción</string>
+    <string name="notification_channel_playback_desc">Controles de la música que está sonando</string>
+    <string name="action_play">Reproducir</string>
+    <string name="action_pause">Pausar</string>
+    <string name="action_next">Siguiente</string>
+    <string name="action_prev">Anterior</string>
 </resources>

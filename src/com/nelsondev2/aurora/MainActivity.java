@@ -28,6 +28,11 @@ import android.widget.FrameLayout;
 public class MainActivity extends Activity {
 
     private static final int REQ_FILE_CHOOSER = 1001;
+    private static final int REQ_NOTIFICATIONS = 1002;
+    /** android.permission.POST_NOTIFICATIONS (API 33), como literal para
+     *  poder compilar también contra SDK anteriores. */
+    private static final String PERMISSION_POST_NOTIFICATIONS =
+            "android.permission.POST_NOTIFICATIONS";
     private static final int BG_COLOR = 0xFF050509; // el --bg-0 de la app
 
     private WebView webView;
@@ -48,6 +53,7 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         configureWebView(webView);
+        WebApp.attach(webView);
         // Sin restaurar estado de Android a propósito: la app ya recupera
         // su propia sesión (biblioteca, cola, ajustes) desde IndexedDB y
         // localStorage, y así una recreación no deja un WebView a medias.
@@ -98,6 +104,23 @@ public class MainActivity extends Activity {
             }
         });
         w.addJavascriptInterface(new AuroraBridge(this), "AuroraAndroid");
+        w.addJavascriptInterface(new AuroraMediaBridge(this), "AuroraMedia");
+    }
+
+    /**
+     * Android 13+ exige permiso explícito para mostrar la notificación de
+     * reproducción. Sin él la música sigue sonando y el servicio funciona:
+     * lo único que se pierde son los controles en la cortina. Se pide una
+     * sola vez, en la primera reproducción.
+     */
+    void ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT < 33) return;
+        try {
+            if (checkSelfPermission(PERMISSION_POST_NOTIFICATIONS) == 0) return;
+            requestPermissions(new String[]{PERMISSION_POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
+        } catch (Exception ignored) {
+            // Un dispositivo sin ese permiso declarado no debe romper nada.
+        }
     }
 
     /**
@@ -181,6 +204,10 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        // Sin WebView no hay música: el servicio no debe quedarse con una
+        // notificación que ya no responde a nada.
+        PlaybackService.shutdown(this);
+        WebApp.detach();
         if (webView != null) {
             webView.removeJavascriptInterface("AuroraAndroid");
             webView.loadUrl("about:blank");

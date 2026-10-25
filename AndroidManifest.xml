@@ -21,6 +21,12 @@
          solo evita que el WebView rechace el origen https ficticio. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Reproducción en segundo plano (PlaybackService) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Android 13+ pide permiso en tiempo de ejecución para la notificación -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="true"
         android:hardwareAccelerated="true"
@@ -41,6 +47,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Reproducción en segundo plano: notificación, MediaSession y
+             foco de audio mientras el WebView sigue sonando. -->
+        <service
+            android:name=".PlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- Archivos exportados (compartir) con permiso temporal de lectura -->
         <provider

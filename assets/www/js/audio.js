@@ -1010,6 +1010,7 @@ Object.assign(App, {
       this._statsWallBase = Date.now();
       this.updateProgress();
       this.updateMediaPosition(true);
+      if (typeof this.syncNativeMedia === 'function') this.syncNativeMedia();
     },
     seekTo(ratio) {
       if (!this.audio || !this.audio.duration || !isFinite(this.audio.duration)) return;

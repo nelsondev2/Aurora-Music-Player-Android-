@@ -27,6 +27,17 @@ Historial de versiones **publicadas** de Aurora Music Player.
 - **Botón atrás con criterio**: cierra la hoja abierta, sale de Letras
   o manda la app al fondo si suena música, en vez de cortar la
   reproducción.
+- **Reproducción en segundo plano de verdad**: `PlaybackService` es un
+  servicio en primer plano que mantiene vivo el proceso mientras suena,
+  publica la notificación con carátula y controles (anterior, play/pausa,
+  siguiente), expone la música a la pantalla de bloqueo y a los botones
+  de los auriculares con `MediaSession`, pide el foco de audio —si entra
+  una llamada, Aurora se pausa sola— y sostiene un wake lock parcial para
+  que el sueño del dispositivo no la corte. En pausa suelta el primer
+  plano y la notificación se puede descartar.
+- **Esto antes no se podía**: dentro de un `.xdc` la app vivía en la
+  ventana del cliente de mensajería, sin servicio ni notificación, y la
+  música moría al cerrar. Era la limitación más citada del README.
 - Los enlaces externos («Código fuente») abren el navegador del
   sistema, así que desaparece la URL en texto como sustituto.
 
@@ -255,7 +266,8 @@ verificado función a función:
 
 - La biblioteca vive en el almacenamiento de la app: sin
   sincronización entre dispositivos ni copia de seguridad integrada.
-- La reproducción se detiene si el sistema destruye la actividad (no
-  hay servicio en primer plano todavía).
+- El audio sigue viviendo en el WebView: si Android mata el proceso por
+  memoria o se cierra la tarea desde «recientes», la reproducción se
+  corta. El paso siguiente es un reproductor nativo de verdad.
 - Verificada a mano por el mantenedor antes de publicar; los fallos
   se recogen en los *issues* de GitHub.

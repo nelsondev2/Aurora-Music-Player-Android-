@@ -16,6 +16,8 @@ Object.assign(App, {
      * ============================================================ */
     renderCurrentTrack() {
       const t = this.currentTrack;
+      // Notificación / MediaSession: pista nueva (o ninguna).
+      if (typeof this.syncNativeMedia === 'function') this.syncNativeMedia();
       if (!t) {
         this._shownCoverTrackId = null;
         if (typeof this.setBuffering === 'function') this.setBuffering(false);
@@ -385,6 +387,9 @@ Object.assign(App, {
           homeHeroEl.hidden = !!this.isPlaying;
         }
       }
+
+      // Play/pausa hacia la notificación de Android y la MediaSession.
+      if (typeof this.syncNativeMedia === 'function') this.syncNativeMedia();
 
       // Visualizador en tiempo real
       if (this.isPlaying) {
