@@ -84,16 +84,19 @@ jobs:
 
       - name: Compilar
         run: |
+          #  GitHub ejecuta los pasos con `bash -e`: sin capturar el estado
+          # con `|| status=$?` el script moría aquí mismo y el diagnóstico
+          # de abajo no llegaba a ejecutarse nunca.
           set -uo pipefail
           mkdir -p dist
           LOG="$RUNNER_TEMP/build.log"
+          status=0
           # bash -x deja en el log la orden exacta que falló, no solo el
           # mensaje del tool: con el log del runner a veces no basta.
           bash -x tools/build-apk.sh \
             --min-sdk ${{ matrix.api }} \
             --target-sdk 33 \
-            --out "dist/aurora-minSdk${{ matrix.api }}.apk" >"$LOG" 2>&1
-          status=$?
+            --out "dist/aurora-minSdk${{ matrix.api }}.apk" >"$LOG" 2>&1 || status=$?
           tail -n 60 "$LOG" || true
           if [ "$status" -ne 0 ]; then
             # El log del runner no siempre es accesible desde fuera (y el
