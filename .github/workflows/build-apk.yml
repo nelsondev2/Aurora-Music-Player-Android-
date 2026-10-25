@@ -26,6 +26,10 @@ on:
 
 permissions:
   contents: read
+  # Solo para poder publicar el fallo de la compilación donde se lea:
+  # las anotaciones del runner y un comentario en el PR.
+  checks: write
+  pull-requests: write
 
 concurrency:
   group: apk-${{ github.ref }}
@@ -102,6 +106,26 @@ jobs:
               echo "::error title=javac.log::$(head -c 2500 build/apk/javac.log | esc)"
             fi
             echo "::error title=Entorno::$( { echo "ANDROID_HOME=$ANDROID_HOME"; java -version 2>&1 | head -2; ls "$ANDROID_HOME/build-tools" 2>&1; ls "$ANDROID_HOME/platforms" 2>&1; } | esc | head -c 2000)"
+            # Y además, un comentario en el PR: es el único sitio donde el
+            # fallo se puede leer sin abrir la pestaña del runner.
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              {
+                echo "**La compilación falló (minSdk ${{ matrix.api }}, commit \`${GITHUB_SHA:0:7}\`).** Últimas líneas:"
+                echo
+                echo '```'
+                tail -n 45 "$LOG"
+                echo '```'
+                echo 'Entorno:'
+                echo '```'
+                echo "ANDROID_HOME=$ANDROID_HOME"
+                java -version 2>&1 | head -2
+                ls "$ANDROID_HOME/build-tools" 2>&1
+                ls "$ANDROID_HOME/platforms" 2>&1
+                echo '```'
+              } > "$RUNNER_TEMP/comment.md" || true
+              GH_TOKEN="${{ github.token }}" gh pr comment ${{ github.event.pull_request.number }} \
+                --body-file "$RUNNER_TEMP/comment.md" || true
+            fi
             exit "$status"
           fi
 
