@@ -30,6 +30,7 @@ final class PlayQueue {
         String title = "";
         String artist = "";
         String album = "";
+        String uri = "";
         long durationMs;
     }
 
@@ -101,6 +102,7 @@ final class PlayQueue {
                 entry.title = raw.optString("title", "");
                 entry.artist = raw.optString("artist", "");
                 entry.album = raw.optString("album", "");
+                entry.uri = raw.optString("uri", "");
                 entry.durationMs = raw.optLong("duration", 0);
                 if (entry.id.length() > 0) entries.add(entry);
             }

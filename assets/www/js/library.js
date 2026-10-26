@@ -1398,6 +1398,21 @@ Object.assign(App, {
         audioEntries.push({ track: track, source: source, fileEntry: fileEntry });
       });
 
+      // Resolver el mapa de audio antes del manifiesto para que este sea
+      // la primera entrada del ZIP y el importador Java pueda leer en flujo.
+      for (let i = 0; i < audioEntries.length; i++) {
+        const item = audioEntries[i];
+        let blob = item.source && item.source.fileBlob;
+        if (!(blob instanceof Blob) && item.source && item.source._file instanceof Blob) blob = item.source._file;
+        if (!(blob instanceof Blob) && item.source && item.source.id) {
+          const latest = await window.AuroraStorage.getTrack(item.source.id);
+          if (latest && latest.fileBlob instanceof Blob) blob = latest.fileBlob;
+        }
+        if (!(blob instanceof Blob) || blob.size <= 0) continue;
+        item.blob = blob;
+        item.track.backupAudio = item.fileEntry;
+      }
+
       const metadata = {
         format: 'aurora-migration-backup',
         formatVersion: 1,
@@ -1409,34 +1424,22 @@ Object.assign(App, {
         localStorage: local,
         audioEntries: []
       };
+      audioEntries.forEach(item => {
+        if (item.blob) metadata.audioEntries.push({
+          trackId: item.track.id, path: item.fileEntry, size: item.blob.size
+        });
+      });
+
       if (!B.beginArchive('aurora-backup.zip')) throw new Error('No se pudo crear el archivo de respaldo');
       archiveStarted = true;
+      await appendBlob('backup.json', new Blob([JSON.stringify(metadata)], {
+        type: 'application/json;charset=utf-8'
+      }));
       for (let i = 0; i < audioEntries.length; i++) {
         const item = audioEntries[i];
-        let blob = item.source && item.source.fileBlob;
-        if (!(blob instanceof Blob) && item.source && item.source._file instanceof Blob) blob = item.source._file;
-        if (!(blob instanceof Blob) && item.source && item.source.id) {
-          const latest = await window.AuroraStorage.getTrack(item.source.id);
-          if (latest && latest.fileBlob instanceof Blob) blob = latest.fileBlob;
-        }
-        if (!(blob instanceof Blob) || blob.size <= 0) continue;
-        await appendBlob(item.fileEntry, blob);
-        item.track.backupAudio = item.fileEntry;
-        metadata.audioEntries.push({ trackId: item.track.id, path: item.fileEntry, size: blob.size });
+        if (item.blob) await appendBlob(item.fileEntry, item.blob);
       }
-
-      // El índice va al final para que anote solo los archivos que sí se copiaron.
-      if (!B.beginArchiveEntry('backup.json')) throw new Error('No se pudo escribir el índice del respaldo');
-      const json = new Blob([JSON.stringify(metadata)], { type: 'application/json;charset=utf-8' });
-      const chunk = 192 * 1024;
-      for (let offset = 0; offset < json.size; offset += chunk) {
-        const dataUrl = await readSlice(json, offset, Math.min(json.size, offset + chunk));
-        const comma = dataUrl.indexOf(',');
-        if (comma < 0 || !B.appendArchiveChunk(dataUrl.slice(comma + 1))) {
-          throw new Error('No se pudo escribir el índice del respaldo');
-        }
-      }
-      if (!B.endArchiveEntry() || !B.finishArchive()) throw new Error('No se pudo finalizar el respaldo');
+      if (!B.finishArchive()) throw new Error('No se pudo finalizar el respaldo');
       completed = true;
       const shared = B.share('Respaldo de Aurora', 'application/zip');
       if (!shared) throw new Error('No se pudo abrir el selector para guardar el respaldo');

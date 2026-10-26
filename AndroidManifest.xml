@@ -2,20 +2,16 @@
 <!--
   Aurora Music Player para Android.
   Compatibilidad mínima: Android 5.0 (API 21).
-  Los recursos locales se sirven al WebView desde https://aurora.localhost.
+  La interfaz y la reproducción se ejecutan de forma nativa en Java.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.nelsondev2.aurora"
-    android:versionCode="140"
-    android:versionName="1.4.0">
+    android:versionCode="141"
+    android:versionName="1.5.0">
 
     <uses-sdk
         android:minSdkVersion="21"
         android:targetSdkVersion="33" />
-
-    <!-- No hay red: los recursos se interceptan desde assets. El permiso
-         solo evita que el WebView rechace el origen https ficticio. -->
-    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Reproducción en segundo plano (PlaybackService) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -33,15 +29,20 @@
 
     <application
         android:allowBackup="true"
-        android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:largeHeap="true"
         android:supportsRtl="true"
         android:theme="@style/AuroraTheme">
 
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".NativeHomeActivity"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
             android:exported="true"
             android:launchMode="singleTask"
@@ -52,8 +53,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Reproducción en segundo plano: notificación, MediaSession y
-             foco de audio mientras el WebView sigue sonando. -->
+        <!-- Reproducción en segundo plano y controles del sistema. -->
         <service
             android:name=".PlaybackService"
             android:exported="false"

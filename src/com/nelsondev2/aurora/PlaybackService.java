@@ -16,7 +16,9 @@ import android.media.MediaMetadata;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Base64;
 import android.util.Log;
@@ -25,22 +27,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Reproducción en segundo plano: servicio en primer plano + MediaSession.
- *
- * El audio sigue sonando dentro del WebView (la app es una sola página);
- * lo que aporta este servicio es lo que antes era imposible:
- *
- *   · que Android no mate el proceso al salir de la app,
- *   · notificación con carátula y controles, pantalla de bloqueo y
- *     botones de auriculares/Bluetooth (todo pasa por MediaSession),
- *   · foco de audio: si entra una llamada o suena otra app, Aurora se
- *     pausa sola,
- *   · un wake lock parcial mientras suena, para que el sueño del
- *     dispositivo no corte la reproducción.
- *
- * Los comandos (play, pause, next, prev) viajan a la web con
- * WebApp.mediaCommand(); el estado viaja al revés con
- * AuroraMediaBridge.mediaUpdate().
+ * Servicio nativo de reproducción en segundo plano con MediaSession,
+ * notificación, foco de audio y wake lock. La cola Java sigue activa aunque
+ * NativeHomeActivity deje de estar visible.
  */
 public class PlaybackService extends Service {
 
@@ -57,8 +46,8 @@ public class PlaybackService extends Service {
     /** PendingIntent.FLAG_IMMUTABLE (API 23) sin exigir ese SDK al compilar. */
     private static final int FLAG_IMMUTABLE = 0x04000000;
 
-    /** Estado vigente. Es estático porque la web puede avisar antes de que
-     *  el servicio termine de crearse (startForegroundService es async). */
+    /** Estado vigente. Es estático porque la actividad puede avisar antes
+     *  de que el servicio termine de crearse (startForegroundService es async). */
     private static String sTitle = "";
     private static String sArtist = "";
     private static String sAlbum = "";
@@ -84,9 +73,24 @@ public class PlaybackService extends Service {
     private PowerManager.WakeLock wakeLock;
     private BroadcastReceiver noisyReceiver;
     private boolean focused;
+    private boolean progressScheduled;
+    private final Handler progressHandler = new Handler(Looper.getMainLooper());
+    private final Runnable progressTicker = new Runnable() {
+        @Override public void run() {
+            if (live != PlaybackService.this || !sPlaying) {
+                progressScheduled = false;
+                return;
+            }
+            NativePlayer player = NativePlayerBridge.get(PlaybackService.this);
+            sPositionMs = player.position();
+            sDurationMs = player.duration();
+            updatePlaybackState();
+            progressHandler.postDelayed(this, 1000);
+        }
+    };
 
     // ------------------------------------------------------------ estático
-    // API para AuroraMediaBridge: no necesita el servicio levantado.
+    // API nativa: no necesita que el servicio ya esté levantado.
 
     static void ensureRunning(Context context) {
         Intent intent = new Intent(context, PlaybackService.class);
@@ -256,6 +260,8 @@ public class PlaybackService extends Service {
 
     @Override
     public void onDestroy() {
+        progressHandler.removeCallbacks(progressTicker);
+        progressScheduled = false;
         unregisterNoisyReceiver();
         NativePlayerBridge.releaseAll();
         releaseFocus();
@@ -278,9 +284,8 @@ public class PlaybackService extends Service {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        // Cerrar la app desde «recientes» con la música en pausa: el
-        // WebView se va con la tarea, así que el servicio no tiene a quién
-        // mandar comandos.
+        // En pausa, no hace falta mantener vivo el servicio al quitar la
+        // actividad de la pantalla de recientes.
         if (!sPlaying) stopSelf();
         super.onTaskRemoved(rootIntent);
     }
@@ -288,10 +293,8 @@ public class PlaybackService extends Service {
     /**
      * Un comando del sistema (notificación, bloqueo, auriculares).
      *
-     * Con la página viva manda la web, que sabe de aleatorio, listas y
-     * contexto. Si el WebView ya no está, se atiende aquí: antes, con la
-     * app cerrada, los botones de la notificación y los del casco no
-     * hacían nada (solo el de pausa) y la notificación se quedaba mintiendo.
+     * Se conserva la ruta de comandos web durante la transición. En la
+     * interfaz nativa los comandos llegan a la cola Java y se ejecutan aquí.
      */
     private void command(String name) {
         if (WebApp.attached()) {
@@ -361,12 +364,20 @@ public class PlaybackService extends Service {
         applyState();
 
         NativePlayer player = NativePlayerBridge.get(this);
-        player.play(entry.id, 0);
+        if (entry.uri != null && (entry.uri.startsWith("content://")
+                || entry.uri.startsWith("file://"))) {
+            player.playUri(entry.id, entry.uri, 0);
+        } else {
+            player.play(entry.id, 0);
+        }
 
-        // Si la siguiente ya está en la caché, que MediaPlayer la prepare:
-        // así el relevo no tiene hueco aunque no haya página que lo pida.
+        // La pista siguiente se prepara por URI o desde la caché local.
         PlayQueue.Entry following = queue.next();
-        if (following != null && player.hasTrack(following.id)) {
+        if (following != null && following.uri != null
+                && (following.uri.startsWith("content://") || following.uri.startsWith("file://"))) {
+            player.setPendingPreparedId(following.id);
+            player.prepareNextUri(following.uri);
+        } else if (following != null && player.hasTrack(following.id)) {
             player.prepareNext(following.id);
         }
     }
@@ -451,7 +462,13 @@ public class PlaybackService extends Service {
             requestFocus();
             // Sigue en primer plano: Android no debería matar la música.
             startForeground(NOTIFICATION_ID, notification);
+            if (!progressScheduled) {
+                progressScheduled = true;
+                progressHandler.postDelayed(progressTicker, 1000);
+            }
         } else {
+            progressHandler.removeCallbacks(progressTicker);
+            progressScheduled = false;
             releaseWakeLock();
             releaseFocus();
             // En pausa se suelta el primer plano: nothing suena, así que el
@@ -525,7 +542,7 @@ public class PlaybackService extends Service {
     }
 
     private PendingIntent openAppIntent() {
-        Intent intent = new Intent(this, MainActivity.class);
+        Intent intent = new Intent(this, NativeHomeActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(this, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | FLAG_IMMUTABLE);

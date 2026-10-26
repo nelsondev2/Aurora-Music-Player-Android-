@@ -1,79 +1,46 @@
 # Aurora Music Player · Android
 
-Reproductor de música **offline-first** para Android: una app web
-completa (HTML, CSS y JavaScript propios) dentro de un WebView, sin
-servidor, sin cuenta y sin publicidad. Carga archivos locales
-(MP3, M4A, FLAC, WAV, OGG, Opus), lee ID3 y letras LRC.
+Reproductor de música **offline-first** para Android. La pantalla principal
+ahora está implementada en Java nativo y reproduce con `MediaPlayer`; no
+necesita conexión, cuenta ni servidor.
 
-**Versión:** 1.3.0 · licencia MIT · minSdk 21 · sin dependencias
+**Versión:** 1.5.0 · licencia MIT · minSdk 21 (Android 5.0+)
 
-> **Nota:** Aurora es un proyecto **generado con inteligencia
-> artificial**. Todo su código —y las traducciones de la
-> interfaz— lo ha escrito un asistente de IA, con la dirección,
-> las decisiones y las pruebas finales de una persona. Si algo
-> suena raro en tu idioma o se comporta de forma extraña, no es
-> un misterio: repórtalo en los *issues* y se corrige.
+## Estado de la transición a Java
 
-## Qué hace
+Esta es la primera etapa funcional de la nueva aplicación nativa. Ya están
+portados la biblioteca local, el escaneo de MediaStore, la importación de
+audio, listas básicas, reproducción en segundo plano y restauración del ZIP
+de migración. La conversión continúa: letras sincronizadas, ecualizador,
+visualizador reactivo, estadísticas, temas e importación avanzada de listas
+todavía deben trasladarse antes de retirar el código anterior.
 
-- **Tu música, sin nube**: importa MP3, M4A, FLAC, WAV, OGG y Opus
-  desde el dispositivo, con metadatos, portadas y duración real. Todo
-  queda guardado en el almacenamiento local de la app; sin red, sin
-  cuenta y sin servidor.
-- **La música que ya tienes, sin copiarla**: «Buscar música en el móvil»
-  lee la biblioteca del teléfono por MediaStore y guarda solo la ficha
-  (título, artista, álbum, carátula) y el `content://` del archivo
-  original. Nada se duplica: la canción suena desde donde ya estaba, y
-  si la borras de Aurora el archivo sigue en el teléfono (vuelve a
-  aparecer en el siguiente escaneo).
-- **Letras sincronizadas**: archivos `.lrc` o letras incrustadas, con
-  desplazamiento automático y pantalla de letras a lo grande.
-- **Listas para todo**: crea y edita listas, marca **Favoritos** y
-  deja que la app mantenga sola «Mi Música» (lo añadido fuera de
-  listas). Para llenar una lista hay **«Añadir pistas»**: una hoja con
-  buscador, casillas y «seleccionar todo» que añade **muchas canciones
-  de una vez** (las que ya están en la lista no se repiten), desde la
-  biblioteca o **directamente del móvil**. Lo que se importa queda en
-  cola si hay otra importación en marcha: nada se pierde. Todas las listas —Favoritos incluida— **se ordenan solas
-  por tus estrellas**: las mejores arriba, las sin nota al final, y
-  la cola suena en ese mismo orden.
-- **Estrellas de 1 a 5** en el menú de cada canción, en el reproductor
-  y en las filas, para valorar sin salir de donde estás. En Inicio,
-  el escaparate «Más valoradas» enseña tus mejores notas.
-- **Reproducción seria**: cola, aleatorio de verdad, repetir, bucle
-  A-B, «Reproducir desde…» con su contexto, reproducción continua
-  (gapless/crossfade), ecualizador, visualizador y temporizador de
-  apagado.
-- **Sigue sonando fuera de la app**: reproducción en segundo plano con
-  notificación y carátula, controles en la pantalla de bloqueo y en los
-  auriculares, y foco de audio (si entra una llamada o se desconectan
-  auriculares, Aurora se pausa sola).
-- **Motor de audio del sistema**: el sonido lo pone Android
-  (MediaPlayer), así que la música aguanta aunque el WebView desaparezca
-  y el paso de una pista a la siguiente no tiene hueco. Se puede cambiar
-  al motor de la app (Web Audio) desde Ajustes, que es el que trae
-  ecualizador, visualizador y fundidos.
-- **Estadísticas**: más reproducidas, artistas favoritos y tiempo de
-  escucha (una reproducción solo cuenta cuando la canción suena
-  entera).
-- **Comparte lo que quieras**: canciones, listas (`.m3u8`) y letras
-  salen por el selector «Compartir» de Android, listos para cualquier
-  app (mensajería, correo, unidades de nube…).
-- **Ordena y explora a tu manera**: cada lista se puede ordenar por
-  título, artista, álbum o duración (además del orden por estrellas),
-  y Biblioteca explora tu colección por Álbumes, Artistas y Géneros.
-  La cola se puede guardar como lista y hay buscador de duplicados.
-- **14 idiomas** (es, en, pt, zh, ja, fr, it, ru, de, uk, pl, tr, id,
-  zh-TW), temas y colores de acento.
+Para conservar los datos de una instalación previa, exporta el ZIP desde
+**Ajustes → Mantenimiento → Exportar respaldo para migrar** antes de
+instalar esta versión. En la interfaz nativa, toca **Importar respaldo**
+y selecciona ese ZIP. La biblioteca de MediaStore se vuelve a escanear; los
+audios importados y las listas se restauran desde el respaldo.
+
+## Funciones nativas disponibles
+
+- **Biblioteca local**: escanea canciones del teléfono y permite buscar por
+'título, artista o álbum; el audio original de MediaStore no se copia.
+- **Importación de archivos**: el selector del sistema acepta varias pistas
+  en una selección y conserva acceso a esos archivos.
+- **Reproducción**: controles nativos, cola y reproducción en segundo plano
+  mediante `MediaPlayer`, notificación y sesión multimedia de Android.
+- **Listas básicas**: crear listas, añadir pistas con pulsación larga y
+  reproducir una lista.
+- **Restauración manual**: importa biblioteca, listas, ajustes y audio desde
+  el respaldo ZIP creado por la edición de transición.
 
 ## Compilar e instalar la APK
 
 El proyecto produce **una sola APK universal**, con `minSdk 21`, instalable
 en **Android 5.0 o superior** y válida para las arquitecturas Android
-habituales. La interfaz requiere Android System WebView basado en Chrome 55
-o posterior; en equipos antiguos, hay que actualizar ese componente del
-sistema. CI compila y verifica esa misma APK, sin variantes por versión de
-Android.
+habituales. La pantalla principal y el reproductor de esta versión se
+inician en Java nativo. CI compila y verifica esa misma APK, sin variantes
+por versión de Android.
 
 Para compilarla localmente se necesita un JDK y el SDK de Android con
 `aapt2`, `d8`, `zipalign`, `apksigner` y una plataforma de compilación:
@@ -94,17 +61,18 @@ Android 5.0 y para versiones posteriores.
 
 ### Respaldo para trasladar tus datos
 
-En **Ajustes → Mantenimiento → Exportar respaldo para migrar**, guarda el
-ZIP desde el selector de Android. Incluye listas, ajustes, metadatos de la
-biblioteca y el audio de los archivos importados; las pistas leídas desde
-MediaStore conservan su referencia al archivo original y no se duplican.
-El archivo contiene `backup.json` y las pistas incluidas bajo `audio/`.
-Consérvalo hasta confirmar que la versión nativa haya restaurado tus datos.
+Antes de actualizar, crea el ZIP desde **Ajustes → Mantenimiento →
+Exportar respaldo para migrar** en la APK de transición anterior y guárdalo
+fuera del teléfono o en una carpeta accesible. Esta versión lo restaura con
+**Importar respaldo**. El ZIP incluye listas, ajustes, metadatos y audio
+importado; las pistas de MediaStore conservan la referencia a su archivo
+original. No borres el ZIP hasta comprobar que la restauración terminó.
 
-### Probar la parte web en el ordenador
+### Herramienta de vista previa heredada
 
-La app entera vive en `assets/www` y funciona en cualquier navegador
-moderno:
+`assets/www` y `tools/serve.py` se conservan temporalmente para consultar
+la interfaz anterior durante la migración. No son la pantalla de inicio de
+la APK nativa.
 
 ```bash
 python3 tools/serve.py          # http://localhost:8000
@@ -115,339 +83,86 @@ En el navegador lo único que cambia es lo que aporta Android:
 «Compartir» descarga el archivo en vez de abrir el selector, y el
 botón atrás es el del navegador.
 
-## La música del móvil, sin copiarla
+## Arquitectura nativa actual
 
-La app no necesita que le pases los archivos: lee la biblioteca del
-teléfono por MediaStore y se queda con la ficha.
+La actividad de inicio es `NativeHomeActivity.java`; la biblioteca, las
+listas y los ajustes migrados se guardan en SQLite (`NativeLibraryDatabase`).
+La música del teléfono se consulta desde MediaStore y se reproduce desde el
+`content://` original. Los archivos elegidos por el selector del sistema
+conservan su permiso de lectura.
 
-- **`DeviceLibraryBridge.java`** (`window.AuroraDevice`) consulta
-  MediaStore por páginas de 200 (`scan(offset, limit)`) para que una
-  biblioteca de miles de canciones no acabe en una sola cadena de
-  JavaScript, y devuelve carátulas en JPEG de 256 px (`albumArt`).
-- **`js/device-library.js`** recorre las páginas, evita duplicados (por
-  id de MediaStore y por nombre + tamaño: una canción importada antes
-  copiándola no entra dos veces) y crea pistas con `deviceUri` en vez de
-  un `Blob`.
-- **Reproducción**: las pistas del móvil van al motor nativo con
-  `playUri(trackId, uri, ms)` y el relevo se prepara con
-  `prepareNextUri` — el archivo original se lee, nunca se copia a la
-  caché de la app. Con el motor web se avisa una vez: `content://` solo
-  suena con garantías en el motor del sistema.
-- **Permiso**: `READ_MEDIA_AUDIO` desde Android 13, `READ_EXTERNAL_STORAGE`
-  hasta Android 12. Se pide al pulsar «Buscar música en el móvil», nunca
-  al arrancar; si se deniega, la app sigue funcionando como siempre.
-- **Borrar** una pista del móvil olvida la ficha, no toca el archivo.
-- **Compartir** una pista del móvil comparte el `content://` original
-  (el receptor lee el archivo real, sin pasar por la memoria de Aurora).
+`NativePlayer.java` y `PlaybackService.java` llevan la reproducción, la
+cola, el foco de audio, la pausa al desconectar auriculares, la notificación
+y la sesión multimedia. La cola nativa conoce las URI de las pistas para
+poder continuar cuando la actividad no está visible.
 
-### Añadir varias canciones del móvil a una lista
+`NativeBackupImporter.java` restaura el formato ZIP v1: lee `backup.json`,
+guarda permanentemente los audios incluidos en el almacenamiento privado y
+restaura listas y ajustes en SQLite. Los respaldos grandes se copian a un
+archivo temporal durante la importación; se elimina al terminar.
 
-Dentro de una lista, **«Añadir pistas» → Del móvil** enseña la música
-del teléfono (MediaStore) con casillas: se marcan las que se quieran y
-entran **todas a la vez**, sin copiar los archivos y sin depender del
-selector de archivos del sistema. Es el camino recomendado cuando el
-WebView del teléfono es antiguo: el `<input type="file" multiple>` de la
-web depende de que ese motor y el selector del sistema se pongan de
-acuerdo, y con un WebView viejo muchas veces solo devuelven un archivo.
-
-Las pistas que ya están en la biblioteca se reutilizan (no se duplican)
-y las nuevas se guardan como ficha con su `content://`, igual que un
-escaneo completo pero solo con las elegidas.
-
-Para archivos sueltos que no estén en MediaStore sigue estando
-**«Subir archivos del móvil…»**, y **«Subir canciones»** en la cabecera
-de la lista. Ahora, si ya hay una importación en marcha, la siguiente
-selección **se apunta y arranca al terminar** (antes se descartaba con
-un aviso y esa tanda se perdía para siempre: parecía que la app «no
-dejaba añadir más de una canción»).
-
-## Cómo está montada
+### Archivos principales
 
 ```
-AndroidManifest.xml              manifiesto Android (minSdk 21; Android 5.0+)
+AndroidManifest.xml                 minSdk 21; NativeHomeActivity es el inicio
 src/com/nelsondev2/aurora/
-    MainActivity.java            WebView, selector de archivos, botón atrás
-    AuroraWebClient.java         sirve assets/www desde https://aurora.localhost
-    AuroraBridge.java            puente JS ↔ Android (compartir por trozos)
-    PlaybackService.java         segundo plano: MediaSession, notificación, foco
-    NativePlayer.java            MediaPlayer con relevo preparado (gapless)
-    NativePlayerBridge.java      puente JS ↔ Android del motor nativo
-    NativeAudioStore.java        caché de audio en archivos, para MediaPlayer
-    PlayQueue.java               ventana de la cola para cuando no hay página
-    AuroraMediaBridge.java       puente JS ↔ Android del estado de reproducción
-    DeviceLibraryBridge.java     música del móvil por MediaStore (solo la ficha)
-    WebApp.java                  comandos del sistema hacia el WebView
-    ShareProvider.java           content:// de solo lectura para compartir
-    Mime.java                    tipos MIME por extensión
-assets/www/                      la app (HTML + CSS + JS, sin build)
-    js/device-library.js         escaneo paginado del móvil y fichas sin copia
-res/                             iconos, tema y textos de Android
-tools/                           servidor local y comprobaciones
+    NativeHomeActivity.java         pantalla nativa: biblioteca, listas y controles
+    NativeLibraryDatabase.java      pistas, listas y ajustes en SQLite
+    NativeBackupImporter.java       importador del ZIP de migración
+    NativePlayer.java               reproducción Android con MediaPlayer
+    PlaybackService.java            segundo plano, MediaSession y notificación
+    NativeAudioStore.java           caché de reproducción
+    PlayQueue.java                  cola que atiende controles del sistema
+    DeviceLibraryBridge.java        consulta MediaStore reutilizable
+    ShareProvider.java              URI de solo lectura para compartir
+assets/www/                         interfaz anterior retenida durante la transición
+res/                                iconos, tema y textos de Android
+tools/                              compilación y verificaciones
 ```
 
-Tres decisiones que explican el resto:
+### Trabajo pendiente de portar
 
-- **La app no se carga con `file://`.** En Chromium un `file://` es un
-  origen opaco, y ahí IndexedDB —donde vive toda la música— no es
-  fiable o se pierde al cerrar. `AuroraWebClient` intercepta
-  `https://aurora.localhost/…` y responde desde `assets/www`, así que
-  el WebView ve un origen seguro normal: IndexedDB, `localStorage` y
-  `navigator.storage.persist()` funcionan como en cualquier web.
-  Nada sale a la red: lo que no existe en assets devuelve un 404 local.
-- **Compartir sin AndroidX.** Android no deja enviar un `File` a otra
-  app, y `FileProvider` obligaría a arrastrar AndroidX. `ShareProvider`
-  son ochenta líneas de `ContentProvider` de solo lectura, y el
-  archivo cruza el puente por trozos de 512 KB en base64 para no
-  cargar un FLAC entero en memoria.
-- **El botón atrás pregunta a la web.** `MainActivity` evalúa
-  `window.AuroraAndroidBack()`, que cierra la hoja abierta, sale de
-  Letras o responde «sigue sonando» para que la app se vaya al fondo
-  sin cortar la música, en vez de matar la reproducción.
+Esta es una primera versión nativa funcional, no la paridad final. Siguen
+pendientes las letras sincronizadas, estrellas, estadísticas, temas e
+idiomas, ecualizador, visualizador reactivo, temporizador, aleatorio y las
+opciones avanzadas de las listas. Esos módulos se trasladarán antes de
+retirar por completo los recursos de la interfaz anterior.
 
-## Reproducción en segundo plano
+## Limitaciones actuales
 
-El audio sigue viviendo en el WebView (la app es una sola página), pero
-`PlaybackService` lo protege: es un servicio en primer plano que mantiene
-el proceso vivo mientras suena, publica la notificación con carátula y
-controles, expone la sesión a la pantalla de bloqueo y a los auriculares
-(`MediaSession`), pide el foco de audio —si entra una llamada, la música
-se pausa— y sostiene un wake lock parcial para que el sueño del
-dispositivo no la corte.
-
-El estado viaja en los dos sentidos:
-
-- **Web → Android:** cada cambio de pista, play/pausa o salto llama a
-  `window.AuroraMedia` (`AuroraMediaBridge`), que actualiza notificación y
-  sesión. Se deduplica en `js/platform.js`, así que repetir llamadas no
-  cuesta nada.
-- **Android → Web:** los botones de la notificación, del bloqueo y de los
-  auriculares ejecutan `window.AuroraMediaCommand('play' | 'pause' |
-  'next' | 'prev')`, que llama a la app de siempre.
-
-En pausa el servicio suelta el primer plano: nada suena, así que el
-sistema puede reclamar el proceso y la notificación se puede descartar con
-un gesto. En Android 13+ la primera reproducción pide permiso para
-mostrar notificaciones; si se niega, la música suena igual, sin controles
-en la cortina.
-
-### La cola también, sin la app abierta
-
-La cola de verdad vive en la web (aleatorio, repetir, listas que se
-reordenan solas), pero Java guarda una **ventana** de ella —la pista
-actual y las diez siguientes, con título, artista, álbum y duración— en
-`PlayQueue.java`. La web la empuja cada vez que cambia, deduplicada, así
-que no cuesta nada mantenerla al día.
-
-Gracias a esa ventana, con la app cerrada siguen funcionando «siguiente»,
-«anterior», el avance automático al terminar una canción y la
-notificación con la carátula correcta (se guardan las últimas ocho
-portadas vistas). Si la ventana se agota, la reproducción se detiene: es
-preferible a que suene algo que no toca. Al volver a la app, la web manda
-otra vez y todo recupera su sitio.
-
-## Motor de audio: sistema o app
-
-La app sabe reproducir de dos maneras y se elige en **Ajustes → Motor de
-audio** (se aplica en la siguiente reproducción):
-
-| | Motor del sistema (por defecto) | Motor de la app |
-|---|---|---|
-| Quién pone el sonido | `MediaPlayer` (Java) | `<audio>` + Web Audio (WebView) |
-| Si el WebView muere | **la música sigue** | se corta |
-| Relevo entre pistas | sin hueco (`setNextMediaPlayer`) | sin hueco o con fundido |
-| Ecualizador | no | **sí** |
-| Visualizador | onda animada (no reacciona al sonido) | **sí, en tiempo real** |
-| Fundidos (crossfade) | no | **sí** |
-| Normalización de volumen | no | **sí** |
-
-El motor nativo es el de por defecto porque es el que hace que la música
-no dependa de la página. Para que `MediaPlayer` pueda leer las pistas, la
-web le manda el audio por trozos la primera vez que suena cada canción y
-queda en una caché de archivos (`filesDir/audio`, tope 1 GB, se vacía
-sola por antigüedad; borrar una pista de la biblioteca borra también su
-archivo). Esa caché es la contrapartida: la biblioteca sigue viviendo en
-IndexedDB y el motor nativo guarda además una copia temporal de lo que
-suena.
-
-Si una pista falla tres veces seguidas en el motor nativo (un códec que
-el sistema no reconoce), la app avisa y vuelve sola al motor del WebView.
-
-Los dos motores se presentan a la app igual: `js/native-audio.js` expone
-un objeto que se comporta como el `<audio>` (mismos eventos
-`timeupdate`, `ended`, `error`…), así que la cola, las estadísticas, las
-letras y la interfaz no saben —ni necesitan saber— cuál está sonando.
-
-## Auditoría de los reproductores
-
-Los cuatro fallos que se reportaron usando la app en el móvil tenían la
-misma raíz: **tres reproductores contando la misma historia por su
-cuenta** —el `<audio>` de la web, el `MediaPlayer` de Java y la
-notificación de `PlaybackService`— y ninguno obligado a coincidir con el
-altavoz. Esto es lo que estaba mal y lo que se cambió, pieza por pieza.
-
-### 1. «No deja añadir más de una canción a la vez a una lista»
-
-**Causa:** no había ninguna pantalla para eso. El menú de cada canción
-solo sabía añadir *esa* canción, así que llenar una lista de 30 era abrir
-el menú 30 veces.
-
-**Arreglo:** botón **«Añadir pistas»** dentro de la lista
-(`js/playlist-edit.js`): hoja a pantalla completa con buscador (con
-retardo de 180 ms para no filtrar en cada tecla), casillas por fila,
-«seleccionar todo», contador y un pie que dice cuántas se van a añadir.
-Lista virtualizada a partir de 80 filas para que una biblioteca de miles
-de canciones se abra igual de rápida. Al confirmar se descartan las que
-ya estaban, se guarda la lista y —si esa lista es la que está sonando—
-se re-sincroniza la cola sin cortar la canción actual.
-
-### 2. «La interfaz del reproductor se congela»
-
-**Causa:** tres atasquen el hilo principal:
-- `PlaybackService.command()` solo atendía «pausa» si el WebView ya no
-  existía; play, siguiente y anterior no hacían nada (el botón parecía
-  muerto).
-- El puente subía el audio a Java en trozos de 512 KB **sin ceder el
-  hilo** entre trozos, y dos subidas a la vez (la actual y la siguiente)
-  se entrelazaban: `NativeAudioStore` abre un archivo cada vez, así que
-  se mezclaban los trozos y quedaban archivos corruptos que «existían»
-  pero no sonaban.
-- Cada `update()` de la notificación construía la notificación **dos
-  veces**, decodificando la carátula en el hilo principal cada vez.
-
-**Arreglo:** `command()` atiende las cinco acciones con respaldo nativo
-(`NativePlayerBridge.resumePlayback()` incluido); las subidas van en
-serie (`_uploadChain`) y ceden el hilo cada 256 KB; se construye una sola
-notificación por actualización.
-
-### 3. «No hay coordinación entre mini reproductor, reproductor y notificación»
-
-**Causa:** cada superficie decidía por su cuenta. La web marcaba
-«reproduciendo» al instante (antes de que sonara), la notificación se
-enteraba por otro camino, y la bandera de la interfaz podía quedar un
-paso por detrás mientras una pista se preparaba. Encima, la web y
-`PlaybackService` registraban **dos** `MediaSession` con los mismos
-botones: dos dueños contestando a la vez, cada uno con su idea de si
-sonaba.
-
-**Arreglo:** una sola fuente de verdad, `App._applyNativePlayState()`
-(`js/native-audio.js`), por la que pasan los eventos de Java, los del
-`<audio>` y el arranque. Al volver a primer plano, `syncNativeState()`
-reconcilia pista, posición y estado con el `snapshot()` del motor. La
-`MediaSession` del WebView se calla cuando manda la nativa
-(`updateMediaSession()`), y lo que la notificación muestra se copia del
-snapshot de Java, no de la bandera de la interfaz. Los comandos del
-sistema («play/pausa» de la notificación, del bloqueo o del casco) se
-deciden por el estado **real** del motor (`App.isReallyPlaying()`), no por
-la bandera, y la pausa se aplica aunque Java ya haya pausado por pérdida
-de foco. `_realignQueueIdx()` recoloca la cola antes de «siguiente» y
-«anterior»: si el índice se quedaba atrás, «siguiente» repetía la misma
-canción.
-
-### 4. «A veces pone que está reproduciendo y no se oye nada»
-
-**Causa:** `play()` no esperaba a nadie. La app marcaba «reproduciendo»,
-la notificación también, y si `MediaPlayer` no podía abrir el archivo
-—caché corrupta, pista sin preparar— el resultado era pantalla mintiendo
-y altavoz callado. Además, el relevo automático seguía funcionando en la
-web con el motor nativo: cada `timeupdate` intentaba recargar la misma
-pista y mataba el `MediaPlayer` en marcha.
-
-**Arreglo:** `play()` devuelve una promesa que se resuelve **cuando Java
-confirma** `playing` (y si no llega en 15 s se rechaza con
-`TimeoutError`: la interfaz deja de mentir sin saltarse la pista). Se
-carga con `load()`/`loadUri()` y solo se arranca con `resume()` si el
-usuario quiere sonido, así que preparar una pista no la pone a sonar. Con
-el motor nativo, `tickPlaybackAdvance()`, `_startCrossfadeOut()`,
-`gaplessNext()` y `preloadNextTrack()` no hacen nada (el relevo lo lleva
-`setNextMediaPlayer`). Y la caché de audio se purga una vez
-(`audioClear()` + `aurora_native_cache_gen`) para tirar los archivos que
-quedaron corruptos.
-
-### Comprobado con un banco de pruebas
-
-Además de `tools/check.py`, los cuatro fallos se reprodujeron y se
-verificaron en jsdom con un `MediaPlayer` simulado que se comporta como
-el de verdad (`play()` carga y suena, `load()` carga sin sonar,
-`resume()` arranca al estar listo, `paused` por eventos): 33
-comprobaciones sobre play, pausa desde el sistema, carga en pausa,
-pausa/play/siguiente desde la notificación, pérdida de foco, fin de
-pista sin recargas, reconciliación al volver a la app, subidas en serie y
-la selección múltiple de pistas.
-
-## Si algo falla solo en tu teléfono
-
-Aurora vive dentro del **WebView** de Android, y ese motor no lo
-actualiza la app: lo pone el sistema (o el fabricante). Un WebView
-antiguo explica fallos que no se reproducen en ningún otro sitio.
-
-Por eso **Ajustes → Acerca de** enseña la versión exacta, por ejemplo
-`105.0.5195.136 · Android 9 · API 28`. Si algo se comporta raro, ese
-dato es lo primero que hay que mirar (y el que conviene copiar en un
-aviso de error).
-
-Además, `js/polyfills.js` se carga antes que todo lo demás y rellena las
-funciones que a un WebView intermedio le falten (`includes`, `closest`,
-`Object.assign`, `Array.from`, `padStart`…), así que los huecos pequeños
-no se convierten en fallos raros. Lo que no se puede rellenar es el
-lenguaje: la app usa `async`/`await`, que pide Chrome 55 o superior. Con
-un WebView anterior la app no arranca (se queda en la pantalla de
-carga); actualizar «Android System WebView» desde Play Store lo
-soluciona.
-
-## Limitaciones conocidas
-
-Dichas en voz alta, para que nadie se lleve una sorpresa:
-
-- **Sin página, la cola es una copia congelada.** Java reproduce las
-  siguientes diez pistas tal como estaban al cerrar la app; si se acaban,
-  la música se detiene. Reordenar, cambiar de lista o activar aleatorio
-  necesita la app abierta.
-- **El motor del sistema no ofrece visualización del audio en tiempo
-  real ni ecualizador.** La onda se anima mientras reproduce, pero no
-  analiza el sonido; para el visualizador reactivo y el ecualizador,
-  elige el motor de la app en Ajustes.
-- **La caché del motor nativo ocupa disco aparte.** Duplica el audio que
-  está sonando (hasta 1 GB, con poda automática), además de la copia de
-  la biblioteca en IndexedDB.
-- **El espacio manda el dispositivo.** La biblioteca vive en el
-  almacenamiento web del WebView; una biblioteca enorme puede chocar
-  con la cuota del sistema.
-- **Sin selector de carpetas en Android** (la plataforma no lo
-  ofrece): se eligen archivos sueltos o varios a la vez. Cuántos
-  archivos acepta el selector del sistema depende del WebView del
-  teléfono; si solo deja uno, usa **«Añadir pistas → Del móvil»**.
-- **Los archivos importados no se copian**: se guardan dentro de la
-  app, así que borrar los datos de Aurora (o desinstalarla) borra su
-  biblioteca. Los archivos originales de tu dispositivo no se tocan.
-- Las traducciones las mantiene el proyecto: si tu idioma suena raro,
-  un aviso en los *issues* se agradece.
+- La migración todavía no tiene paridad con todas las funciones de la
+  interfaz anterior; la lista de trabajo pendiente aparece arriba.
+- La biblioteca de MediaStore requiere permiso de lectura. Si se deniega,
+  la app conserva la música ya importada y permite volver a solicitarlo
+  con **Escanear**.
+- El ZIP de respaldo debe exportarse antes de actualizar desde la APK de
+  transición anterior. Mantén una copia del archivo hasta verificar la
+  restauración en este reproductor.
+- Los audios restaurados se guardan en el almacenamiento privado de Aurora;
+  desinstalar la app los elimina. Conserva el respaldo original.
+- El espacio libre del dispositivo limita la cantidad de audio que puede
+  importarse o restaurarse.
 
 ## Reportar un problema
 
-En los [*issues* de GitHub](https://github.com/nelsondev2/Aurora-Music-Player-Android-/issues)
-(en español o inglés). Ayuda mucho incluir:
-
-- la versión de Aurora (Ajustes → Acerca de),
-- tu dispositivo, la versión de Android y el WebView instalado,
-- los pasos para reproducir el fallo, y qué esperabas que pasara.
+Abre un [*issue* en GitHub](https://github.com/nelsondev2/Aurora-Music-Player-Android-/issues)
+en español o inglés. Incluye el modelo del dispositivo, la versión de
+Android, la acción realizada y el resultado esperado. No compartas archivos
+de música ni respaldos privados en el reporte.
 
 ## Contenido
 
 | Ruta | Qué es |
 |---|---|
-| `assets/www/index.html` | Markup de la app (vistas, hojas, sprite de iconos) |
-| `assets/www/css/styles.css` | Estilos, temas y acentos |
-| `assets/www/js/data.js` | Traducciones (14 idiomas) y utilidades de datos |
-| `assets/www/js/storage.js` | Persistencia en IndexedDB |
-| `assets/www/js/uploader.js` | Lectura de archivos, ID3 y LRC |
-| `assets/www/js/polyfills.js` | Rellenos para WebView antiguos (se carga primero) |
-| `assets/www/js/platform.js` | Puente con Android (compartir, botón atrás, notificación) |
-| `assets/www/js/native-audio.js` | Motor nativo con la cara de un `<audio>` |
-| `assets/www/js/` | Módulos de la app (audio, UI, listas, letras, ajustes…) |
-| `assets/www/fonts/`, `assets/www/icon.png` | Fuente Outfit (OFL) e icono |
-| `src/` | Código Java de la app Android |
-| `res/` | Recursos de Android (iconos, tema, textos) |
-| `tools/serve.py`, `tools/check.py` | Desarrollo en local y verificación |
-| `tools/build-apk.sh` | Compila el APK sin Gradle (SDK + JDK) |
-| `.github/workflows/` | Comprobaciones y compilación del APK en CI |
+| `AndroidManifest.xml` | Lanzador nativo y compatibilidad Android 5.0+ |
+| `src/com/nelsondev2/aurora/NativeHomeActivity.java` | Interfaz Java nativa |
+| `src/com/nelsondev2/aurora/NativeLibraryDatabase.java` | Biblioteca y listas en SQLite |
+| `src/com/nelsondev2/aurora/NativeBackupImporter.java` | Importación del respaldo ZIP |
+| `src/com/nelsondev2/aurora/PlaybackService.java` | Reproducción en segundo plano |
+| `src/com/nelsondev2/aurora/NativePlayer.java` | Motor MediaPlayer |
+| `assets/www/` | Recursos de la interfaz anterior, retenidos durante la transición |
+| `res/` | Recursos de Android (iconos, tema y textos) |
+| `tools/check.py` | Comprobaciones del proyecto |
+| `tools/build-apk.sh` | Compila una APK universal con SDK + JDK |
+| `.github/workflows/` | Verificaciones y compilación en CI |
 | `README.md`, `LICENSE`, `CHANGELOG.md` | Documentación, licencia e historial |

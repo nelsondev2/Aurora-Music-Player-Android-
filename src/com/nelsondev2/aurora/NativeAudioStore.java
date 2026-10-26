@@ -5,6 +5,7 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 
 /**
  * Caché de audio en archivos reales, para el reproductor nativo.
@@ -120,6 +121,23 @@ final class NativeAudioStore {
             return moved;
         } catch (Exception e) {
             Log.w(TAG, "finish: " + e);
+            closeQuietly();
+            return false;
+        }
+    }
+
+    /** Copia un flujo de audio del respaldo a la caché nativa sin cargarlo en memoria. */
+    boolean importStream(String trackId, String ext, InputStream input) {
+        if (input == null || !begin(trackId, ext)) return false;
+        try {
+            byte[] buffer = new byte[64 * 1024];
+            int count;
+            while ((count = input.read(buffer)) >= 0) {
+                if (count > 0) out.write(buffer, 0, count);
+            }
+            return finish(trackId, ext);
+        } catch (Exception e) {
+            Log.w(TAG, "importStream: " + e);
             closeQuietly();
             return false;
         }

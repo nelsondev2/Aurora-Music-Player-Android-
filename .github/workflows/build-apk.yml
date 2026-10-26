@@ -152,6 +152,9 @@ jobs:
               dex_data = b"".join(archive.read(name) for name in dex_files)
               expected = [
                   b"Lcom/nelsondev2/aurora/MainActivity;",
+                  b"Lcom/nelsondev2/aurora/NativeHomeActivity;",
+                  b"Lcom/nelsondev2/aurora/NativeLibraryDatabase;",
+                  b"Lcom/nelsondev2/aurora/NativeBackupImporter;",
                   b"Lcom/nelsondev2/aurora/NativePlayer;",
                   b"Lcom/nelsondev2/aurora/NativePlayerBridge;",
                   b"Lcom/nelsondev2/aurora/DeviceLibraryBridge;",

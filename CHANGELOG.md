@@ -2,6 +2,14 @@
 
 Historial de versiones **publicadas** de Aurora Music Player.
 
+## Sin publicar — 1.5.0 · Primera interfaz nativa
+
+- **La pantalla de inicio ya está en Java nativo** (`NativeHomeActivity`): biblioteca de MediaStore, búsqueda, importación de archivos, listas básicas y controles de reproducción.
+- **Persistencia local SQLite** para fichas, listas y ajustes (`NativeLibraryDatabase`).
+- **Importador del respaldo ZIP v1** (`NativeBackupImporter`): restaura metadatos, listas, ajustes y audios importados en almacenamiento privado; las URI de MediaStore se mantienen.
+- **Cola Java con URI**: los controles de notificación y el avance de pista pueden reproducir tanto `content://` como los audios restaurados locales.
+- **La transición sigue abierta**: letras, calificaciones, estadísticas, temas, ecualizador, visualizador reactivo, temporizador y opciones avanzadas de cola siguen pendientes de portar. Los recursos antiguos se conservan solo durante esta etapa.
+
 ## Sin publicar — 1.4.0 · Reproductor nativo
 
 - **Respaldo ZIP para migrar los datos a la edición nativa**: Ajustes →
