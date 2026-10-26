@@ -2315,13 +2315,13 @@ const I18N = {
     'zh-TW': '歌詞已保存'
   },
   lrc_original_saved: {
-    es: 'Letra incrustada en el MP3 original', en: 'Lyrics embedded in the original MP3',
-    pt: 'Letra incorporada no MP3 original', zh: '歌词已嵌入原始 MP3',
-    ja: '歌詞を元のMP3に埋め込みました', fr: 'Paroles intégrées au MP3 original',
-    it: 'Testo incorporato nell’MP3 originale', ru: 'Текст встроен в исходный MP3',
-    de: 'Text in die Original-MP3 eingebettet', uk: 'Текст вбудовано в оригінальний MP3',
-    pl: 'Tekst osadzono w oryginalnym pliku MP3', tr: 'Sözler orijinal MP3’e gömüldü',
-    id: 'Lirik disematkan ke MP3 asli', 'zh-TW': '歌詞已嵌入原始 MP3'
+    es: 'Letra incrustada en el archivo original', en: 'Lyrics embedded in the original file',
+    pt: 'Letra incorporada no arquivo original', zh: '歌词已嵌入原始文件',
+    ja: '歌詞を元のファイルに埋め込みました', fr: 'Paroles intégrées au fichier original',
+    it: 'Testo incorporato nel file originale', ru: 'Текст встроен в исходный файл',
+    de: 'Text in die Originaldatei eingebettet', uk: 'Текст вбудовано в оригінальний файл',
+    pl: 'Tekst osadzono w oryginalnym pliku', tr: 'Sözler orijinal dosyaya gömüldü',
+    id: 'Lirik disematkan ke file asli', 'zh-TW': '歌詞已嵌入原始檔案'
   },
   lrc_original_unavailable: {
     es: 'No se conserva acceso al archivo original. Vuelve a añadirlo desde el selector de Android.',
@@ -2356,19 +2356,19 @@ const I18N = {
     'zh-TW': 'Android 不允許修改原始檔案，歌詞未儲存。'
   },
   lrc_original_format_unsupported: {
-    es: 'La incrustación directa solo está disponible para MP3 por ahora.',
-    en: 'Direct embedding is only supported for MP3 for now.',
-    pt: 'A incorporação direta só é compatível com MP3 por enquanto.',
-    zh: '目前仅支持直接嵌入 MP3。', ja: '現在、直接埋め込みに対応しているのはMP3のみです。',
-    fr: 'L’intégration directe est uniquement prise en charge pour les MP3 pour le moment.',
-    it: 'Per ora l’incorporamento diretto è supportato solo per MP3.',
-    ru: 'Пока прямое встраивание поддерживается только для MP3.',
-    de: 'Direktes Einbetten wird vorerst nur für MP3 unterstützt.',
-    uk: 'Наразі пряме вбудовування підтримується лише для MP3.',
-    pl: 'Obecnie bezpośrednie osadzanie jest obsługiwane tylko dla MP3.',
-    tr: 'Şimdilik doğrudan gömme yalnızca MP3 için destekleniyor.',
-    id: 'Untuk saat ini, penyematan langsung hanya didukung untuk MP3.',
-    'zh-TW': '目前僅支援直接嵌入 MP3。'
+    es: 'La incrustación directa está disponible para MP3 y FLAC por ahora.',
+    en: 'Direct embedding is currently supported for MP3 and FLAC.',
+    pt: 'A incorporação direta está disponível para MP3 e FLAC por enquanto.',
+    zh: '目前支持直接嵌入 MP3 和 FLAC。', ja: '現在、MP3とFLACの直接埋め込みに対応しています。',
+    fr: 'L’intégration directe est actuellement prise en charge pour les MP3 et FLAC.',
+    it: 'Per ora l’incorporamento diretto è supportato per MP3 e FLAC.',
+    ru: 'Пока прямое встраивание поддерживается для MP3 и FLAC.',
+    de: 'Direktes Einbetten wird derzeit für MP3 und FLAC unterstützt.',
+    uk: 'Наразі пряме вбудовування підтримується для MP3 і FLAC.',
+    pl: 'Obecnie bezpośrednie osadzanie jest obsługiwane dla MP3 i FLAC.',
+    tr: 'Şu anda doğrudan gömme MP3 ve FLAC için destekleniyor.',
+    id: 'Saat ini penyematan langsung didukung untuk MP3 dan FLAC.',
+    'zh-TW': '目前支援直接嵌入 MP3 和 FLAC。'
   },
   lrc_original_write_error: {
     es: 'No se pudo modificar el original. Comprueba el archivo antes de volver a intentarlo.',

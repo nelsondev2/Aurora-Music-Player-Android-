@@ -25,7 +25,7 @@ reproductor web.
 - Biblioteca local e importación de varias pistas; escaneo del dispositivo
   mediante MediaStore y selector de archivos Android.
 - Listas, favoritos, estrellas y búsqueda.
-- Letras sincronizadas LRC, ajustes de sincronización y herramientas de letra. En Android, Guardar puede incrustar la letra en el MP3 original si se conserva una URI escribible; la escritura directa en el archivo original no se sustituye por una copia.
+- Letras sincronizadas LRC, ajustes de sincronización y herramientas de letra. En Android, Guardar puede incrustar la letra en el MP3 o FLAC original si se conserva una URI escribible; la escritura directa en el archivo original no se sustituye por una copia.
 - Ecualizador, visualizador, temporizador, estadísticas, temas e idiomas.
 - Reproducción en segundo plano, controles multimedia, cola y persistencia
   mediante componentes Java/Android.
@@ -65,7 +65,7 @@ Artifacts**, con el nombre `aurora-android5-plus`.
 - `NativePlayerBridge.java` y `WebApp.java`: coordinación entre la interfaz,
   el servicio y el motor de reproducción.
 - `DeviceLibraryBridge.java`: consulta de MediaStore, URI de archivos seleccionados y acceso de audio.
-- `Mp3LyricsWriter.java`: actualiza ID3 `USLT`/`SYLT` en el MP3 original, sin recodificar el audio y solo con permiso de escritura.
+- `Mp3LyricsWriter.java` y `FlacLyricsWriter.java`: incrustan y leen letras en los metadatos del MP3 (`USLT`/`SYLT`) o FLAC (comentarios Vorbis `LYRICS`/`SYNCEDLYRICS`), sin recodificar el audio y solo con permiso de escritura.
 - `NativeHomeActivity.java`: implementación nativa anterior; ya no es la
   actividad de inicio.
 - `NativeBackupImporter.java` y `NativeBackupExporter.java`: respaldo manual.

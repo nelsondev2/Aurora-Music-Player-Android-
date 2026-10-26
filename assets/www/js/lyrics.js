@@ -195,11 +195,11 @@ Object.assign(App, {
       if (!track || track._originalLyricsChecked) return;
       const bridge = window.AuroraDevice;
       const uri = track.deviceUri || track.sourceUri;
-      if (!uri || !bridge || typeof bridge.readLyricsFromMp3 !== 'function') return;
+      if (!uri || !bridge || typeof bridge.readLyricsFromOriginal !== 'function') return;
       track._originalLyricsChecked = true;
       setTimeout(() => {
         try {
-          const result = JSON.parse(bridge.readLyricsFromMp3(uri) || '{}');
+          const result = JSON.parse(bridge.readLyricsFromOriginal(uri) || '{}');
           if (!result.ok || typeof result.lyrics !== 'string' || !result.lyrics.trim()) return;
           if (this.currentTrack !== track || (track.lrc && track.lrc.length)) return;
           track.lrc = result.lyrics.split(/\r?\n/);
@@ -624,7 +624,7 @@ Object.assign(App, {
       const text = ta.value.trim();
       const androidFiles = window.AuroraDevice;
       let embeddedInOriginal = false;
-      if (androidFiles && typeof androidFiles.writeLyricsToMp3 === 'function') {
+      if (androidFiles && typeof androidFiles.writeLyricsToOriginal === 'function') {
         const uri = track.deviceUri || track.sourceUri;
         if (!uri) {
           this.toast(this.t('lrc_original_unavailable'));
@@ -633,7 +633,7 @@ Object.assign(App, {
         const button = document.getElementById('btnLrcSave');
         if (button) button.disabled = true;
         try {
-          const raw = androidFiles.writeLyricsToMp3(uri, text);
+          const raw = androidFiles.writeLyricsToOriginal(uri, text);
           const result = JSON.parse(raw || '{}');
           if (!result.ok) {
             let message;

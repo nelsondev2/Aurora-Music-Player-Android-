@@ -104,10 +104,15 @@ class DeviceLibraryBridge {
     }
 
     @JavascriptInterface
-    public String readLyricsFromMp3(String uri) {
+    public String readLyricsFromOriginal(String uri) {
         JSONObject out = new JSONObject();
         try {
-            String lyrics = Mp3LyricsWriter.read(context(), Uri.parse(uri));
+            Uri source = Uri.parse(uri);
+            String name = pickedDisplayName(source).toLowerCase(java.util.Locale.ROOT);
+            String lyrics;
+            if (name.endsWith(".mp3")) lyrics = Mp3LyricsWriter.read(context(), source);
+            else if (name.endsWith(".flac")) lyrics = FlacLyricsWriter.read(context(), source);
+            else throw new IllegalArgumentException("format_unsupported");
             out.put("ok", true);
             out.put("lyrics", lyrics == null ? JSONObject.NULL : lyrics);
         } catch (Exception e) {
@@ -121,10 +126,14 @@ class DeviceLibraryBridge {
     }
 
     @JavascriptInterface
-    public String writeLyricsToMp3(String uri, String lyrics) {
+    public String writeLyricsToOriginal(String uri, String lyrics) {
         JSONObject out = new JSONObject();
         try {
-            Mp3LyricsWriter.write(context(), Uri.parse(uri), lyrics);
+            Uri source = Uri.parse(uri);
+            String name = pickedDisplayName(source).toLowerCase(java.util.Locale.ROOT);
+            if (name.endsWith(".mp3")) Mp3LyricsWriter.write(context(), source, lyrics);
+            else if (name.endsWith(".flac")) FlacLyricsWriter.write(context(), source, lyrics);
+            else throw new IllegalArgumentException("format_unsupported");
             out.put("ok", true);
         } catch (Exception e) {
             String code = e.getMessage();
@@ -136,6 +145,22 @@ class DeviceLibraryBridge {
             }
         }
         return out.toString();
+    }
+
+    private String pickedDisplayName(Uri uri) {
+        Cursor cursor = null;
+        try {
+            cursor = context().getContentResolver().query(uri,
+                    new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                String name = cursor.getString(0);
+                if (name != null) return name;
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        return uri == null ? "" : String.valueOf(uri.getLastPathSegment());
     }
 
     private static String sourceKey(String name, long size) {
