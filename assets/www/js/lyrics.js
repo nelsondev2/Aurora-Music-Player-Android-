@@ -533,7 +533,177 @@ Object.assign(App, {
       const results = document.getElementById('lrcSearchResults');
       if (status) status.textContent = '';
       if (results) { results.innerHTML = ''; results.hidden = true; }
+      this._populateLrcTranslationTargets();
+      const translateStatus = document.getElementById('lrcTranslateStatus');
+      if (translateStatus) translateStatus.textContent = '';
       this.openSheet('sheetLrcEditor');
+    },
+
+    _populateLrcTranslationTargets() {
+      const select = document.getElementById('lrcTranslateLang');
+      if (!select) return;
+      const languages = window.SUPPORTED_LANGS || [];
+      select.innerHTML = '';
+      languages.forEach(language => {
+        const option = document.createElement('option');
+        option.value = language.code;
+        option.textContent = language.name;
+        select.appendChild(option);
+      });
+      const selected = languages.some(language => language.code === this.lang)
+        ? this.lang : (languages[0] && languages[0].code);
+      if (selected) select.value = selected;
+    },
+
+    /* Traduce las líneas del editor, conservando intactos sus timestamps y
+     * metadatos LRC. El usuario revisa el resultado y decide cuándo guardarlo. */
+    async translateLrcFromEditor() {
+      const textarea = document.getElementById('lrcEditorText');
+      const select = document.getElementById('lrcTranslateLang');
+      const button = document.getElementById('btnLrcTranslate');
+      const status = document.getElementById('lrcTranslateStatus');
+      const track = this.currentTrack;
+      if (!textarea || !select || !button || !status || !track) return;
+      const originalText = textarea.value;
+      if (!originalText.trim()) {
+        status.textContent = this.t('lrc_translate_empty');
+        return;
+      }
+
+      const targetMap = {
+        es: 'es', en: 'en', pt: 'pt', zh: 'zh-CN', ja: 'ja', fr: 'fr', it: 'it',
+        ru: 'ru', de: 'de', uk: 'uk', pl: 'pl', tr: 'tr', id: 'id', 'zh-TW': 'zh-TW'
+      };
+      const target = targetMap[select.value];
+      if (!target) return;
+      const lines = originalText.split(/\r?\n/);
+      const translatedLines = lines.slice();
+      const work = [];
+      const metadata = /^\s*\[(?:ar|ti|al|by|offset|length|re|ve|id):/i;
+      const timestamps = /^(\s*(?:\[(?:(?:\d{1,3}:)?\d{1,2}:\d{1,2}(?:[.,]\d+)?)\]\s*)+)([\s\S]*)$/;
+      lines.forEach((line, index) => {
+        if (!line.trim() || metadata.test(line)) return;
+        const match = line.match(timestamps);
+        const prefix = match ? match[1] : '';
+        const text = match ? match[2] : line;
+        if (text.trim()) work.push({ index: index, prefix: prefix, text: text.trim() });
+      });
+      if (!work.length) {
+        status.textContent = this.t('lrc_translate_empty');
+        return;
+      }
+
+      const byteLength = text => new Blob([text]).size;
+      const decodeEntities = text => String(text || '').replace(
+        /&(#x[\da-f]{1,6}|#\d{1,7}|amp|lt|gt|quot|apos|#39);/gi,
+        (whole, entity) => {
+          const key = entity.toLowerCase();
+          if (key === 'amp') return '&';
+          if (key === 'lt') return '<';
+          if (key === 'gt') return '>';
+          if (key === 'quot') return '"';
+          if (key === 'apos' || key === '#39') return "'";
+          const number = key.slice(0, 2) === '#x'
+            ? parseInt(key.slice(2), 16) : parseInt(key.slice(1), 10);
+          try { return number > 0 && number <= 0x10ffff ? String.fromCodePoint(number) : whole; }
+          catch (e) { return whole; }
+        });
+      const requestTranslation = async text => {
+        const params = new URLSearchParams({ q: text, langpair: 'autodetect|' + target });
+        const response = await fetch('https://api.mymemory.translated.net/get?' + params.toString(), {
+          method: 'GET', headers: { Accept: 'application/json' }, cache: 'no-store'
+        });
+        if (!response.ok) throw new Error('MyMemory HTTP ' + response.status);
+        const payload = await response.json();
+        if (!payload || Number(payload.responseStatus) !== 200 ||
+            !payload.responseData || typeof payload.responseData.translatedText !== 'string') {
+          throw new Error((payload && payload.responseDetails) || 'invalid translation response');
+        }
+        return decodeEntities(payload.responseData.translatedText).replace(/\r/g, '');
+      };
+      const translateGroupIndividually = async group => {
+        const results = [];
+        for (const item of group) results.push(await translateLongLine(item.text));
+        return results;
+      };
+      const translateLongLine = async text => {
+        if (byteLength(text) <= 420) return requestTranslation(text);
+        const words = text.match(/\S+\s*/g) || [text];
+        const chunks = [];
+        let chunk = '';
+        for (const word of words) {
+          if (chunk && byteLength(chunk + word) > 420) {
+            chunks.push(chunk.trim());
+            chunk = '';
+          }
+          if (byteLength(word) > 420) {
+            if (chunk) { chunks.push(chunk.trim()); chunk = ''; }
+            let part = '';
+            for (const character of Array.from(word)) {
+              if (part && byteLength(part + character) > 400) {
+                chunks.push(part);
+                part = '';
+              }
+              part += character;
+            }
+            if (part) chunk = part;
+          } else chunk += word;
+        }
+        if (chunk.trim()) chunks.push(chunk.trim());
+        const translated = [];
+        for (const part of chunks) translated.push(await requestTranslation(part));
+        return translated.join(' ');
+      };
+
+      button.disabled = true;
+      select.disabled = true;
+      status.textContent = this.t('lrc_translating');
+      try {
+        // Agrupar unas pocas líneas por petición reduce latencia y conserva
+        // las líneas por separado; si el servicio cambia los saltos de línea,
+        // se reintenta individualmente para no desalinear letras y tiempos.
+        const batches = [];
+        let batch = [];
+        let batchText = '';
+        for (const item of work) {
+          const candidate = batchText ? batchText + '\n' + item.text : item.text;
+          if (batch.length && (batch.length >= 6 || byteLength(candidate) > 420)) {
+            batches.push(batch);
+            batch = [];
+            batchText = '';
+          }
+          batch.push(item);
+          batchText = batchText ? batchText + '\n' + item.text : item.text;
+        }
+        if (batch.length) batches.push(batch);
+
+        for (const group of batches) {
+          if (this.currentTrack !== track || textarea.value !== originalText) return;
+          const joined = group.map(item => item.text).join('\n');
+          let translations;
+          if (group.length === 1 || byteLength(joined) > 420) {
+            translations = await translateGroupIndividually(group);
+          } else {
+            const translated = await requestTranslation(joined);
+            const split = translated.split('\n');
+            if (split.length === group.length) translations = split;
+            else translations = await translateGroupIndividually(group);
+          }
+          group.forEach((item, index) => {
+            translatedLines[item.index] = item.prefix + String(translations[index] || '').trim();
+          });
+        }
+        if (this.currentTrack !== track || textarea.value !== originalText) return;
+        textarea.value = translatedLines.join('\n');
+        textarea.focus();
+        status.textContent = this.t('lrc_translate_done');
+      } catch (error) {
+        console.warn('[Aurora] traducción de letra:', error);
+        status.textContent = this.t('lrc_translate_error');
+      } finally {
+        button.disabled = false;
+        select.disabled = false;
+      }
     },
 
     /* Busca únicamente resultados LRC sincronizados en LRCLIB. La elección

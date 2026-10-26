@@ -1001,6 +1001,13 @@
               <span id="lrcSearchStatus" class="lrc-search-status" role="status" aria-live="polite"></span>
             </div>
             <div id="lrcSearchResults" class="lrc-search-results" hidden></div>
+            <div class="lrc-translate-tools">
+              <label for="lrcTranslateLang" data-i18n="lrc_translate_target">Traducir a</label>
+              <select id="lrcTranslateLang" class="aurora-select"></select>
+              <button type="button" class="text-btn" id="btnLrcTranslate" data-i18n="lrc_translate_button">Traducir letra</button>
+              <span id="lrcTranslateStatus" class="lrc-search-status" role="status" aria-live="polite"></span>
+            </div>
+            <p class="lrc-translate-hint" data-i18n="lrc_translate_privacy">La letra se enviará a MyMemory para traducirla. Revisa el resultado antes de guardarlo.</p>
             <textarea id="lrcEditorText" class="lrc-editor-textarea" rows="20" data-i18n-aria="lrc_edit" aria-label="Editar letra" placeholder="[00:12.50]Primera línea&#10;[00:15.30]Segunda línea"></textarea>
             <!--  retirado «sincronizar tocando»; el editor sigue
  aceptando sellos [mm:ss.xx] escritos o pegados. -->

@@ -2292,6 +2292,58 @@ const I18N = {
     pl: 'Nie można połączyć się z LRCLIB. Sprawdź internet.', tr: 'LRCLIB bağlantısı kurulamadı. İnternetinizi kontrol edin.',
     id: 'Tidak dapat terhubung ke LRCLIB. Periksa internet.', 'zh-TW': '無法連線到 LRCLIB，請檢查網路'
   },
+  lrc_translate_target: {
+    es: 'Traducir a', en: 'Translate to', pt: 'Traduzir para', zh: '翻译为', ja: '翻訳先', fr: 'Traduire en',
+    it: 'Traduci in', ru: 'Перевести на', de: 'Übersetzen nach', uk: 'Перекласти мовою', pl: 'Przetłumacz na',
+    tr: 'Şuna çevir', id: 'Terjemahkan ke', 'zh-TW': '翻譯為'
+  },
+  lrc_translate_button: {
+    es: 'Traducir letra', en: 'Translate lyrics', pt: 'Traduzir letra', zh: '翻译歌词', ja: '歌詞を翻訳', fr: 'Traduire les paroles',
+    it: 'Traduci testo', ru: 'Перевести текст', de: 'Songtext übersetzen', uk: 'Перекласти текст', pl: 'Przetłumacz tekst',
+    tr: 'Şarkı sözlerini çevir', id: 'Terjemahkan lirik', 'zh-TW': '翻譯歌詞'
+  },
+  lrc_translating: {
+    es: 'Traduciendo letra…', en: 'Translating lyrics…', pt: 'Traduzindo letra…', zh: '正在翻译歌词…', ja: '歌詞を翻訳中…', fr: 'Traduction des paroles…',
+    it: 'Traduzione del testo…', ru: 'Перевод текста…', de: 'Songtext wird übersetzt…', uk: 'Переклад тексту…', pl: 'Tłumaczenie tekstu…',
+    tr: 'Şarkı sözleri çevriliyor…', id: 'Menerjemahkan lirik…', 'zh-TW': '正在翻譯歌詞…'
+  },
+  lrc_translate_done: {
+    es: 'Traducción lista; revisa y pulsa Guardar', en: 'Translation ready; review it and tap Save', pt: 'Tradução pronta; revise e toque em Salvar', zh: '翻译完成，请检查后点击保存', ja: '翻訳完了。確認して保存を押してください', fr: 'Traduction prête ; vérifiez puis appuyez sur Enregistrer',
+    it: 'Traduzione pronta; controlla e premi Salva', ru: 'Перевод готов; проверьте и нажмите «Сохранить»', de: 'Übersetzung fertig; prüfen und Speichern drücken',
+    uk: 'Переклад готовий; перевірте й натисніть «Зберегти»', pl: 'Tłumaczenie gotowe; sprawdź i naciśnij Zapisz',
+    tr: 'Çeviri hazır; kontrol edip Kaydet’e basın', id: 'Terjemahan siap; periksa lalu tekan Simpan', 'zh-TW': '翻譯完成，請檢查後按儲存'
+  },
+  lrc_translate_empty: {
+    es: 'Escribe o carga una letra antes de traducir.', en: 'Enter or load lyrics before translating.', pt: 'Digite ou carregue uma letra antes de traduzir.',
+    zh: '请先输入或载入歌词再翻译。', ja: '翻訳する前に歌詞を入力または読み込んでください。', fr: 'Saisissez ou chargez des paroles avant de les traduire.',
+    it: 'Inserisci o carica il testo prima di tradurre.', ru: 'Сначала введите или загрузите текст.', de: 'Gib zuerst einen Songtext ein oder lade ihn.',
+    uk: 'Спочатку введіть або завантажте текст.', pl: 'Najpierw wpisz lub wczytaj tekst.', tr: 'Çevirmeden önce sözleri girin veya yükleyin.',
+    id: 'Masukkan atau muat lirik sebelum menerjemahkan.', 'zh-TW': '請先輸入或載入歌詞再翻譯。'
+  },
+  lrc_translate_error: {
+    es: 'No se pudo traducir. Comprueba internet o inténtalo más tarde.', en: 'Translation failed. Check your connection or try again later.', pt: 'Não foi possível traduzir. Verifique a internet ou tente mais tarde.',
+    zh: '翻译失败，请检查网络或稍后重试。', ja: '翻訳できませんでした。通信を確認するか、後でもう一度お試しください。', fr: 'Échec de la traduction. Vérifiez Internet ou réessayez plus tard.',
+    it: 'Traduzione non riuscita. Controlla Internet o riprova più tardi.', ru: 'Не удалось перевести. Проверьте интернет или повторите попытку позже.',
+    de: 'Übersetzung fehlgeschlagen. Prüfe die Internetverbindung oder versuche es später erneut.', uk: 'Не вдалося перекласти. Перевірте інтернет або спробуйте пізніше.',
+    pl: 'Nie udało się przetłumaczyć. Sprawdź internet lub spróbuj później.', tr: 'Çeviri başarısız. İnternet bağlantısını kontrol edip sonra tekrar deneyin.',
+    id: 'Terjemahan gagal. Periksa internet atau coba lagi nanti.', 'zh-TW': '翻譯失敗，請檢查網路或稍後再試。'
+  },
+  lrc_translate_privacy: {
+    es: 'La letra se enviará a MyMemory para traducirla. Revisa el resultado antes de guardarlo.',
+    en: 'Lyrics are sent to MyMemory for translation. Review the result before saving.',
+    pt: 'A letra será enviada ao MyMemory para tradução. Revise o resultado antes de salvar.',
+    zh: '歌词会发送到 MyMemory 翻译。保存前请检查结果。',
+    ja: '歌詞は翻訳のため MyMemory に送信されます。保存する前に結果を確認してください。',
+    fr: 'Les paroles seront envoyées à MyMemory pour traduction. Vérifiez le résultat avant de l’enregistrer.',
+    it: 'Il testo sarà inviato a MyMemory per la traduzione. Controlla il risultato prima di salvarlo.',
+    ru: 'Текст будет отправлен в MyMemory для перевода. Проверьте результат перед сохранением.',
+    de: 'Der Songtext wird zur Übersetzung an MyMemory gesendet. Prüfe das Ergebnis vor dem Speichern.',
+    uk: 'Текст буде надіслано до MyMemory для перекладу. Перевірте результат перед збереженням.',
+    pl: 'Tekst zostanie wysłany do MyMemory w celu tłumaczenia. Sprawdź wynik przed zapisaniem.',
+    tr: 'Şarkı sözleri çevrilmek üzere MyMemory’ye gönderilir. Kaydetmeden önce sonucu inceleyin.',
+    id: 'Lirik akan dikirim ke MyMemory untuk diterjemahkan. Periksa hasilnya sebelum menyimpan.',
+    'zh-TW': '歌詞會傳送至 MyMemory 翻譯，儲存前請檢查結果。'
+  },
   lrc_loaded: {
     es: 'Letra cargada', en: 'Lyrics loaded', pt: 'Letra carregada',
     zh: '歌词已加载', ja: '歌詞を読み込みました', fr: 'Paroles chargées',

@@ -451,6 +451,26 @@ def check_visualizer_sync():
     ok.append("onda sincronizada con muestras reales del motor nativo")
 
 
+# ------------------------------------------------------------- LRC translation
+
+def check_lrc_translation():
+    """Traducción online del editor: 14 destinos, conserva tiempos y no guarda sola."""
+    html = read(os.path.join(WWW, "index.html"))
+    lyrics = read(os.path.join(WWW, "js", "lyrics.js"))
+    events = read(os.path.join(WWW, "js", "events.js"))
+    if 'id="lrcTranslateLang"' not in html or 'id="btnLrcTranslate"' not in html:
+        fail("el editor debe ofrecer selector de idioma y botón de traducir")
+    if "translateLrcFromEditor" not in lyrics or "btnLrcTranslate" not in events:
+        fail("el botón del editor debe ejecutar la traducción")
+    if "https://api.mymemory.translated.net/get?" not in lyrics or "autodetect|" not in lyrics:
+        fail("la traducción debe detectar origen y usar el servicio online seleccionado")
+    if "const targetMap = {" not in lyrics or "'zh-TW': 'zh-TW'" not in lyrics:
+        fail("la traducción debe mapear los 14 idiomas, incluidos los dos chinos")
+    if "metadata.test(line)" not in lyrics or "translatedLines[item.index] = item.prefix" not in lyrics:
+        fail("la traducción debe dejar intactos metadatos y timestamps LRC")
+    ok.append("traducción LRC a idiomas de la app conservando timestamps")
+
+
 # -------------------------------------------------------------- original LRC write
 
 def check_original_lrc_write():
@@ -543,6 +563,7 @@ def main():
     check_multi_selection()
     check_playback_restore()
     check_lrclib_search()
+    check_lrc_translation()
     check_browse_playlist_add()
     check_native_first_play_race()
     check_visualizer_sync()

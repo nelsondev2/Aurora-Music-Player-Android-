@@ -12,10 +12,10 @@ Historial de versiones **publicadas** de Aurora Music Player.
 - **El cambio de motor de audio reinicia Aurora de forma segura**: guarda la sesión y vuelve a enlazar el reproductor elegido; antes solo cambiaba la preferencia y podía dejar la interfaz usando el motor anterior.
 - La primera pista importada se prepara en segundo plano para reducir la espera inicial del motor del sistema.
 - **Al salir explícitamente de Aurora, la reproducción se pausa y la próxima apertura queda en pausa**; cerrar la tarea desde Recientes también detiene el servicio huérfano. Mandar Aurora al fondo con Home sigue permitiendo música en segundo plano. La restauración evita cargar de nuevo sobre un `MediaPlayer` activo y el WebView reanuda sus timers al volver.
-- **El editor de letras puede buscar en LRCLIB** por título y artista; solo muestra letras con marcas de tiempo sincronizadas y las pone en el editor para revisarlas antes de Guardar.
+- **El editor de letras puede buscar en LRCLIB** por título y artista; solo muestra letras con marcas de tiempo sincronizadas y las pone en el editor para revisarlas antes de Guardar. También puede traducir la letra a cualquiera de los 14 idiomas de la app mediante MyMemory; reemplaza el texto del editor, conserva timestamps y metadatos LRC, y solo guarda cuando el usuario pulsa Guardar. Requiere Internet, envía el texto de la letra al servicio y está sujeto a sus límites gratuitos.
 - **Desde la vista de un álbum o artista se pueden añadir todas sus pistas a una playlist de una vez**: se elige el destino, se conservan el orden visible y las canciones que ya estaban en la lista, y también se puede crear una playlist nueva en el mismo flujo.
 - El selector Android conserva la URI y el permiso persistente del archivo original cuando el proveedor los concede. **Guardar LRC en Android escribe en el MP3 o FLAC original** mediante ID3 `USLT`/`SYLT` o comentarios Vorbis `LYRICS`/`SYNCEDLYRICS`; también lee esas letras desde el archivo. Requiere acceso de escritura. Si el original no está vinculado, Android deniega el acceso o el formato no está soportado, no se presenta como guardado. La interfaz web sin puente nativo mantiene su guardado local.
-- La app permite conexión a Internet solo para la búsqueda HTTPS de LRCLIB; las demás solicitudes externas siguen bloqueadas.
+- Las solicitudes externas de búsqueda en LRCLIB y traducción MyMemory son iniciadas por el usuario. Al traducir, solo se envía el texto del editor al servicio; las demás solicitudes externas siguen bloqueadas.
 - La APK sigue siendo única y universal, con `minSdk 21` (Android 5.0+). `NativeHomeActivity` queda retenida, pero deja de ser la pantalla de inicio.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
@@ -24,11 +24,7 @@ Historial de versiones **publicadas** de Aurora Music Player.
   Mantenimiento crea un archivo con la biblioteca, las listas, los ajustes
   y el audio importado, usando bloques para limitar la memoria. Las pistas
   de MediaStore conservan la referencia al archivo original.
-- **La onda del visualizador se mueve con el motor nativo.** Antes, ese
-  motor solo pintaba una onda estática porque `MediaPlayer` no entrega
-  muestras de audio al WebView. Ahora la onda se anima mientras suena;
-  es decorativa, no una lectura de frecuencias. Con el motor Web sigue
-  reaccionando al audio real.
+- **El visualizador se sincroniza con el audio nativo.** Android captura la forma de onda de la sesión de `MediaPlayer` y la envía al WebView; requiere el permiso de audio del sistema, solicitado solo al activar el visualizador. Las muestras se usan en memoria y no se guardan ni se envían a Internet. Con el motor Web se mantiene el análisis directo mediante `AnalyserNode`.
 - **Pausa al retirar auriculares.** `PlaybackService` escucha
   `ACTION_AUDIO_BECOMING_NOISY` y manda una pausa coordinada al reproductor
   cuando se desconectan auriculares cableados o Bluetooth; el receptor se
