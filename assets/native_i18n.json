@@ -209,7 +209,15 @@
       "playback_rate": "Velocidad de reproducción",
       "visualizer": "Visualizador",
       "backup_import": "Importar respaldo",
-      "backup_export": "Exportar respaldo"
+      "backup_export": "Exportar respaldo",
+      "lrc_edit": "Editar letra",
+      "lrc_share": "Compartir letra",
+      "lrc_fullscreen": "Pantalla completa",
+      "toast_lyrics_save_error": "No se pudo guardar la letra",
+      "queue_current_cannot_remove": "No se puede quitar la pista actual",
+      "queue_item_removed": "Pista quitada de la cola",
+      "queue_cleared": "Se vació la cola siguiente",
+      "queue_saved_playlist": "Cola guardada como lista"
     },
     "en": {
       "app_title": "Aurora",
@@ -362,7 +370,15 @@
       "playback_rate": "Playback speed",
       "visualizer": "Visualizer",
       "backup_import": "Import backup",
-      "backup_export": "Export backup"
+      "backup_export": "Export backup",
+      "lrc_edit": "Edit lyrics",
+      "lrc_share": "Share lyrics",
+      "lrc_fullscreen": "Fullscreen",
+      "toast_lyrics_save_error": "Could not save lyrics",
+      "queue_current_cannot_remove": "The current track cannot be removed",
+      "queue_item_removed": "Track removed from queue",
+      "queue_cleared": "Up next queue cleared",
+      "queue_saved_playlist": "Queue saved as playlist"
     },
     "pt": {
       "app_title": "Aurora",
@@ -491,7 +507,15 @@
       "playback_rate": "Velocidade de reprodução",
       "visualizer": "Visualizador",
       "backup_import": "Importar backup",
-      "backup_export": "Exportar backup"
+      "backup_export": "Exportar backup",
+      "lrc_edit": "Editar letra",
+      "lrc_share": "Compartilhar letra",
+      "lrc_fullscreen": "Tela cheia",
+      "toast_lyrics_save_error": "Não foi possível salvar a letra",
+      "queue_current_cannot_remove": "A faixa atual não pode ser removida",
+      "queue_item_removed": "Faixa removida da fila",
+      "queue_cleared": "Fila seguinte limpa",
+      "queue_saved_playlist": "Fila salva como lista"
     },
     "zh": {
       "app_title": "Aurora",
@@ -620,7 +644,15 @@
       "playback_rate": "播放速度",
       "visualizer": "可视化器",
       "backup_import": "导入备份",
-      "backup_export": "导出备份"
+      "backup_export": "导出备份",
+      "lrc_edit": "编辑歌词",
+      "lrc_share": "分享歌词",
+      "lrc_fullscreen": "全屏",
+      "toast_lyrics_save_error": "无法保存歌词",
+      "queue_current_cannot_remove": "无法移除当前曲目",
+      "queue_item_removed": "已从队列移除曲目",
+      "queue_cleared": "已清空待播队列",
+      "queue_saved_playlist": "队列已保存为播放列表"
     },
     "ja": {
       "app_title": "Aurora",
@@ -749,7 +781,15 @@
       "playback_rate": "再生速度",
       "visualizer": "ビジュアライザー",
       "backup_import": "バックアップをインポート",
-      "backup_export": "バックアップをエクスポート"
+      "backup_export": "バックアップをエクスポート",
+      "lrc_edit": "歌詞を編集",
+      "lrc_share": "歌詞を共有",
+      "lrc_fullscreen": "全画面",
+      "toast_lyrics_save_error": "歌詞を保存できませんでした",
+      "queue_current_cannot_remove": "現在の曲は削除できません",
+      "queue_item_removed": "キューから曲を削除しました",
+      "queue_cleared": "次の曲のキューを消去しました",
+      "queue_saved_playlist": "キューをプレイリストとして保存しました"
     },
     "fr": {
       "app_title": "Aurora",
@@ -878,7 +918,15 @@
       "playback_rate": "Vitesse de lecture",
       "visualizer": "Visualiseur",
       "backup_import": "Importer une sauvegarde",
-      "backup_export": "Exporter une sauvegarde"
+      "backup_export": "Exporter une sauvegarde",
+      "lrc_edit": "Modifier les paroles",
+      "lrc_share": "Partager les paroles",
+      "lrc_fullscreen": "Plein écran",
+      "toast_lyrics_save_error": "Impossible d’enregistrer les paroles",
+      "queue_current_cannot_remove": "Impossible de retirer le morceau en cours",
+      "queue_item_removed": "Morceau retiré de la file",
+      "queue_cleared": "File d’attente vidée",
+      "queue_saved_playlist": "File enregistrée comme liste"
     },
     "it": {
       "app_title": "Aurora",
@@ -1007,7 +1055,15 @@
       "playback_rate": "Velocità di riproduzione",
       "visualizer": "Visualizzatore",
       "backup_import": "Importa backup",
-      "backup_export": "Esporta backup"
+      "backup_export": "Esporta backup",
+      "lrc_edit": "Modifica testo",
+      "lrc_share": "Condividi testo",
+      "lrc_fullscreen": "Schermo intero",
+      "toast_lyrics_save_error": "Impossibile salvare il testo",
+      "queue_current_cannot_remove": "Impossibile rimuovere il brano corrente",
+      "queue_item_removed": "Brano rimosso dalla coda",
+      "queue_cleared": "Coda successiva svuotata",
+      "queue_saved_playlist": "Coda salvata come playlist"
     },
     "ru": {
       "app_title": "Aurora",
@@ -1136,7 +1192,15 @@
       "playback_rate": "Скорость воспроизведения",
       "visualizer": "Визуализатор",
       "backup_import": "Импортировать резервную копию",
-      "backup_export": "Экспортировать резервную копию"
+      "backup_export": "Экспортировать резервную копию",
+      "lrc_edit": "Изменить текст",
+      "lrc_share": "Поделиться текстом",
+      "lrc_fullscreen": "Полный экран",
+      "toast_lyrics_save_error": "Не удалось сохранить текст",
+      "queue_current_cannot_remove": "Текущий трек нельзя удалить",
+      "queue_item_removed": "Трек удалён из очереди",
+      "queue_cleared": "Очередь следующих треков очищена",
+      "queue_saved_playlist": "Очередь сохранена как плейлист"
     },
     "de": {
       "app_title": "Aurora",
@@ -1265,7 +1329,15 @@
       "playback_rate": "Wiedergabegeschwindigkeit",
       "visualizer": "Visualisierung",
       "backup_import": "Sicherung importieren",
-      "backup_export": "Sicherung exportieren"
+      "backup_export": "Sicherung exportieren",
+      "lrc_edit": "Liedtext bearbeiten",
+      "lrc_share": "Liedtext teilen",
+      "lrc_fullscreen": "Vollbild",
+      "toast_lyrics_save_error": "Liedtext konnte nicht gespeichert werden",
+      "queue_current_cannot_remove": "Der aktuelle Titel kann nicht entfernt werden",
+      "queue_item_removed": "Titel aus Warteschlange entfernt",
+      "queue_cleared": "Warteschlange geleert",
+      "queue_saved_playlist": "Warteschlange als Playlist gespeichert"
     },
     "uk": {
       "app_title": "Aurora",
@@ -1394,7 +1466,15 @@
       "playback_rate": "Швидкість відтворення",
       "visualizer": "Візуалізатор",
       "backup_import": "Імпортувати резервну копію",
-      "backup_export": "Експортувати резервну копію"
+      "backup_export": "Експортувати резервну копію",
+      "lrc_edit": "Редагувати текст",
+      "lrc_share": "Поділитися текстом",
+      "lrc_fullscreen": "На весь екран",
+      "toast_lyrics_save_error": "Не вдалося зберегти текст",
+      "queue_current_cannot_remove": "Поточний трек не можна видалити",
+      "queue_item_removed": "Трек вилучено з черги",
+      "queue_cleared": "Чергу наступних треків очищено",
+      "queue_saved_playlist": "Чергу збережено як список"
     },
     "pl": {
       "app_title": "Aurora",
@@ -1523,7 +1603,15 @@
       "playback_rate": "Szybkość odtwarzania",
       "visualizer": "Wizualizator",
       "backup_import": "Importuj kopię zapasową",
-      "backup_export": "Eksportuj kopię zapasową"
+      "backup_export": "Eksportuj kopię zapasową",
+      "lrc_edit": "Edytuj tekst",
+      "lrc_share": "Udostępnij tekst",
+      "lrc_fullscreen": "Pełny ekran",
+      "toast_lyrics_save_error": "Nie udało się zapisać tekstu",
+      "queue_current_cannot_remove": "Nie można usunąć bieżącego utworu",
+      "queue_item_removed": "Usunięto utwór z kolejki",
+      "queue_cleared": "Wyczyszczono kolejkę następnych",
+      "queue_saved_playlist": "Zapisano kolejkę jako playlistę"
     },
     "tr": {
       "app_title": "Aurora",
@@ -1652,7 +1740,15 @@
       "playback_rate": "Çalma hızı",
       "visualizer": "Görselleştirici",
       "backup_import": "Yedeği içe aktar",
-      "backup_export": "Yedeği dışa aktar"
+      "backup_export": "Yedeği dışa aktar",
+      "lrc_edit": "Şarkı sözlerini düzenle",
+      "lrc_share": "Şarkı sözlerini paylaş",
+      "lrc_fullscreen": "Tam ekran",
+      "toast_lyrics_save_error": "Şarkı sözleri kaydedilemedi",
+      "queue_current_cannot_remove": "Çalan parça kaldırılamaz",
+      "queue_item_removed": "Parça kuyruktan kaldırıldı",
+      "queue_cleared": "Sıradaki kuyruğu temizlendi",
+      "queue_saved_playlist": "Kuyruk çalma listesi olarak kaydedildi"
     },
     "id": {
       "app_title": "Aurora",
@@ -1781,7 +1877,15 @@
       "playback_rate": "Kecepatan pemutaran",
       "visualizer": "Visualisator",
       "backup_import": "Impor cadangan",
-      "backup_export": "Ekspor cadangan"
+      "backup_export": "Ekspor cadangan",
+      "lrc_edit": "Edit lirik",
+      "lrc_share": "Bagikan lirik",
+      "lrc_fullscreen": "Layar penuh",
+      "toast_lyrics_save_error": "Lirik tidak dapat disimpan",
+      "queue_current_cannot_remove": "Lagu yang sedang diputar tidak dapat dihapus",
+      "queue_item_removed": "Lagu dihapus dari antrean",
+      "queue_cleared": "Antrean berikutnya dikosongkan",
+      "queue_saved_playlist": "Antrean disimpan sebagai playlist"
     },
     "zh-TW": {
       "app_title": "Aurora",
@@ -1910,7 +2014,15 @@
       "playback_rate": "播放速度",
       "visualizer": "視覺化器",
       "backup_import": "匯入備份",
-      "backup_export": "匯出備份"
+      "backup_export": "匯出備份",
+      "lrc_edit": "編輯歌詞",
+      "lrc_share": "分享歌詞",
+      "lrc_fullscreen": "全螢幕",
+      "toast_lyrics_save_error": "無法儲存歌詞",
+      "queue_current_cannot_remove": "無法移除目前曲目",
+      "queue_item_removed": "已從佇列移除曲目",
+      "queue_cleared": "已清空待播佇列",
+      "queue_saved_playlist": "佇列已儲存為播放清單"
     }
   }
 }

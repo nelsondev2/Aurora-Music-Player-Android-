@@ -28,10 +28,12 @@ restauración.
 - **Reproductor:** reproducción en segundo plano, controles multimedia,
   notificación, cola persistente, carátulas disponibles, velocidad ajustable
   y repetición de segmento A-B.
-- **Organización:** listas de reproducción, favoritos y calificación de cero
-  a cinco estrellas.
-- **Letras:** lectura de letras sincronizadas LRC y selección de un archivo
-  de letra.
+- **Organización:** listas de reproducción (renombrar, ordenar, limpiar,
+  exportar y borrar), favoritos y calificación de cero a cinco estrellas.
+  La cola permite saltar, quitar pistas pendientes, vaciar lo siguiente y
+  guardarla como una lista.
+- **Letras:** lectura y edición de LRC, importación/compartición, ajuste del
+  desfase por pista, tamaño de texto, repetición de fragmentos y vista inmersiva.
 - **Personalización:** temas, color de acento e idioma.
 - **Audio:** ecualizador Android y visualizador animado.
 - **Herramientas:** temporizador de apagado, estadísticas de reproducción,

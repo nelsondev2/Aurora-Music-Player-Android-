@@ -8,7 +8,7 @@ Historial de versiones **publicadas** de Aurora Music Player.
 - **Persistencia local SQLite** para pistas, metadatos, listas, favoritos, calificaciones y preferencias.
 - **Exportación e importación manual de respaldos ZIP v1**: biblioteca, listas, ajustes y audio accesible; las pistas de MediaStore conservan la referencia original.
 - **Cola Java persistente** con IDs, URI, contexto, reproducción aleatoria y modo de repetición; el servicio guarda periódicamente el estado de la sesión.
-- **Funciones portadas:** letras LRC, estrellas, favoritos, estadísticas, temas, acento, idiomas, ecualizador, visualizador, temporizador, carátulas, control de velocidad, repetición A-B y exportación de listas M3U8.
+- **Funciones portadas:** letras LRC con editor, sincronización, tamaño, bucle, vista inmersiva y compartir; estrellas, favoritos, estadísticas, temas, acento, idiomas, ecualizador, visualizador, temporizador, carátulas, control de velocidad, repetición A-B, cola editable/guardable y exportación de listas M3U8.
 - **Reproducción Android nativa:** controles multimedia, notificación, reproducción en segundo plano y preparación de la pista siguiente.
 - La APK continúa siendo una sola versión universal con `minSdk 21` (Android 5.0+). `assets/www` permanece como recurso heredado del repositorio, no como interfaz de inicio.
 

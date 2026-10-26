@@ -95,6 +95,12 @@ public class NativeHomeActivity extends Activity {
     private float playbackRate = 1f;
     private long loopStartMs = -1;
     private long loopEndMs = -1;
+    private long lyricsLoopStartMs = -1;
+    private long lyricsLoopEndMs = -1;
+    private long lyricsOffsetMs;
+    private int lyricsFontSize = 23;
+    private int lastLyricsIndex = -2;
+    private int originalSystemUiVisibility;
     private String themeName = "dark";
     private String languageCode = "es";
     private final Set<String> favorites = new HashSet<String>();
@@ -112,6 +118,7 @@ public class NativeHomeActivity extends Activity {
     private Visualizer visualizer;
     private boolean visualizerEnabled;
     private ScrollView lyricsScroll;
+    private LinearLayout lyricsTools;
     private TextView lyricsText;
     private ArrayList<NativeLyrics.Line> currentLyrics = new ArrayList<NativeLyrics.Line>();
     private Handler uiHandler = new Handler();
@@ -130,6 +137,7 @@ public class NativeHomeActivity extends Activity {
             if (!ticking) return;
             updatePlayerControls();
             enforceAbRepeat();
+            enforceLyricsLoop();
             if (visualizerEnabled && visualizer == null && player.isPlaying()) startVisualizer();
             listView.postDelayed(this, 500);
         }
@@ -180,6 +188,9 @@ public class NativeHomeActivity extends Activity {
         try { playbackRate = Math.max(0.5f, Math.min(2f, Float.parseFloat(database.setting("native.playback.rate", "1")))); }
         catch (Exception ignored) { playbackRate = 1f; }
         visualizerEnabled = "true".equals(database.setting("native.visualizer", "false"));
+        try { lyricsFontSize = Math.max(12, Math.min(32, Integer.parseInt(database.setting("native.lyrics.font", "23")))); }
+        catch (Exception ignored) { lyricsFontSize = 23; }
+        originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
         boolean eqOn = "true".equals(database.setting("native.eq.enabled", "false"));
         Object levelValue = database.settingValue("native.eq.levels", null);
         short[] levels = null;
@@ -222,6 +233,7 @@ public class NativeHomeActivity extends Activity {
         menu.getMenu().add(0, 4, 3, tr("lyrics"));
         menu.getMenu().add(0, 5, 4, tr("options_title"));
         menu.getMenu().add(0, 6, 5, tr("backup_import"));
+        menu.getMenu().add(0, 7, 6, tr("queue"));
         menu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
@@ -231,11 +243,120 @@ public class NativeHomeActivity extends Activity {
                     case 4: showLyrics(); return true;
                     case 5: showSettings(); return true;
                     case 6: chooseBackup(); return true;
+                    case 7: showQueue(); return true;
                     default: return false;
                 }
             }
         });
         menu.show();
+    }
+
+    private void showQueue() {
+        if (playQueue.isEmpty()) {
+            Toast.makeText(this, tr("no_tracks_loaded"), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final ArrayList<String> labels = new ArrayList<String>();
+        for (int i = 0; i < playQueue.size(); i++) {
+            JSONObject track = playQueue.get(i);
+            labels.add((i == queueIndex ? "▶  " : "") + track.optString("title", "Audio")
+                    + " · " + track.optString("artist", tr("unknown_artist")));
+        }
+        final ListView queueList = new ListView(this);
+        final AlertDialog[] dialogRef = new AlertDialog[1];
+        queueList.setAdapter(new android.widget.ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1, labels));
+        queueList.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
+            @Override public void onItemClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (position >= 0 && position < playQueue.size()) {
+                    JSONObject chosen = playQueue.get(position);
+                    if (dialogRef[0] != null) dialogRef[0].dismiss();
+                    playTrack(chosen);
+                }
+            }
+        });
+        queueList.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
+            @Override public boolean onItemLongClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (position == queueIndex) {
+                    Toast.makeText(NativeHomeActivity.this, tr("queue_current_cannot_remove"), Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                if (position >= 0 && position < playQueue.size()) {
+                    String removedId = playQueue.get(position).optString("id", "");
+                    playQueue.remove(position);
+                    if (position < queueIndex) queueIndex--;
+                    if (originalQueue != null) {
+                        for (int i = originalQueue.size() - 1; i >= 0; i--) {
+                            if (originalQueue.get(i).optString("id").equals(removedId)) originalQueue.remove(i);
+                        }
+                    }
+                    syncNativeQueue();
+                    Toast.makeText(NativeHomeActivity.this, tr("queue_item_removed"), Toast.LENGTH_SHORT).show();
+                    if (dialogRef[0] != null) dialogRef[0].dismiss();
+                    showQueue();
+                }
+                return true;
+            }
+        });
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.addView(queueList, new LinearLayout.LayoutParams(-1, dp(300)));
+        LinearLayout actions = new LinearLayout(this);
+        Button save = button(tr("save_playlist"));
+        Button clear = button(tr("clear_btn"));
+        actions.addView(save, new LinearLayout.LayoutParams(0, dp(44), 1));
+        actions.addView(clear, new LinearLayout.LayoutParams(0, dp(44), 1));
+        container.addView(actions);
+        final AlertDialog dialog = new AlertDialog.Builder(this).setTitle(tr("queue_title"))
+                .setView(container).setNegativeButton(tr("close_btn"), null).create();
+        dialogRef[0] = dialog;
+        save.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { dialog.dismiss(); saveQueueAsPlaylist(); }
+        });
+        clear.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { dialog.dismiss(); clearQueue(); }
+        });
+        dialog.show();
+    }
+
+    private void clearQueue() {
+        if (playQueue.isEmpty()) return;
+        JSONObject playing = currentTrack;
+        playQueue.clear();
+        if (playing != null) {
+            playQueue.add(playing);
+            queueIndex = 0;
+        } else queueIndex = -1;
+        originalQueue = null;
+        syncNativeQueue();
+        Toast.makeText(this, tr("queue_cleared"), Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveQueueAsPlaylist() {
+        if (playQueue.isEmpty()) return;
+        final EditText input = new EditText(this);
+        input.setHint(tr("new_playlist"));
+        new AlertDialog.Builder(this).setTitle(tr("save_playlist")).setView(input)
+                .setNegativeButton(tr("close_btn"), null)
+                .setPositiveButton(tr("save_playlist"), new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                        String name = input.getText().toString().trim();
+                        if (name.length() == 0) return;
+                        try {
+                            JSONObject playlist = new JSONObject();
+                            playlist.put("id", "pl-" + UUID.randomUUID().toString());
+                            playlist.put("name", name);
+                            JSONArray ids = new JSONArray();
+                            for (JSONObject track : playQueue) ids.put(track.optString("id", ""));
+                            playlist.put("trackIds", ids);
+                            playlist.put("sort", "queue");
+                            playlist.put("createdAt", System.currentTimeMillis());
+                            database.savePlaylist(playlist);
+                            loadStoredData();
+                            Toast.makeText(NativeHomeActivity.this, tr("queue_saved_playlist"), Toast.LENGTH_SHORT).show();
+                        } catch (Exception ignored) { }
+                    }
+                }).show();
     }
 
     private void showTrackScreen(String destination) {
@@ -488,6 +609,11 @@ public class NativeHomeActivity extends Activity {
             return;
         }
         currentLyrics = NativeLyrics.parse(currentTrack);
+        lastLyricsIndex = -2;
+        lyricsOffsetMs = Math.round(currentTrack.optDouble("lrcOffset", 0) * 1000);
+        lyricsLoopStartMs = -1;
+        lyricsLoopEndMs = -1;
+        updateLyricsTools();
         if (currentLyrics.isEmpty()) {
             new AlertDialog.Builder(this).setTitle(tr("lyrics_title"))
                     .setMessage(tr("lrc_empty_hint"))
@@ -508,7 +634,10 @@ public class NativeHomeActivity extends Activity {
 
     private void updateLyricsHighlight() {
         if (currentLyrics.isEmpty() || lyricsText == null) return;
-        int current = NativeLyrics.currentIndex(currentLyrics, Math.round(player.position()));
+        int current = NativeLyrics.currentIndex(currentLyrics,
+                Math.max(0, Math.round(player.position()) - lyricsOffsetMs));
+        if (current == lastLyricsIndex) return;
+        lastLyricsIndex = current;
         StringBuilder text = new StringBuilder();
         int[] starts = new int[currentLyrics.size()];
         int[] ends = new int[currentLyrics.size()];
@@ -526,9 +655,111 @@ public class NativeHomeActivity extends Activity {
             rendered.setSpan(new StyleSpan(Typeface.BOLD), starts[current], ends[current], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         lyricsText.setText(rendered);
+        lyricsText.setTextSize(lyricsFontSize);
         if (current >= 0 && current < starts.length) {
             android.text.Layout layout = lyricsText.getLayout();
             if (layout != null) lyricsScroll.smoothScrollTo(0, Math.max(0, layout.getLineTop(layout.getLineForOffset(starts[current])) - dp(90)));
+        }
+    }
+
+    private void addLyricsTool(LinearLayout row, String label, View.OnClickListener listener) {
+        Button tool = button(label);
+        tool.setTextSize(11);
+        row.addView(tool, new LinearLayout.LayoutParams(0, dp(38), 1));
+        tool.setOnClickListener(listener);
+    }
+
+    private void updateLyricsTools() {
+        if (lyricsText != null) lyricsText.setTextSize(lyricsFontSize);
+    }
+
+    private void setLyricsFontSize(int size) {
+        lyricsFontSize = Math.max(12, Math.min(32, size));
+        database.saveSetting("native.lyrics.font", String.valueOf(lyricsFontSize));
+        updateLyricsTools();
+        updateLyricsHighlight();
+    }
+
+    private void adjustLyricsOffset(long deltaMs) {
+        if (currentTrack == null) return;
+        lyricsOffsetMs = Math.max(-30000, Math.min(30000, lyricsOffsetMs + deltaMs));
+        try {
+            currentTrack.put("lrcOffset", lyricsOffsetMs / 1000.0);
+            database.saveTrack(currentTrack);
+        } catch (Exception ignored) { }
+        updateLyricsHighlight();
+        Toast.makeText(this, "Desfase: " + (lyricsOffsetMs > 0 ? "+" : "")
+                + String.format(java.util.Locale.US, "%.1f s", lyricsOffsetMs / 1000.0), Toast.LENGTH_SHORT).show();
+    }
+
+    private void cycleLyricsLoop() {
+        if (currentTrack == null || !player.isPlaying()) return;
+        long logicalPosition = Math.max(0, Math.round(player.position()) - lyricsOffsetMs);
+        if (lyricsLoopStartMs < 0 || lyricsLoopEndMs >= 0) {
+            lyricsLoopStartMs = logicalPosition;
+            lyricsLoopEndMs = -1;
+            Toast.makeText(this, "Punto A de letra guardado", Toast.LENGTH_SHORT).show();
+        } else if (logicalPosition > lyricsLoopStartMs + 500) {
+            lyricsLoopEndMs = logicalPosition;
+            Toast.makeText(this, "Bucle de letra A-B activo", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void enforceLyricsLoop() {
+        if (lyricsLoopStartMs >= 0 && lyricsLoopEndMs > lyricsLoopStartMs && player.isPlaying()) {
+            long end = Math.max(0, lyricsLoopEndMs + lyricsOffsetMs);
+            if (player.position() >= end - 80) player.seekTo(Math.max(0, lyricsLoopStartMs + lyricsOffsetMs));
+        }
+    }
+
+    private void editLyrics() {
+        if (currentTrack == null) return;
+        final EditText editor = new EditText(this);
+        editor.setGravity(Gravity.TOP | Gravity.START);
+        editor.setMinLines(8);
+        editor.setMaxLines(16);
+        editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        editor.setText(currentTrack.optString("lrc", ""));
+        new AlertDialog.Builder(this).setTitle(tr("lrc_edit")).setView(editor)
+                .setNegativeButton(tr("close_btn"), null)
+                .setPositiveButton(tr("save_playlist"), new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                        try {
+                            currentTrack.put("lrc", editor.getText().toString());
+                            database.saveTrack(currentTrack);
+                            currentLyrics = NativeLyrics.parse(currentTrack);
+                            lastLyricsIndex = -2;
+                            updateLyricsHighlight();
+                        } catch (Exception e) {
+                            Toast.makeText(NativeHomeActivity.this, tr("toast_lyrics_save_error"), Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }).show();
+    }
+
+    private void shareLyrics() {
+        if (currentTrack == null) return;
+        String lyrics = currentTrack.optString("lrc", "");
+        if (lyrics.length() == 0) {
+            Toast.makeText(this, tr("lrc_empty_hint"), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Intent share = new Intent(Intent.ACTION_SEND);
+        share.setType("text/plain");
+        share.putExtra(Intent.EXTRA_TEXT, currentTrack.optString("title", "") + " — "
+                + currentTrack.optString("artist", "") + "\n\n" + lyrics);
+        startActivity(Intent.createChooser(share, tr("lrc_share")));
+    }
+
+    private void toggleLyricsFullscreen() {
+        int flags = getWindow().getDecorView().getSystemUiVisibility();
+        if ((flags & View.SYSTEM_UI_FLAG_FULLSCREEN) != 0) {
+            getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
     }
 
@@ -674,10 +905,44 @@ public class NativeHomeActivity extends Activity {
         });
         root.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1));
         lyricsScroll = new ScrollView(this);
-        lyricsText = text(NativeText.text(this, "load_track_to_start"), 23, TEXT, true);
+        LinearLayout lyricsContent = new LinearLayout(this);
+        lyricsContent.setOrientation(LinearLayout.VERTICAL);
+        lyricsTools = new LinearLayout(this);
+        lyricsTools.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout lyricRowOne = new LinearLayout(this);
+        addLyricsTool(lyricRowOne, "A−", new View.OnClickListener() {
+            @Override public void onClick(View v) { setLyricsFontSize(lyricsFontSize - 2); }
+        });
+        addLyricsTool(lyricRowOne, "A+", new View.OnClickListener() {
+            @Override public void onClick(View v) { setLyricsFontSize(lyricsFontSize + 2); }
+        });
+        addLyricsTool(lyricRowOne, "−0.5s", new View.OnClickListener() {
+            @Override public void onClick(View v) { adjustLyricsOffset(-500); }
+        });
+        addLyricsTool(lyricRowOne, "+0.5s", new View.OnClickListener() {
+            @Override public void onClick(View v) { adjustLyricsOffset(500); }
+        });
+        addLyricsTool(lyricRowOne, "A-B", new View.OnClickListener() {
+            @Override public void onClick(View v) { cycleLyricsLoop(); }
+        });
+        lyricsTools.addView(lyricRowOne);
+        LinearLayout lyricRowTwo = new LinearLayout(this);
+        addLyricsTool(lyricRowTwo, tr("lrc_edit"), new View.OnClickListener() {
+            @Override public void onClick(View v) { editLyrics(); }
+        });
+        addLyricsTool(lyricRowTwo, tr("lrc_share"), new View.OnClickListener() {
+            @Override public void onClick(View v) { shareLyrics(); }
+        });
+        addLyricsTool(lyricRowTwo, tr("lrc_fullscreen"), new View.OnClickListener() {
+            @Override public void onClick(View v) { toggleLyricsFullscreen(); }
+        });
+        lyricsTools.addView(lyricRowTwo);
+        lyricsContent.addView(lyricsTools, new LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT));
+        lyricsText = text(NativeText.text(this, "load_track_to_start"), lyricsFontSize, TEXT, true);
         lyricsText.setGravity(Gravity.CENTER);
         lyricsText.setPadding(dp(20), dp(24), dp(20), dp(24));
-        lyricsScroll.addView(lyricsText, new ScrollView.LayoutParams(-1, -2));
+        lyricsContent.addView(lyricsText, new LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT));
+        lyricsScroll.addView(lyricsContent, new ScrollView.LayoutParams(-1, -2));
         lyricsScroll.setVisibility(View.GONE);
         root.addView(lyricsScroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
@@ -1083,6 +1348,7 @@ public class NativeHomeActivity extends Activity {
     private void sortTracks(List<JSONObject> tracks, final String mode) {
         Collections.sort(tracks, new Comparator<JSONObject>() {
             @Override public int compare(JSONObject a, JSONObject b) {
+                if ("queue".equals(mode)) return 0;
                 if ("stars".equals(mode)) {
                     return rating(b) - rating(a);
                 } else if ("artist".equals(mode)) {
@@ -1178,9 +1444,18 @@ public class NativeHomeActivity extends Activity {
         if (currentTrack == null || !currentTrack.optString("id").equals(track.optString("id"))) {
             loopStartMs = -1;
             loopEndMs = -1;
+            lyricsLoopStartMs = -1;
+            lyricsLoopEndMs = -1;
             if (abButton != null) { abButton.setText("A-B"); abButton.setTextColor(TEXT); }
         }
         currentTrack = track;
+        if ("lyrics".equals(screen)) {
+            currentLyrics = NativeLyrics.parse(track);
+            lastLyricsIndex = -2;
+            lyricsOffsetMs = Math.round(track.optDouble("lrcOffset", 0) * 1000);
+            if (currentLyrics.isEmpty()) lyricsText.setText(tr("lrc_empty_hint"));
+            else updateLyricsHighlight();
+        }
         int found = indexOfId(playQueue, track.optString("id", ""));
         if (found < 0) {
             playQueue.clear();
@@ -1786,6 +2061,11 @@ public class NativeHomeActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        int uiFlags = getWindow().getDecorView().getSystemUiVisibility();
+        if ((uiFlags & View.SYSTEM_UI_FLAG_FULLSCREEN) != 0) {
+            getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
+            return;
+        }
         if ("lyrics".equals(screen)) {
             screen = screenBeforeLyrics;
             lyricsScroll.setVisibility(View.GONE);
