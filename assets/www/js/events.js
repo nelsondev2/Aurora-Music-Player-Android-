@@ -202,6 +202,7 @@ Object.assign(App, {
       $('btnLrcEmptyEdit').addEventListener('click', () => this.openLrcEditor());
       // Editor de letras (#2)
       $('btnLrcEdit').addEventListener('click', () => this.openLrcEditor());
+      $('btnLrcSearch').addEventListener('click', () => this.searchSyncedLyrics());
       $('btnLrcSave').addEventListener('click', () => this.saveLrcFromEditor());
       //  «sincronizar tocando» retirado con su panel (letras.js).
       const btnLrcExp = document.getElementById('btnLrcExport');

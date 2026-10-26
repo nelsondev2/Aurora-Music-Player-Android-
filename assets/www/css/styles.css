@@ -1161,6 +1161,14 @@ svg { display: block; }
 }
 .lrc-editor-textarea:focus { border-color: var(--accent); }
 .lrc-editor-textarea::placeholder { color: var(--text-3); }
+.lrc-search-tools { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; flex-wrap: wrap; }
+.lrc-search-tools .text-btn { padding-left: 0; }
+.lrc-search-status { color: var(--text-3); font-size: var(--fs-sm); }
+.lrc-search-results:not([hidden]) { margin: 0 0 14px; }
+.lrc-search-list { display: grid; gap: 8px; max-height: 30vh; overflow-y: auto; }
+.lrc-search-result { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-1); text-align: left; }
+.lrc-search-result:active { background: var(--surface-hi); }
+.lrc-search-result span { color: var(--text-3); font-size: var(--fs-sm); }
 
 /* ============== SHEETS / MODALES ============== */
 .sheet {

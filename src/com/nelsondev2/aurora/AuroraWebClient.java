@@ -24,9 +24,9 @@ import java.util.Map;
  * origen seguro normal: IndexedDB, localStorage y persistencia funcionan
  * como en cualquier web.
  *
- * Cada petición de ese host se responde desde assets/www (interceptada
- * antes de tocar la red) y lo que no exista devuelve un 404 local: la app
- * no tiene ni una sola dependencia de red.
+ * Cada petición de ese host se responde desde assets/www. La única
+ * petición web externa permitida es la búsqueda explícita de letras en
+ * https://lrclib.net/api/search; el resto no se usa como dependencia.
  */
 class AuroraWebClient extends WebViewClient {
 
@@ -43,7 +43,15 @@ class AuroraWebClient extends WebViewClient {
 
     @Override
     public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-        return serve(request.getUrl());
+        Uri url = request.getUrl();
+        // Pasar solo la API de búsqueda LRC a la red. Los demás hosts siguen
+        // bloqueados para conservar el modelo offline-first del WebView.
+        if (url != null && "https".equalsIgnoreCase(url.getScheme())
+                && "lrclib.net".equalsIgnoreCase(url.getHost())
+                && "/api/search".equals(url.getPath())) {
+            return null;
+        }
+        return serve(url);
     }
 
     /** Enlaces externos (p. ej. «Código fuente»): al navegador del sistema. */

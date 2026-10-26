@@ -506,7 +506,92 @@ Object.assign(App, {
       } else {
         ta.value = '';
       }
+      const status = document.getElementById('lrcSearchStatus');
+      const results = document.getElementById('lrcSearchResults');
+      if (status) status.textContent = '';
+      if (results) { results.innerHTML = ''; results.hidden = true; }
       this.openSheet('sheetLrcEditor');
+    },
+
+    /* Busca únicamente resultados LRC sincronizados en LRCLIB. La elección
+     * se copia al editor; el usuario conserva el control y debe pulsar Guardar. */
+    async searchSyncedLyrics() {
+      const track = this.currentTrack;
+      const title = String(track && track.title || '').trim();
+      const artist = String(track && track.artist || '').trim();
+      const button = document.getElementById('btnLrcSearch');
+      const status = document.getElementById('lrcSearchStatus');
+      const resultsBox = document.getElementById('lrcSearchResults');
+      const textarea = document.getElementById('lrcEditorText');
+      if (!track || !title || !button || !status || !resultsBox || !textarea) return;
+
+      button.disabled = true;
+      status.textContent = this.t('lrc_searching');
+      resultsBox.innerHTML = '';
+      resultsBox.hidden = true;
+      try {
+        const query = 'track_name=' + encodeURIComponent(title) +
+          (artist ? '&artist_name=' + encodeURIComponent(artist) : '');
+        const response = await fetch('https://lrclib.net/api/search?' + query, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
+        if (!response.ok) throw new Error('LRCLIB HTTP ' + response.status);
+        const payload = await response.json();
+        const timed = Array.isArray(payload) ? payload.filter(item => {
+          const lyrics = String(item && item.syncedLyrics || '').trim();
+          return lyrics && /^\s*\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\]/m.test(lyrics);
+        }) : [];
+        if (!timed.length) {
+          status.textContent = this.t('lrc_search_none');
+          return;
+        }
+
+        const normalize = value => {
+          let text = String(value || '').toLowerCase();
+          try { if (text.normalize) text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+          return text.replace(/[^a-z0-9]+/g, ' ').trim();
+        };
+        const wantedTitle = normalize(title);
+        const wantedArtist = normalize(artist);
+        timed.sort((a, b) => {
+          const score = item => (normalize(item.trackName) === wantedTitle ? 4 : 0) +
+            (wantedArtist && normalize(item.artistName) === wantedArtist ? 3 : 0);
+          return score(b) - score(a);
+        });
+
+        const list = document.createElement('div');
+        list.className = 'lrc-search-list';
+        timed.forEach(item => {
+          const pick = document.createElement('button');
+          pick.type = 'button';
+          pick.className = 'lrc-search-result';
+          const name = document.createElement('strong');
+          name.textContent = String(item.trackName || title);
+          const details = document.createElement('span');
+          details.textContent = [item.artistName, item.albumName].filter(Boolean).join(' · ');
+          pick.appendChild(name);
+          if (details.textContent) pick.appendChild(details);
+          pick.addEventListener('click', () => {
+            if (this.currentTrack !== track) return;
+            textarea.value = String(item.syncedLyrics).trim();
+            resultsBox.hidden = true;
+            resultsBox.innerHTML = '';
+            status.textContent = this.t('lrc_search_selected');
+            textarea.focus();
+          });
+          list.appendChild(pick);
+        });
+        resultsBox.appendChild(list);
+        resultsBox.hidden = false;
+        status.textContent = this.t('lrc_search_found').replace('X', String(timed.length));
+      } catch (error) {
+        console.warn('[Aurora] búsqueda LRCLIB:', error);
+        status.textContent = this.t('lrc_search_error');
+      } finally {
+        button.disabled = false;
+      }
     },
 
     saveLrcFromEditor() {

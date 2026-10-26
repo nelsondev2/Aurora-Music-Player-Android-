@@ -2230,6 +2230,54 @@ const I18N = {
     id: 'Tempel atau edit lirik di sini. Gunakan [mm:ss.xx] untuk penanda waktu.',
     'zh-TW': '在此粘貼或編輯歌詞。使用 [mm:ss.xx] 作為時間戳。'
   },
+  lrc_search_synced: {
+    es: 'Buscar letra sincronizada', en: 'Search synced lyrics', pt: 'Buscar letra sincronizada',
+    zh: '搜索同步歌词', ja: '同期歌詞を検索', fr: 'Rechercher des paroles synchronisées',
+    it: 'Cerca testo sincronizzato', ru: 'Найти синхронизированный текст',
+    de: 'Synchronisierte Songtexte suchen', uk: 'Знайти синхронізований текст',
+    pl: 'Szukaj zsynchronizowanych tekstów', tr: 'Senkronize şarkı sözlerini ara',
+    id: 'Cari lirik tersinkron', 'zh-TW': '搜尋同步歌詞'
+  },
+  lrc_searching: {
+    es: 'Buscando letras sincronizadas…', en: 'Searching synced lyrics…', pt: 'Buscando letras sincronizadas…',
+    zh: '正在搜索同步歌词…', ja: '同期歌詞を検索中…', fr: 'Recherche de paroles synchronisées…',
+    it: 'Ricerca testi sincronizzati…', ru: 'Поиск синхронизированного текста…',
+    de: 'Synchronisierte Songtexte werden gesucht…', uk: 'Пошук синхронізованого тексту…',
+    pl: 'Wyszukiwanie zsynchronizowanych tekstów…', tr: 'Senkronize sözler aranıyor…',
+    id: 'Mencari lirik tersinkron…', 'zh-TW': '正在搜尋同步歌詞…'
+  },
+  lrc_search_none: {
+    es: 'No se encontraron letras sincronizadas', en: 'No synced lyrics found', pt: 'Nenhuma letra sincronizada encontrada',
+    zh: '未找到同步歌词', ja: '同期歌詞が見つかりません', fr: 'Aucune parole synchronisée trouvée',
+    it: 'Nessun testo sincronizzato trovato', ru: 'Синхронизированный текст не найден',
+    de: 'Keine synchronisierten Songtexte gefunden', uk: 'Синхронізований текст не знайдено',
+    pl: 'Nie znaleziono zsynchronizowanych tekstów', tr: 'Senkronize söz bulunamadı',
+    id: 'Lirik tersinkron tidak ditemukan', 'zh-TW': '找不到同步歌詞'
+  },
+  lrc_search_found: {
+    es: 'X letras sincronizadas; elige una', en: 'X synced results; choose one', pt: 'X letras sincronizadas; escolha uma',
+    zh: '找到 X 条同步歌词，请选择', ja: '同期歌詞がX件見つかりました。選択してください', fr: 'X résultats synchronisés ; choisissez-en un',
+    it: 'X risultati sincronizzati; scegline uno', ru: 'Найдено синхронизированных вариантов: X. Выберите один',
+    de: 'X synchronisierte Treffer; bitte auswählen', uk: 'Знайдено синхронізованих варіантів: X. Виберіть один',
+    pl: 'Znaleziono X zsynchronizowanych wyników; wybierz jeden', tr: 'X senkronize sonuç bulundu; birini seçin',
+    id: 'Ditemukan X hasil tersinkron; pilih salah satu', 'zh-TW': '找到 X 筆同步歌詞，請選擇'
+  },
+  lrc_search_selected: {
+    es: 'Letra puesta en el editor; pulsa Guardar', en: 'Lyrics added to editor; tap Save', pt: 'Letra colocada no editor; toque em Salvar',
+    zh: '歌词已放入编辑器，请点击保存', ja: '歌詞をエディターに追加しました。保存を押してください', fr: 'Paroles ajoutées à l’éditeur ; appuyez sur Enregistrer',
+    it: 'Testo inserito nell’editor; premi Salva', ru: 'Текст добавлен в редактор; нажмите «Сохранить»',
+    de: 'Text im Editor eingefügt; bitte Speichern drücken', uk: 'Текст додано до редактора; натисніть «Зберегти»',
+    pl: 'Tekst dodany do edytora; naciśnij Zapisz', tr: 'Sözler düzenleyiciye eklendi; Kaydet’e basın',
+    id: 'Lirik ditambahkan ke editor; tekan Simpan', 'zh-TW': '歌詞已加入編輯器，請按儲存'
+  },
+  lrc_search_error: {
+    es: 'No se pudo conectar con LRCLIB. Comprueba internet.', en: 'Could not connect to LRCLIB. Check your internet connection.', pt: 'Não foi possível conectar ao LRCLIB. Verifique a internet.',
+    zh: '无法连接 LRCLIB，请检查网络', ja: 'LRCLIBに接続できません。インターネットを確認してください', fr: 'Connexion à LRCLIB impossible. Vérifiez Internet.',
+    it: 'Impossibile connettersi a LRCLIB. Controlla Internet.', ru: 'Не удалось подключиться к LRCLIB. Проверьте интернет.',
+    de: 'Verbindung zu LRCLIB fehlgeschlagen. Internet prüfen.', uk: 'Не вдалося підключитися до LRCLIB. Перевірте інтернет.',
+    pl: 'Nie można połączyć się z LRCLIB. Sprawdź internet.', tr: 'LRCLIB bağlantısı kurulamadı. İnternetinizi kontrol edin.',
+    id: 'Tidak dapat terhubung ke LRCLIB. Periksa internet.', 'zh-TW': '無法連線到 LRCLIB，請檢查網路'
+  },
   lrc_loaded: {
     es: 'Letra cargada', en: 'Lyrics loaded', pt: 'Letra carregada',
     zh: '歌词已加载', ja: '歌詞を読み込みました', fr: 'Paroles chargées',

@@ -996,6 +996,11 @@
           </header>
           <div class="sheet-body">
             <p class="sheet-subtitle" data-i18n="lrc_edit_hint">Pega o edita la letra aquí. Usa [mm:ss.xx] para timestamps.</p>
+            <div class="lrc-search-tools">
+              <button type="button" class="text-btn" id="btnLrcSearch" data-i18n="lrc_search_synced">Buscar letra sincronizada</button>
+              <span id="lrcSearchStatus" class="lrc-search-status" role="status" aria-live="polite"></span>
+            </div>
+            <div id="lrcSearchResults" class="lrc-search-results" hidden></div>
             <textarea id="lrcEditorText" class="lrc-editor-textarea" rows="20" data-i18n-aria="lrc_edit" aria-label="Editar letra" placeholder="[00:12.50]Primera línea&#10;[00:15.30]Segunda línea"></textarea>
             <!--  retirado «sincronizar tocando»; el editor sigue
  aceptando sellos [mm:ss.xx] escritos o pegados. -->

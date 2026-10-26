@@ -13,6 +13,9 @@
         android:minSdkVersion="21"
         android:targetSdkVersion="33" />
 
+    <!-- Consulta explícita de letras sincronizadas en LRCLIB. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Reproducción en segundo plano (PlaybackService) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />

@@ -353,6 +353,28 @@ def check_playback_restore():
     ok.append("restauración sin reiniciar el audio nativo y ciclo de vida WebView")
 
 
+# -------------------------------------------------------------- LRCLIB lyrics
+
+def check_lrclib_search():
+    """La búsqueda remota es explícita, restringida y solo acepta LRC."""
+    manifest = read(os.path.join(ROOT, "AndroidManifest.xml"))
+    client = read(os.path.join(SRC, "AuroraWebClient.java"))
+    lyrics = read(os.path.join(WWW, "js", "lyrics.js"))
+    html = read(os.path.join(WWW, "index.html"))
+    events = read(os.path.join(WWW, "js", "events.js"))
+    if "android.permission.INTERNET" not in manifest:
+        fail("la búsqueda LRCLIB necesita permiso INTERNET")
+    if '"lrclib.net".equalsIgnoreCase(url.getHost())' not in client or "return null;" not in client:
+        fail("AuroraWebClient debe permitir la solicitud LRCLIB sin abrir otros hosts")
+    if "https://lrclib.net/api/search?" not in lyrics or "item.syncedLyrics" not in lyrics:
+        fail("el editor debe consultar LRCLIB y filtrar a letras sincronizadas")
+    if "this.saveLrcFromEditor()" in lyrics:
+        fail("no se debe guardar automáticamente una letra encontrada")
+    if 'id="btnLrcSearch"' not in html or "searchSyncedLyrics()" not in events:
+        fail("el botón de búsqueda LRC debe estar en el editor y cableado")
+    ok.append("búsqueda LRCLIB restringida a HTTPS y resultados sincronizados")
+
+
 # ---------------------------------------------------------------------- i18n
 def check_i18n():
     data = read(os.path.join(WWW, "js", "data.js"))
@@ -416,6 +438,7 @@ def main():
     check_bridge()
     check_multi_selection()
     check_playback_restore()
+    check_lrclib_search()
     check_i18n()
 
     for line in ok:
