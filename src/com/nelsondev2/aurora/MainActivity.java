@@ -1,6 +1,7 @@
 package com.nelsondev2.aurora;
 
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -13,6 +14,8 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
+
+import java.util.LinkedHashSet;
 
 /**
  * La única pantalla de Aurora: un WebView a pantalla completa que carga
@@ -193,7 +196,30 @@ public class MainActivity extends Activity {
             if (pendingFileCallback == null) return;
             Uri[] result = null;
             if (resultCode == RESULT_OK && data != null) {
-                result = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                // Android file providers commonly return multi-selection in
+                // Intent.getClipData(), while getData() contains only one URI
+                // (or is null). Do not rely on parseResult() implementations
+                // that only inspect getData(), or the remaining songs vanish.
+                LinkedHashSet<Uri> selected = new LinkedHashSet<>();
+                ClipData clip = data.getClipData();
+                if (clip != null) {
+                    for (int i = 0; i < clip.getItemCount(); i++) {
+                        Uri uri = clip.getItemAt(i).getUri();
+                        if (uri != null) selected.add(uri);
+                    }
+                }
+                if (selected.isEmpty() && data.getData() != null) {
+                    selected.add(data.getData());
+                }
+                if (selected.isEmpty()) {
+                    Uri[] parsed = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                    if (parsed != null) {
+                        for (Uri uri : parsed) {
+                            if (uri != null) selected.add(uri);
+                        }
+                    }
+                }
+                if (!selected.isEmpty()) result = selected.toArray(new Uri[selected.size()]);
             }
             pendingFileCallback.onReceiveValue(result);
             pendingFileCallback = null;

@@ -305,6 +305,34 @@ def check_bridge():
         fail("WebApp.java no envía comandos a la web")
 
 
+# ----------------------------------------------------------- multiselección
+
+def check_multi_selection():
+    """Evita perder canciones al importar varias desde Android o la web."""
+    main = read(os.path.join(SRC, "MainActivity.java"))
+    queue = read(os.path.join(WWW, "js", "queue.js"))
+    library = read(os.path.join(WWW, "js", "library.js"))
+    picker = read(os.path.join(WWW, "js", "playlist-edit.js"))
+    device = read(os.path.join(WWW, "js", "device-library.js"))
+
+    if "Intent.EXTRA_ALLOW_MULTIPLE, true" not in main:
+        fail("el selector Android no habilita la selección múltiple")
+    if "data.getClipData()" not in main or "clip.getItemCount()" not in main:
+        fail("MainActivity debe recoger todas las URI de ClipData")
+    if "input.multiple = true" not in queue:
+        fail("el selector web no habilita input.multiple")
+    if "Array.from(fileList)" not in library or "processFiles(mediaFiles" not in library:
+        fail("la importación web no procesa la lista completa de archivos")
+    if "Array.from(this._pickIds)" not in picker:
+        fail("el selector de pistas no recoge todas las selecciones")
+    if "for (const key of selectedIds)" not in device:
+        fail("la selección de pistas del dispositivo no procesa todos los IDs")
+    if not any("for (" in line and "clip.getItemCount()" in line
+               for line in main.splitlines()):
+        fail("ClipData no itera todos los archivos seleccionados")
+    ok.append("selección múltiple: selector Android, importación web y pistas de playlist")
+
+
 # ---------------------------------------------------------------------- i18n
 def check_i18n():
     data = read(os.path.join(WWW, "js", "data.js"))
@@ -366,6 +394,7 @@ def main():
     check_java_resources()
     check_java_shapes()
     check_bridge()
+    check_multi_selection()
     check_i18n()
 
     for line in ok:
