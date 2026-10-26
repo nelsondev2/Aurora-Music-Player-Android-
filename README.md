@@ -66,72 +66,31 @@ servidor, sin cuenta y sin publicidad. Carga archivos locales
 - **14 idiomas** (es, en, pt, zh, ja, fr, it, ru, de, uk, pl, tr, id,
   zh-TW), temas y colores de acento.
 
-## Compilar el APK con AIDE
+## Compilar e instalar la APK
 
-El repositorio **es** el proyecto de AIDE: no hay Gradle, ni
-repositorios que descargar, ni dependencias externas (nada de
-AndroidX). Se compila offline con el propio compilador de AIDE.
+El proyecto produce **una sola APK universal**, con `minSdk 21`, instalable
+en **Android 5.0 o superior** y válida para las arquitecturas Android
+habituales. La interfaz requiere Android System WebView basado en Chrome 55
+o posterior; en equipos antiguos, hay que actualizar ese componente del
+sistema. CI compila y verifica esa misma APK, sin variantes por versión de
+Android.
 
-1. Copia esta carpeta al almacenamiento del teléfono (o clónala con
-   git desde AIDE).
-2. En AIDE: **Abrir proyecto → carpeta del proyecto**. AIDE reconoce
-   `AndroidManifest.xml` y propone sus SDK instalados.
-3. Pulsa **Run**: compila el APK y lo instala.
-
-Requisitos: AIDE 3.x o superior con un SDK de compilación 26 o mayor
-(el minSdk de la app es 21; la notificación de reproducción usa
-`NotificationChannel`, que necesita API 26 para compilar). El resultado es `Aurora.apk`, sin permisos de
-almacenamiento (los archivos se eligen con el selector del sistema,
-que concede cada archivo concreto).
-
-### Compilar sin AIDE (CI o portátil)
-
-`tools/build-apk.sh` hace lo mismo que AIDE pero desde la línea de
-comandos: `aapt2 → javac → d8 → zipalign → apksigner`, sin Gradle ni
-dependencias que descargar. El workflow ya compila en verde las tres
-APK, así que lo que se descarga de *Actions → Artifacts* es una APK
-firmada de verdad, no un artefacto de mentira.
+Para compilarla localmente se necesita un JDK y el SDK de Android con
+`aapt2`, `d8`, `zipalign`, `apksigner` y una plataforma de compilación:
 
 ```bash
-tools/build-apk.sh                      # build/aurora-minSdk21.apk
-tools/build-apk.sh --min-sdk 26         # variante para Android 8+
-tools/build-apk.sh --out /tmp/a.apk --unsigned
+tools/build-apk.sh                      # build/aurora-android5-plus.apk
+tools/build-apk.sh --out /tmp/aurora.apk
 ```
 
-Necesita `ANDROID_HOME` con build-tools y una plataforma, y un JDK.
+La versión del SDK usada para compilar puede ser posterior a Android 5:
+`minSdk 21` es el requisito mínimo del dispositivo y `targetSdk` define el
+comportamiento de permisos y servicios en versiones recientes.
 
-**Sobre las arquitecturas:** la app no lleva código nativo (ni `.so`, ni
-NDK, ni jniLibs), así que **una sola APK sirve para arm64-v8a,
-armeabi-v7a, x86 y x86_64**: el WebView, el MediaPlayer y el resto los
-pone el sistema. Por eso el workflow `.github/workflows/build-apk.yml`
-compila por **tramos de Android**, que es lo que sí cambia de un móvil a
-otro, y deja tres artefactos firmados listos para instalar:
-
-| Artefacto | Sirve para |
-|---|---|
-| `aurora-minSdk21` | todo móvil con Android 5.0+ (cualquier ABI) |
-| `aurora-minSdk26` | Android 8.0+ |
-| `aurora-minSdk33` | Android 13+ |
-
-Un segundo job (`Cobertura de la APK`) abre la APK universal y comprueba
-lo que de verdad importa: que están el manifiesto, `resources.arsc`,
-`classes.dex` y la app web; que el DEX lleva **dentro** las clases de la
-app (un `classes.dex` vacío también existe, y sin esto una APK que no
-arranca pasaría por buena); que no aparece ninguna librería nativa (si
-algún día aparece, el job falla y avisa de que habría que repartir por
-ABI); y qué densidades de pantalla lleva dentro.
-
-Se compila contra la plataforma del `targetSdk` (33) y con el
-build-tools estable más nuevo: la imagen del runner trae betas
-(`android-37.2-beta3`) y el APK no debe depender de cuál toque ese día.
-
-Si la compilación falla, el propio workflow publica las últimas líneas
-del log como anotación **y** como comentario en el PR: el log del runner
-no siempre se puede leer desde fuera.
-
-Para probar en el móvil: pestaña **Actions → Compilar APK →** el run
-más reciente **→ Artifacts**, descarga el zip del tramo que
-corresponda a tu Android, descomprime e instala el `.apk`.
+Para instalarla desde CI: abre **Actions → Compilar APK → ejecución más
+reciente → Artifacts**, descarga **`aurora-android5-plus`**, descomprime el
+archivo e instala `aurora-android5-plus.apk`. Es el mismo artefacto para
+Android 5.0 y para versiones posteriores.
 
 ### Probar la parte web en el ordenador
 
@@ -196,7 +155,7 @@ dejaba añadir más de una canción»).
 ## Cómo está montada
 
 ```
-AndroidManifest.xml              proyecto de AIDE (sin Gradle)
+AndroidManifest.xml              manifiesto Android (minSdk 21; Android 5.0+)
 src/com/nelsondev2/aurora/
     MainActivity.java            WebView, selector de archivos, botón atrás
     AuroraWebClient.java         sirve assets/www desde https://aurora.localhost

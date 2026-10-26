@@ -20,9 +20,8 @@ import java.io.FileNotFoundException;
  * content://com.nelsondev2.aurora.share/<nombre> con permiso temporal
  * de lectura.
  *
- * Se escribe a mano en vez de usar FileProvider para no arrastrar
- * AndroidX: en AIDE, sin Gradle ni repositorios, las dependencias
- * pesan más que estas 80 líneas.
+ * El proveedor es pequeño y autónomo, así que no requiere dependencias
+ * externas para compartir archivos.
  */
 public class ShareProvider extends ContentProvider {
 

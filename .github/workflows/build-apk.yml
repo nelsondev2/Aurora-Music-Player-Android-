@@ -1,21 +1,6 @@
-# Compilar APK — Aurora Music Player
-#
-# Compila la app sin Gradle (el repositorio es un proyecto de AIDE) usando
-# solo las herramientas del SDK de Android, con el mismo orden que sigue
-# AIDE: aapt2 → javac → d8 → zipalign → apksigner. Ver tools/build-apk.sh.
-#
-# ¿Y las arquitecturas? La app no tiene ni una línea de código nativo: no
-# hay .so, ni NDK, ni jniLibs. El WebView, el MediaPlayer y el resto vienen
-# del sistema, así que UNA sola APK funciona igual en arm64-v8a,
-# armeabi-v7a, x86 y x86_64. Lo que sí cambia de un móvil a otro es la
-# versión de Android, así que la matriz compila una APK por tramo de API:
-#
-#   · minSdk 21 — todas las arquitecturas, Android 5.0 o superior (universal)
-#   · minSdk 26 — Android 8.0 o superior (canal de notificación nativo)
-#   · minSdk 33 — Android 13 o superior (permiso de notificaciones)
-#
-# Las tres APK quedan como artefactos del workflow, firmadas con una clave
-# de depuración, listas para instalar y probar en el móvil.
+# Compila una única APK universal, compatible con Android 5.0 o superior.
+# La app no incluye bibliotecas nativas, por lo que la misma APK funciona
+# en todas las arquitecturas soportadas por Android.
 
 name: Compilar APK
 
@@ -26,8 +11,6 @@ on:
 
 permissions:
   contents: read
-  # Solo para poder publicar el fallo de la compilación donde se lea:
-  # las anotaciones del runner y un comentario en el PR.
   checks: write
   pull-requests: write
 
@@ -37,13 +20,9 @@ concurrency:
 
 jobs:
   apk:
-    name: APK (minSdk ${{ matrix.api }})
+    name: APK universal (Android 5.0+)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        api: [21, 26, 33]
 
     steps:
       - name: Descargar el código
@@ -80,54 +59,31 @@ jobs:
             exit 1
           fi
           yes | "$SM" --licenses > /dev/null 2>&1 || true
-          # Se instala la plataforma del targetSdk (33) para compilar
-          # siempre contra la misma: la imagen del runner trae betas
-          # (android-37.2-beta3) y no queremos que el APK dependa de cuál
-          # toque ese día.
           "$SM" "platforms;android-33" "build-tools;34.0.0" > /dev/null
 
-      - name: Compilar
+      - name: Compilar APK Android 5+
         run: |
-          #  GitHub ejecuta los pasos con `bash -e`: sin capturar el estado
-          # con `|| status=$?` el script moría aquí mismo y el diagnóstico
-          # de abajo no llegaba a ejecutarse nunca.
           set -uo pipefail
           mkdir -p dist
           LOG="$RUNNER_TEMP/build.log"
           status=0
-          # bash -x deja en el log la orden exacta que falló, no solo el
-          # mensaje del tool: con el log del runner a veces no basta.
           bash -x tools/build-apk.sh \
-            --min-sdk ${{ matrix.api }} \
             --target-sdk 33 \
-            --out "dist/aurora-minSdk${{ matrix.api }}.apk" >"$LOG" 2>&1 || status=$?
+            --out dist/aurora-android5-plus.apk >"$LOG" 2>&1 || status=$?
           tail -n 60 "$LOG" || true
           if [ "$status" -ne 0 ]; then
-            # El log del runner no siempre es accesible desde fuera (y el
-            # almacenamiento de artefactos, menos). Las anotaciones sí se
-            # leen por API, así que el error viaja ahí: una sola ejecución
-            # dice qué herramienta falló y por qué.
             esc() { sed -e 's/%/%25/g' -e 's/\r//g' | awk '{printf "%s%s", sep, $0; sep="%0A"}'; }
-            echo "::error title=build-apk.sh falló (minSdk ${{ matrix.api }})::$(tail -n 45 "$LOG" | esc | head -c 3000)"
+            echo "::error title=Falló la compilación de la APK universal::$(tail -n 45 "$LOG" | esc | head -c 3000)"
             if [ -f build/apk/javac.log ]; then
               echo "::error title=javac.log::$(head -c 2500 build/apk/javac.log | esc)"
             fi
             echo "::error title=Entorno::$( { echo "ANDROID_HOME=$ANDROID_HOME"; java -version 2>&1 | head -2; ls "$ANDROID_HOME/build-tools" 2>&1; ls "$ANDROID_HOME/platforms" 2>&1; } | esc | head -c 2000)"
-            # Y además, un comentario en el PR: es el único sitio donde el
-            # fallo se puede leer sin abrir la pestaña del runner.
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               {
-                echo "**La compilación falló (minSdk ${{ matrix.api }}, commit \`${GITHUB_SHA:0:7}\`).** Últimas líneas:"
+                echo "**Falló la compilación de la APK universal (commit \`${GITHUB_SHA:0:7}\`).** Últimas líneas:"
                 echo
                 echo '```'
                 tail -n 45 "$LOG"
-                echo '```'
-                echo 'Entorno:'
-                echo '```'
-                echo "ANDROID_HOME=$ANDROID_HOME"
-                java -version 2>&1 | head -2
-                ls "$ANDROID_HOME/build-tools" 2>&1
-                ls "$ANDROID_HOME/platforms" 2>&1
                 echo '```'
               } > "$RUNNER_TEMP/comment.md" || true
               GH_TOKEN="${{ github.token }}" gh pr comment ${{ github.event.pull_request.number }} \
@@ -139,111 +95,89 @@ jobs:
       - name: Resumen
         run: |
           {
-            echo "### Aurora · minSdk ${{ matrix.api }}"
+            echo "### APK universal · Android 5.0 o superior"
             echo
             echo '```'
-            ls -lh dist/
+            ls -lh dist/aurora-android5-plus.apk
             echo '```'
-            echo
-            echo "Detalles de la compilación en el log del paso «Compilar»."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publicar artefacto
+      - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
-          name: aurora-minSdk${{ matrix.api }}
-          path: dist/*.apk
+          name: aurora-android5-plus
+          path: dist/aurora-android5-plus.apk
           if-no-files-found: error
           retention-days: 30
 
   cobertura:
-    name: Cobertura de la APK
+    name: Verificar APK universal
     runs-on: ubuntu-latest
     needs: apk
     steps:
-      - name: Descargar la APK universal
+      - name: Descargar APK
         uses: actions/download-artifact@v4
         with:
-          name: aurora-minSdk21
+          name: aurora-android5-plus
           path: dist
 
-      - name: Analizar la APK
+      - name: Verificar contenido y compatibilidad
         run: |
           set -euo pipefail
-          APK="$(ls dist/*.apk | head -1)"
-          echo "APK: $APK ($(du -h "$APK" | cut -f1))"
-
-          python3 - "$APK" <<'PY'
-          import sys, zipfile, collections
+          python3 - dist/aurora-android5-plus.apk <<'PY'
+          import sys
+          import zipfile
 
           apk = sys.argv[1]
-          z = zipfile.ZipFile(apk)
-          names = z.namelist()
+          with zipfile.ZipFile(apk) as archive:
+              names = archive.namelist()
+              required = [
+                  "AndroidManifest.xml",
+                  "resources.arsc",
+                  "classes.dex",
+                  "assets/www/index.html",
+                  "assets/www/js/main.js",
+              ]
+              missing = [name for name in required if name not in names]
+              if missing:
+                  sys.exit("Faltan archivos en la APK: " + ", ".join(missing))
 
-          # 1) Lo que hace falta para que sea instalable y arranque
-          obligatorios = ["AndroidManifest.xml", "resources.arsc", "classes.dex",
-                          "assets/www/index.html", "assets/www/js/main.js"]
-          faltan = [n for n in obligatorios if n not in names]
-          if faltan:
-              sys.exit("faltan en la APK: " + ", ".join(faltan))
+              native = [name for name in names
+                        if name.startswith("lib/") or name.endswith(".so")]
+              if native:
+                  sys.exit("La APK contiene librerías nativas y ya no es universal: "
+                           + ", ".join(native[:10]))
 
-          # 2) Código nativo: si no hay lib/, una sola APK sirve para todas las ABIs
-          nativas = [n for n in names if n.startswith("lib/") or n.endswith(".so")]
-          if nativas:
-              sys.exit("la APK lleva código nativo (%d archivos): habría que "
-                       "repartir por ABI" % len(nativas))
+              dex_files = [name for name in names if name.endswith(".dex")]
+              dex_data = b"".join(archive.read(name) for name in dex_files)
+              expected = [
+                  b"Lcom/nelsondev2/aurora/MainActivity;",
+                  b"Lcom/nelsondev2/aurora/NativePlayer;",
+                  b"Lcom/nelsondev2/aurora/NativePlayerBridge;",
+                  b"Lcom/nelsondev2/aurora/DeviceLibraryBridge;",
+                  b"Lcom/nelsondev2/aurora/PlaybackService;",
+                  b"Lcom/nelsondev2/aurora/ShareProvider;",
+              ]
+              missing_classes = [item.decode().strip("L;")
+                                 for item in expected if item not in dex_data]
+              if missing_classes:
+                  sys.exit("El DEX no incluye: " + ", ".join(missing_classes))
 
-          # 3) Recursos por densidad y por idioma (lo que de verdad varía
-          #    entre dispositivos cuando no hay ABIs)
-          densidades = sorted({n.split("/")[1] for n in names
-                               if n.startswith("res/") and "/" in n[4:]
-                               and n.split("/")[1].startswith("mipmap")})
-          dexs = [n for n in names if n.endswith(".dex")]
-          web = [n for n in names if n.startswith("assets/www/")]
+              size = sum(archive.getinfo(name).file_size for name in names)
+              print("APK verificada: Android 5.0+ (minSdk 21), todas las arquitecturas")
+              print("Clases Java comprobadas en DEX: %d" % len(expected))
+              print("Peso sin comprimir: %.1f MB" % (size / 1048576))
 
-          # 4) Que el DEX lleve DENTRO las clases de la app: un
-          #    classes.dex vacío también «existe», y sin esto una APK que
-          #    no arranca pasaría por buena.
-          dexdata = b"".join(z.read(n) for n in dexs)
-          esperadas = [b"Lcom/nelsondev2/aurora/MainActivity;",
-                       b"Lcom/nelsondev2/aurora/NativePlayer;",
-                       b"Lcom/nelsondev2/aurora/NativePlayerBridge;",
-                       b"Lcom/nelsondev2/aurora/DeviceLibraryBridge;",
-                       b"Lcom/nelsondev2/aurora/PlaybackService;",
-                       b"Lcom/nelsondev2/aurora/ShareProvider;"]
-          faltan_clases = [c.decode().strip("L;") for c in esperadas if c not in dexdata]
-          if faltan_clases:
-              sys.exit("el DEX no lleva: " + ", ".join(faltan_clases))
-
-          print()
-          print("ABIs            : todas (arm64-v8a, armeabi-v7a, x86, x86_64)")
-          print("                 no hay librerías nativas, el sistema pone el WebView")
-          print("DEX             : " + ", ".join(dexs))
-          print("Clases          : %d comprobadas (MainActivity, NativePlayer, "
-                "DeviceLibraryBridge, ...)" % len(esperadas))
-          print("Densidades      : " + (", ".join(densidades) or "solo la por defecto"))
-          print("Archivos de la app web: %d" % len(web))
-          print("Peso sin comprimir    : %.1f MB" % (sum(z.getinfo(n).file_size for n in names) / 1048576))
-
-          resumen = [
-              "### Cobertura de la APK universal",
+          summary = [
+              "### APK universal verificada",
               "",
-              "| Qué | Valor |",
-              "|---|---|",
-              "| Arquitecturas | todas: sin código nativo, el WebView es del sistema |",
-              "| DEX | %s |" % ", ".join(dexs),
-              "| Clases de la app | %d comprobadas en el DEX |" % len(esperadas),
-              "| Densidades | %s |" % (", ".join(densidades) or "por defecto"),
-              "| Archivos web | %d |" % len(web),
-              "",
-              "Una sola APK vale para cualquier móvil de Android 5.0 o superior, "
-              "sea de 32 o de 64 bits.",
+              "- Una sola APK, compatible con Android 5.0 o superior (minSdk 21).",
+              "- Todas las arquitecturas: no incluye librerías nativas.",
+              "- Manifiesto, recursos y clases Java comprobados dentro del APK.",
           ]
           import os
-          paso = os.environ.get("GITHUB_STEP_SUMMARY")
-          if paso:
-              with open(paso, "a", encoding="utf-8") as fh:
-                  fh.write("\n".join(resumen) + "\n")
-          print()
-          print("OK: la APK cubre todas las arquitecturas y arranca en Android 5.0+")
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as output:
+                  output.write("\n".join(summary) + "\n")
           PY

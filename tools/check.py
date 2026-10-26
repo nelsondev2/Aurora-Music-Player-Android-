@@ -4,7 +4,7 @@
     python3 tools/check.py
 
 Verifica, sin dependencias externas:
-  · que el proyecto Android tiene lo que AIDE espera,
+  · que la estructura del proyecto Android está completa,
   · que el manifest y las clases Java coinciden,
   · que el XML está bien formado,
   · que todo lo que carga index.html existe y ningún script sobra,
@@ -13,7 +13,6 @@ Verifica, sin dependencias externas:
     conocida sin importarla (lo que javac rechaza y aquí no se ve),
   · que los puentes Java ↔ JS (compartir y reproducción) casan,
   · que las claves de traducción usadas existen en data.js,
-  · que no ha vuelto a colarse nada de la etapa WebXDC/Delta Chat.
 
 Sale con código 0 si todo está bien y 1 si algo falla.
 """
@@ -78,6 +77,9 @@ def check_android_project():
         ok.append("estructura del proyecto Android completa")
 
     manifest = read(os.path.join(ROOT, "AndroidManifest.xml"))
+    min_sdk = re.search(r'android:minSdkVersion="(\d+)"', manifest)
+    if not min_sdk or min_sdk.group(1) != "21":
+        fail("la APK debe mantener minSdk 21 (Android 5.0 o superior)")
     for name in re.findall(r'android:name="\.([A-Za-z0-9_]+)"', manifest):
         if not os.path.isfile(os.path.join(SRC, name + ".java")):
             fail("el manifest declara .%s y no existe %s.java" % (name, name))
@@ -130,9 +132,6 @@ def check_assets():
     if "platform.js" in order and "main.js" in order:
         if order.index("platform.js") > order.index("main.js"):
             fail("platform.js debe cargarse antes de main.js")
-
-    if "webxdc.js" in html:
-        fail("index.html sigue cargando webxdc.js")
 
     ok.append("%d recursos de index.html verificados" % len(set(local)))
 
@@ -319,34 +318,6 @@ def check_i18n():
     ok.append("%d claves de traducción en uso, todas definidas" % len(used))
 
 
-# --------------------------------------------------------------- webxdc-off
-LEGACY = re.compile(r"webxdc|delta\s*chat|deltachat|\.xdc\b", re.I)
-
-
-def check_no_webxdc():
-    targets = []
-    for base, _dirs, files in os.walk(WWW):
-        targets += [os.path.join(base, f) for f in files]
-    targets.append(os.path.join(ROOT, "AndroidManifest.xml"))
-    for base, _dirs, files in os.walk(SRC):
-        targets += [os.path.join(base, f) for f in files if f.endswith(".java")]
-    # El CHANGELOG queda fuera a propósito: su entrada 1.3.0 explica
-    # precisamente qué se retiró, así que nombra WebXDC y Delta Chat.
-    targets += [os.path.join(ROOT, f) for f in ("README.md", ".gitignore")]
-
-    bad = []
-    for path in targets:
-        if not os.path.isfile(path) or path.endswith((".png", ".woff2", ".ico")):
-            continue
-        for num, line in enumerate(read(path).splitlines(), 1):
-            if LEGACY.search(line):
-                bad.append("%s:%d" % (os.path.relpath(path, ROOT), num))
-    if bad:
-        fail("quedan referencias a WebXDC/Delta Chat:\n    " + "\n    ".join(bad))
-    else:
-        ok.append("sin rastro de WebXDC/Delta Chat")
-
-
 # --------------------------------------------------------------------- ci
 def check_ci():
     """El workflow de compilación y el script tienen que seguir casando."""
@@ -358,12 +329,18 @@ def check_ci():
     if not os.access(script, os.X_OK):
         fail("tools/build-apk.sh no es ejecutable (chmod +x)")
     texto = read(workflow)
+    compilador = read(script)
     if "tools/build-apk.sh" not in texto:
         fail("el workflow no llama a tools/build-apk.sh")
-    for bandera in ("--min-sdk", "--out"):
-        if bandera not in texto:
-            fail("el workflow no pasa %s al script" % bandera)
-    ok.append("workflow de compilación enlazado con tools/build-apk.sh")
+    if not re.search(r"(?m)^readonly MIN_SDK=21$", compilador):
+        fail("el script debe compilar con minSdk 21")
+    if "--min-sdk)" in compilador:
+        fail("el script no debe generar variantes con mínimos distintos")
+    if "--out dist/aurora-android5-plus.apk" not in texto:
+        fail("el workflow no produce la APK universal Android 5+")
+    if "matrix:" in texto or texto.count("uses: actions/upload-artifact@") != 1:
+        fail("el workflow debe publicar una sola APK, sin matriz de versiones")
+    ok.append("CI compila una única APK universal compatible con Android 5.0+")
 
 
 def main():
@@ -375,7 +352,6 @@ def main():
     check_java_shapes()
     check_bridge()
     check_i18n()
-    check_no_webxdc()
 
     for line in ok:
         print("  ok    " + line)

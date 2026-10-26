@@ -2,15 +2,13 @@
 #
 #  build-apk.sh — compila Aurora sin Gradle, solo con las herramientas del SDK.
 #
-#  El proyecto es de AIDE: no hay build.gradle ni wrapper. Este script hace
-#  a mano lo mismo que haría AIDE, para poder compilar en CI (o en un
-#  portátil) sin añadir Gradle al repositorio:
+#  Compila la única variante distribuida: APK universal con minSdk 21
+#  (Android 5.0 o superior), usando las herramientas oficiales del SDK.
 #
 #    aapt2 compile → aapt2 link → javac → d8 → zipalign → apksigner
 #
 #  Uso:
-#    tools/build-apk.sh                       # APK de depuración, minSdk 21
-#    tools/build-apk.sh --min-sdk 26          # variante para Android 8+
+#    tools/build-apk.sh                       # build/aurora-android5-plus.apk
 #    tools/build-apk.sh --out /tmp/aurora.apk --version-code 140
 #    tools/build-apk.sh --unsigned            # sin firmar (para revisar)
 #
@@ -26,24 +24,23 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MIN_SDK=21
 TARGET_SDK=33
 VERSION_CODE=""
 OUT=""
 KEYSTORE=""
 UNSIGNED=0
 WORK="$ROOT/build/apk"
+readonly MIN_SDK=21
 
 die() { echo "error: $*" >&2; exit 1; }
 say() { echo "» $*"; }
 
 usage() {
   cat <<'TXT'
-Compila Aurora sin Gradle, solo con las herramientas del SDK.
+Compila la APK universal de Aurora (Android 5.0 o superior).
 
 Uso:
-  tools/build-apk.sh                       APK de depuración, minSdk 21
-  tools/build-apk.sh --min-sdk 26          variante para Android 8+
+  tools/build-apk.sh                       build/aurora-android5-plus.apk
   tools/build-apk.sh --target-sdk 34       plataforma de compilación
   tools/build-apk.sh --version-code 141    versionCode del manifiesto
   tools/build-apk.sh --out /tmp/a.apk      ruta de salida
@@ -58,7 +55,6 @@ TXT
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --min-sdk)      MIN_SDK="${2:?falta el valor}"; shift 2 ;;
     --target-sdk)   TARGET_SDK="${2:?falta el valor}"; shift 2 ;;
     --version-code) VERSION_CODE="${2:?falta el valor}"; shift 2 ;;
     --out)          OUT="${2:?falta el valor}"; shift 2 ;;
@@ -70,7 +66,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-OUT="${OUT:-$ROOT/build/aurora-minSdk$MIN_SDK.apk}"
+OUT="${OUT:-$ROOT/build/aurora-android5-plus.apk}"
 OUT_DIR="$(dirname "$OUT")"
 mkdir -p "$OUT_DIR" "$WORK" || die "no puedo crear $OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"

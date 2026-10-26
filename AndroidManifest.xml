@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Aurora Music Player — proyecto de AIDE (clásico, sin Gradle).
-
-  Para compilar: abre esta carpeta como proyecto en AIDE y pulsa Run.
-  No hay dependencias externas ni repositorios que descargar.
-
-  La app web vive en assets/www y se sirve al WebView desde
-  https://aurora.localhost (ver AuroraWebClient.java).
+  Aurora Music Player para Android.
+  Compatibilidad mínima: Android 5.0 (API 21).
+  Los recursos locales se sirven al WebView desde https://aurora.localhost.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.nelsondev2.aurora"

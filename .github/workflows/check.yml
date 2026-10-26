@@ -1,9 +1,5 @@
-# Comprobaciones — Aurora Music Player
-#
-# El APK se compila en AIDE, así que aquí no se construye nada: solo se
-# verifica que el proyecto sigue siendo coherente (estructura, recursos,
-# traducciones, puente Java ↔ JS) y que el JavaScript no tiene errores de
-# sintaxis. Es rápido y no necesita SDK de Android.
+# Comprobaciones de estructura, recursos, traducciones y sintaxis.
+# La compilación completa de la APK se ejecuta en el workflow de Android.
 #
 #   python3 tools/check.py
 #   node --check assets/www/js/*.js

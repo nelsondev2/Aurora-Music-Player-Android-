@@ -90,13 +90,10 @@ Historial de versiones **publicadas** de Aurora Music Player.
   `READ_MEDIA_AUDIO` (Android 13+) o `READ_EXTERNAL_STORAGE` (hasta
   Android 12), pedido solo al usarlo.
 
-- **Compilación en CI sin Gradle**: `tools/build-apk.sh` hace con las
-  herramientas del SDK (`aapt2`, `javac`, `d8`, `zipalign`, `apksigner`)
-  lo que hace AIDE, y `.github/workflows/build-apk.yml` compila una APK
-  por tramo de Android (minSdk 21 / 26 / 33) y las publica como
-  artefactos firmados para probar. Un job extra abre la APK universal y
-  verifica manifiesto, DEX, app web, densidades y que no haya código
-  nativo: como no lo hay, una sola APK vale para todas las arquitecturas.
+- **Una sola APK universal para Android 5.0 o superior**: el manifiesto
+  fija `minSdk 21` y CI compila y verifica un único artefacto firmado
+  (`aurora-android5-plus.apk`). Al no incluir bibliotecas nativas, sirve
+  para todas las arquitecturas Android habituales.
 
 
 - **El audio lo pone Android** (`NativePlayer.java`, sobre `MediaPlayer`):
@@ -126,22 +123,11 @@ Historial de versiones **publicadas** de Aurora Music Player.
   notificación (últimas ocho portadas en memoria) siguen vivos sin
   página. Si la ventana se agota, la reproducción se detiene.
 
-## Sin publicar — 1.3.0 · Aurora se hace app de Android
+## Sin publicar — 1.3.0 · Funciones Android
 
-- **Deja de ser un WebXDC.** Fuera todo lo que ataba la app a Delta
-  Chat: el manifiesto `manifest.toml`, el empaquetador `build-xdc.py`,
-  el flujo de publicación del `.xdc`, la referencia a `webxdc.js`, el
-  selector de archivos del cliente (`importFiles`), el envío al chat
-  (`sendToChat`) y el aviso de primer arranque que explicaba el botón
-  atrás de la mensajería.
-- **Proyecto de AIDE, sin Gradle.** El repositorio ya es un proyecto
-  Android compilable en el propio teléfono: `AndroidManifest.xml`,
-  `src/`, `res/` y la app web en `assets/www`. Sin AndroidX ni
-  dependencias externas.
-- **La app se sirve desde `https://aurora.localhost`** en vez de
-  `file://`: origen seguro de verdad, así que IndexedDB (donde vive la
-  música), `localStorage` y `navigator.storage.persist()` funcionan y
-  sobreviven a cerrar la app.
+- **Recursos locales desde `https://aurora.localhost`**: IndexedDB,
+  `localStorage` y `navigator.storage.persist()` funcionan de forma
+  fiable y conservan la biblioteca y los ajustes entre sesiones.
 - **Selector de archivos del sistema** para los `<input type="file">`:
   importar música, letras y portadas sigue igual, sin pedir permisos
   de almacenamiento.
@@ -159,9 +145,6 @@ Historial de versiones **publicadas** de Aurora Music Player.
   una llamada, Aurora se pausa sola— y sostiene un wake lock parcial para
   que el sueño del dispositivo no la corte. En pausa suelta el primer
   plano y la notificación se puede descartar.
-- **Esto antes no se podía**: dentro de un `.xdc` la app vivía en la
-  ventana del cliente de mensajería, sin servicio ni notificación, y la
-  música moría al cerrar. Era la limitación más citada del README.
 - Los enlaces externos («Código fuente») abren el navegador del
   sistema, así que desaparece la URL en texto como sustituto.
 
