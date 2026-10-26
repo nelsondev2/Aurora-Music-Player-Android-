@@ -1401,6 +1401,15 @@ Object.assign(App, {
         return;
       }
 
+      // En el motor nativo, recibir muestras reales del MediaPlayer; el
+      // motor Web ya alimenta el visualizador desde su AnalyserNode.
+      if (typeof this.isNativeAudio === 'function' && this.isNativeAudio()) {
+        try {
+          const N = window.AuroraNativePlayer;
+          if (N && typeof N.visualizerStart === 'function') N.visualizerStart();
+        } catch (e) {}
+      }
+
       // Pausar el dibujado cuando el canvas no está en pantalla
       // (otra vista, sheet encima): ahorra batería en móvil.
       if (!this._visObserver && 'IntersectionObserver' in window) {
@@ -1461,6 +1470,11 @@ Object.assign(App, {
     },
 
     stopVisualizer() {
+      this._nativeVisualizerWaveform = null;
+      try {
+        const N = window.AuroraNativePlayer;
+        if (N && typeof N.visualizerStop === 'function') N.visualizerStop();
+      } catch (e) {}
       if (this._visRafId) {
         cancelAnimationFrame(this._visRafId);
         this._visRafId = null;
@@ -1584,26 +1598,23 @@ Object.assign(App, {
       const dt = (typeof dtMs === 'number' && dtMs > 0) ? Math.min(100, dtMs) : 33;
       const cols = this._visColors();
 
-      // El motor Web usa muestras reales del AnalyserNode. MediaPlayer no
-      // expone esas muestras al WebView: allí se genera una onda animada
-      // suave para que el visualizador no quede congelado.
+      // Ambos motores alimentan la onda con muestras reales: AnalyserNode
+      // en WebAudio y android.media.audiofx.Visualizer sobre el audio nativo.
       if (!this._visTimeData || (!nativeEngine && this.analyser.fftSize
           && this._visTimeData.length !== this.analyser.fftSize)) {
-        this._visTimeData = new Uint8Array(nativeEngine ? 2048 : (this.analyser.fftSize || this.freqData.length));
+        this._visTimeData = new Uint8Array(nativeEngine ? 1024 : (this.analyser.fftSize || this.freqData.length));
       }
       if (nativeEngine) {
-        this._visNativeClock = (this._visNativeClock || 0) + dt;
-        const phase = this._visNativeClock * 0.0025;
-        const envelope = 0.42 + 0.20 * (0.5 + 0.5 * Math.sin(phase * 1.3));
-        const length = this._visTimeData.length;
-        for (let i = 0; i < length; i++) {
-          const x = i / (length - 1);
-          const signal = envelope * (
-            0.58 * Math.sin(x * Math.PI * 8 + phase)
-            + 0.27 * Math.sin(x * Math.PI * 19 - phase * 1.6)
-            + 0.15 * Math.sin(x * Math.PI * 31 + phase * 0.7)
-          );
-          this._visTimeData[i] = Math.max(0, Math.min(255, Math.round(128 + signal * 120)));
+        const source = this._nativeVisualizerWaveform;
+        if (source && source.length) {
+          for (let i = 0; i < this._visTimeData.length; i++) {
+            const sample = source[Math.floor(i * source.length / this._visTimeData.length)];
+            this._visTimeData[i] = sample === undefined ? 128 : sample;
+          }
+        } else {
+          // Sin permiso o mientras Android inicia la captura, dejar una
+          // línea neutra en vez de mostrar una onda sintética desincronizada.
+          this._visTimeData.fill(128);
         }
       } else {
         this.analyser.getByteTimeDomainData(this._visTimeData);

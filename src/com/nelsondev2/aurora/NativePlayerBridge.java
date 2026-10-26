@@ -1,8 +1,16 @@
 package com.nelsondev2.aurora;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.media.audiofx.Visualizer;
+import android.os.Build;
+import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
+
+import org.json.JSONObject;
 
 /**
  * Puente JS ↔ Android del reproductor nativo (window.AuroraNativePlayer).
@@ -22,6 +30,11 @@ class NativePlayerBridge {
     private static NativePlayer player;
     /** Cola mínima para cuando no hay página (la web la mantiene al día). */
     private static final PlayQueue queue = new PlayQueue();
+    private static Visualizer visualizer;
+    private static int visualizerSession = -1;
+    private static boolean visualizerWanted;
+    private static boolean visualizerPermissionPending;
+    private static boolean visualizerPermissionDenied;
 
     private final Context context;
 
@@ -36,6 +49,7 @@ class NativePlayerBridge {
     }
 
     static synchronized void releaseAll() {
+        stopVisualizer();
         if (player != null) {
             try {
                 player.release();
@@ -66,6 +80,95 @@ class NativePlayerBridge {
     /** Reanudar desde la notificación con la página cerrada. */
     static synchronized void resumePlayback() {
         if (player != null) player.resume();
+    }
+
+
+    /** Inicia captura de la forma de onda de la sesión que reproduce la app. */
+    @JavascriptInterface
+    public boolean visualizerStart() {
+        return startVisualizer(context);
+    }
+
+    /** Libera la captura cuando se pausa o se oculta el visualizador. */
+    @JavascriptInterface
+    public void visualizerStop() {
+        stopVisualizer();
+    }
+
+    static synchronized boolean startVisualizer(Context context) {
+        visualizerWanted = true;
+        if (!isCurrentlyPlaying()) return false;
+        if (Build.VERSION.SDK_INT >= 23 &&
+                context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (!visualizerPermissionPending && !visualizerPermissionDenied && context instanceof MainActivity) {
+                visualizerPermissionPending = true;
+                ((MainActivity) context).requestVisualizerPermission();
+            }
+            return false;
+        }
+        visualizerPermissionPending = false;
+        visualizerPermissionDenied = false;
+        int session = audioSessionId(context);
+        if (session <= 0) return false;
+        if (visualizer != null && visualizerSession == session) return true;
+        releaseVisualizerCapture();
+        try {
+            int[] range = Visualizer.getCaptureSizeRange();
+            Visualizer next = new Visualizer(session);
+            next.setCaptureSize(range[1]);
+            next.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
+                @Override public void onWaveFormDataCapture(Visualizer source, byte[] data, int rate) {
+                    if (data == null || data.length == 0) return;
+                    JSONObject event = new JSONObject();
+                    try {
+                        event.put("event", "visualizer");
+                        event.put("waveform", Base64.encodeToString(data, Base64.NO_WRAP));
+                        WebApp.emitNativeEvent(event);
+                    } catch (Exception ignored) { }
+                }
+                @Override public void onFftDataCapture(Visualizer source, byte[] data, int rate) { }
+            }, Visualizer.getMaxCaptureRate(), true, false);
+            next.setEnabled(true);
+            visualizer = next;
+            visualizerSession = session;
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "No se pudo iniciar el visualizador sincronizado", e);
+            releaseVisualizerCapture();
+            JSONObject event = new JSONObject();
+            try { event.put("event", "visualizerUnavailable"); } catch (Exception ignored) { }
+            WebApp.emitNativeEvent(event);
+            return false;
+        }
+    }
+
+    static synchronized void visualizerPermissionResult(Context context, boolean granted) {
+        visualizerPermissionPending = false;
+        if (!granted) {
+            visualizerPermissionDenied = true;
+            visualizerWanted = false;
+            JSONObject event = new JSONObject();
+            try { event.put("event", "visualizerPermissionDenied"); } catch (Exception ignored) { }
+            WebApp.emitNativeEvent(event);
+            return;
+        }
+        visualizerPermissionDenied = false;
+        if (visualizerWanted) startVisualizer(context);
+    }
+
+    static synchronized void stopVisualizer() {
+        visualizerWanted = false;
+        visualizerPermissionPending = false;
+        visualizerPermissionDenied = false;
+        releaseVisualizerCapture();
+    }
+
+    private static void releaseVisualizerCapture() {
+        if (visualizer != null) {
+            try { visualizer.setEnabled(false); visualizer.release(); } catch (Exception ignored) { }
+        }
+        visualizer = null;
+        visualizerSession = -1;
     }
 
     private NativePlayer player() {

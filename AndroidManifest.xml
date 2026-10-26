@@ -19,6 +19,8 @@
     <!-- Reproducción en segundo plano (PlaybackService) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Solo para analizar la salida del reproductor y sincronizar el visualizador. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Android 13+ pide permiso en tiempo de ejecución para la notificación -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

@@ -525,6 +525,24 @@ class NativeAudioElement {
     if (!payload || !payload.event) return;
     const kind = payload.event;
 
+    if (kind === 'visualizer') {
+      try {
+        const raw = atob(String(payload.waveform || ''));
+        const samples = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) samples[i] = raw.charCodeAt(i);
+        if (window.App) window.App._nativeVisualizerWaveform = samples;
+      } catch (e) {}
+      return;
+    }
+    if (kind === 'visualizerPermissionDenied' || kind === 'visualizerUnavailable') {
+      if (window.App && typeof window.App.toast === 'function') {
+        const key = kind === 'visualizerPermissionDenied'
+          ? 'visualizer_permission_denied' : 'visualizer_unavailable';
+        window.App.toast(window.App.t(key));
+      }
+      return;
+    }
+
     if (kind === 'loaded') {
       this._readyState = 4;
       this._duration = (Number(payload.duration) || 0) / 1000;

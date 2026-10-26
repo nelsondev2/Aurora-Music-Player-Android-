@@ -209,6 +209,10 @@ IMPORTANTES = {
     "AudioManager": "android.media.AudioManager",
     "PowerManager": "android.os.PowerManager",
     "ComponentName": "android.content.ComponentName",
+    "Activity": "android.app.Activity",
+    "Manifest": "android.Manifest",
+    "PackageManager": "android.content.pm.PackageManager",
+    "Visualizer": "android.media.audiofx.Visualizer",
 }
 
 
@@ -274,7 +278,7 @@ def check_bridge():
     # Módulos que hablan con los puentes: platform.js (compartir, media),
     # native-audio.js (motor nativo) e init.js (limpieza de la caché).
     js = "".join(read(os.path.join(WWW, "js", name))
-                 for name in ("platform.js", "native-audio.js", "init.js",
+                 for name in ("platform.js", "native-audio.js", "audio.js", "init.js",
                               "device-library.js", "library.js", "lyrics.js"))
     pairs = [
         ("AuroraAndroid", "B", "AuroraBridge.java"),
@@ -423,6 +427,30 @@ def check_native_first_play_race():
     ok.append("errores obsoletos ignorados y arranque directo desde URI original")
 
 
+# --------------------------------------------------------------- visualizer
+
+def check_visualizer_sync():
+    """El visualizador nativo debe dibujar muestras de MediaPlayer, no una onda falsa."""
+    audio = read(os.path.join(WWW, "js", "audio.js"))
+    native_audio = read(os.path.join(WWW, "js", "native-audio.js"))
+    bridge = read(os.path.join(SRC, "NativePlayerBridge.java"))
+    activity = read(os.path.join(SRC, "MainActivity.java"))
+    manifest = read(os.path.join(ROOT, "AndroidManifest.xml"))
+    if "N.visualizerStart()" not in audio or "N.visualizerStop()" not in audio:
+        fail("el canvas debe iniciar y liberar la captura nativa")
+    if "_nativeVisualizerWaveform" not in audio or "kind === 'visualizer'" not in native_audio:
+        fail("la onda del motor nativo debe consumir muestras reales")
+    if "_visNativeClock" in audio:
+        fail("el motor nativo no debe volver a dibujar una onda sintética desincronizada")
+    if "new Visualizer(session)" not in bridge or "onWaveFormDataCapture" not in bridge:
+        fail("Android debe capturar la forma de onda de la sesión de reproducción")
+    if "visualizerPermissionResult(this, granted)" not in activity or "REQ_VISUALIZER" not in activity:
+        fail("el permiso opcional del visualizador debe resolverse en la actividad")
+    if 'android.permission.RECORD_AUDIO' not in manifest:
+        fail("el permiso de captura requerido por Android Visualizer debe estar declarado")
+    ok.append("onda sincronizada con muestras reales del motor nativo")
+
+
 # -------------------------------------------------------------- original LRC write
 
 def check_original_lrc_write():
@@ -517,6 +545,7 @@ def main():
     check_lrclib_search()
     check_browse_playlist_add()
     check_native_first_play_race()
+    check_visualizer_sync()
     check_original_lrc_write()
     check_i18n()
 

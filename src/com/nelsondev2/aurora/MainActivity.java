@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
 
     private static final int REQ_FILE_CHOOSER = 1001;
     private static final int REQ_NOTIFICATIONS = 1002;
+    private static final int REQ_VISUALIZER = 1003;
     /** android.permission.POST_NOTIFICATIONS (API 33), como literal para
      *  poder compilar también contra SDK anteriores. */
     private static final String PERMISSION_POST_NOTIFICATIONS =
@@ -138,6 +139,10 @@ public class MainActivity extends Activity {
             boolean granted = results != null && results.length > 0 && results[0] == 0;
             WebApp.evalJs("window.AuroraDeviceAccess && window.AuroraDeviceAccess("
                     + (granted ? "true" : "false") + ")");
+        } else if (requestCode == REQ_VISUALIZER) {
+            boolean granted = results != null && results.length > 0 &&
+                    results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            NativePlayerBridge.visualizerPermissionResult(this, granted);
         }
     }
 
@@ -155,6 +160,25 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
             // Un dispositivo sin ese permiso declarado no debe romper nada.
         }
+    }
+
+    /** Pide RECORD_AUDIO solo cuando se activa el visualizador nativo. */
+    void requestVisualizerPermission() {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                if (Build.VERSION.SDK_INT < 23 ||
+                        checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+                                android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    NativePlayerBridge.visualizerPermissionResult(MainActivity.this, true);
+                    return;
+                }
+                try {
+                    requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, REQ_VISUALIZER);
+                } catch (Exception e) {
+                    NativePlayerBridge.visualizerPermissionResult(MainActivity.this, false);
+                }
+            }
+        });
     }
 
     /**
@@ -317,6 +341,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        NativePlayerBridge.stopVisualizer();
         // Si el reproductor nativo está sonando, la música NO depende del
         // WebView: se deja el servicio (y su notificación) en pie.
         if (NativePlayerBridge.isCurrentlyPlaying()) {

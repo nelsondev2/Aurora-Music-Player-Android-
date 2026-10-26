@@ -4298,6 +4298,38 @@ const I18N = {
     id: 'Nonaktif',
     'zh-TW': '已關閉'
   },
+  visualizer_permission_denied: {
+    es: 'Sin permiso de audio no se puede sincronizar el visualizador con la música.',
+    en: 'Audio access is needed to sync the visualizer with the music.',
+    pt: 'É necessário permitir o acesso ao áudio para sincronizar o visualizador com a música.',
+    zh: '需要允许音频访问，才能让可视化效果与音乐同步。',
+    ja: 'ビジュアライザーを音楽に同期するには、音声へのアクセスが必要です。',
+    fr: 'L’accès audio est nécessaire pour synchroniser le visualiseur avec la musique.',
+    it: 'Serve l’accesso all’audio per sincronizzare il visualizzatore con la musica.',
+    ru: 'Для синхронизации визуализатора с музыкой нужен доступ к аудио.',
+    de: 'Für die Synchronisierung des Visualizers mit der Musik ist Audiozugriff erforderlich.',
+    uk: 'Для синхронізації візуалізатора з музикою потрібен доступ до аудіо.',
+    pl: 'Synchronizacja wizualizatora z muzyką wymaga dostępu do dźwięku.',
+    tr: 'Görselleştiriciyi müzikle eşitlemek için ses erişimi gerekir.',
+    id: 'Akses audio diperlukan agar visualisator tersinkron dengan musik.',
+    'zh-TW': '需要允許音訊存取，才能讓視覺效果與音樂同步。'
+  },
+  visualizer_unavailable: {
+    es: 'Android no permite capturar el audio de esta pista para sincronizar las ondas.',
+    en: 'Android could not capture this track’s audio to sync the visualizer.',
+    pt: 'O Android não conseguiu capturar o áudio desta faixa para sincronizar o visualizador.',
+    zh: 'Android 无法捕获这首曲目的音频以同步可视化效果。',
+    ja: 'この曲の音声を取得できず、ビジュアライザーを同期できません。',
+    fr: 'Android n’a pas pu capter l’audio de cette piste pour synchroniser le visualiseur.',
+    it: 'Android non è riuscito a catturare l’audio di questa traccia per sincronizzare il visualizzatore.',
+    ru: 'Android не удалось захватить звук этой композиции для синхронизации визуализатора.',
+    de: 'Android konnte den Ton dieses Titels nicht erfassen, um den Visualizer zu synchronisieren.',
+    uk: 'Android не вдалося захопити звук цієї композиції для синхронізації візуалізатора.',
+    pl: 'Android nie może przechwycić dźwięku tego utworu, aby zsynchronizować wizualizator.',
+    tr: 'Android bu parçanın sesini yakalayıp görselleştiriciyi eşitleyemedi.',
+    id: 'Android tidak dapat menangkap audio trek ini untuk menyinkronkan visualisator.',
+    'zh-TW': 'Android 無法擷取此曲目的音訊以同步視覺效果。'
+  },
   /* Textos del bucle A-B. Como el resto del diccionario, las
    * traducciones automáticas agradecen revisión nativa. */
   ab_repeat: {
