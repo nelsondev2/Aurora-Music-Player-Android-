@@ -60,8 +60,10 @@ class DeviceLibraryBridge {
                 .edit().clear().apply();
     }
 
-    synchronized void rememberPickedUri(Uri uri) {
-        if (uri == null) return;
+    synchronized void rememberPickedUri(Uri uri, boolean persistedReadGrant) {
+        // Solo guardar URI que sobrevivirá al cierre de la app. Sin este
+        // permiso la pista conserva su Blob y sigue reproduciéndose desde caché.
+        if (uri == null || !persistedReadGrant) return;
         ContentResolver resolver = context().getContentResolver();
         Cursor cursor = null;
         try {

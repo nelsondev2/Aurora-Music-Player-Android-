@@ -250,12 +250,18 @@ public class MainActivity extends Activity {
                     int grantFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION
                             | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     for (Uri uri : result) {
+                        boolean persistedReadGrant = false;
                         if (Build.VERSION.SDK_INT >= 19 && grantFlags != 0 &&
+                                (grantFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0 &&
                                 (data.getFlags() & Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) != 0) {
-                            try { getContentResolver().takePersistableUriPermission(uri, grantFlags); }
-                            catch (Exception ignored) { /* provider may not support persistent grants */ }
+                            try {
+                                getContentResolver().takePersistableUriPermission(uri, grantFlags);
+                                persistedReadGrant = true;
+                            } catch (Exception ignored) { /* provider may not support persistent grants */ }
                         }
-                        if (deviceLibraryBridge != null) deviceLibraryBridge.rememberPickedUri(uri);
+                        if (deviceLibraryBridge != null) {
+                            deviceLibraryBridge.rememberPickedUri(uri, persistedReadGrant);
+                        }
                     }
                 }
             }

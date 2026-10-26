@@ -401,6 +401,26 @@ def check_browse_playlist_add():
     ok.append("adición de álbum/artista completo a playlist")
 
 
+# ------------------------------------------------------------- native first play
+
+def check_native_first_play_race():
+    """Ignora errores de MediaPlayer obsoletos y evita subir URIs accesibles."""
+    player = read(os.path.join(SRC, "NativePlayer.java"))
+    native_audio = read(os.path.join(WWW, "js", "native-audio.js"))
+    library = read(os.path.join(WWW, "js", "library.js"))
+    if "if (mp != current)" not in player or "if (mp == prepared) releasePrepared()" not in player:
+        fail("errores de reproductores obsoletos o prefetched no deben afectar la pista actual")
+    if "if (this._src && !this._loading) this._startLoad();" not in native_audio:
+        fail("load() debe evitar duplicar una carga que src ya inició")
+    if "const originalUri = track.deviceUri || track.sourceUri" not in native_audio:
+        fail("el motor nativo debe reproducir directamente las URI originales accesibles")
+    if "const nextUri = next.deviceUri || next.sourceUri" not in native_audio:
+        fail("la preparación anticipada debe admitir URI originales persistentes")
+    if "!tracksToAdd[0].deviceUri && !tracksToAdd[0].sourceUri" not in library:
+        fail("no se debe subir a la caché una pista cuyo original ya puede reproducirse")
+    ok.append("errores obsoletos ignorados y arranque directo desde URI original")
+
+
 # -------------------------------------------------------------- original LRC write
 
 def check_original_lrc_write():
@@ -494,6 +514,7 @@ def main():
     check_playback_restore()
     check_lrclib_search()
     check_browse_playlist_add()
+    check_native_first_play_race()
     check_original_lrc_write()
     check_i18n()
 

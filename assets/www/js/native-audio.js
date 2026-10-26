@@ -336,7 +336,11 @@ class NativeAudioElement {
   }
 
   load() {
-    if (this._src) this._startLoad();
+    // Asignar src ya dispara _startLoad(). La llamada convencional `load()`
+    // que sigue en loadTrackPaused/restoreSession debe ser idempotente; de lo
+    // contrario se creaban dos MediaPlayer para el mismo primer audio y un
+    // onError tardío del antiguo mostraba un falso aviso de fallo.
+    if (this._src && !this._loading) this._startLoad();
   }
 
   /* ---------- eventos ---------- */
@@ -399,15 +403,31 @@ class NativeAudioElement {
       // sonar con la interfaz en pausa: pantalla y altavoz en desacuerdo.
       const ms = Math.round(startAt * 1000);
       let started = false;
-      if (track.deviceUri) {
-        // Pista del móvil: se reproduce el archivo original, sin copiarlo
-        // ni subirlo a la caché.
+      const originalUri = track.deviceUri || track.sourceUri;
+      if (originalUri) {
+        // Si Android conservó el permiso SAF, reproducir el original desde
+        // content:// evita copiar el archivo entero al motor nativo en el
+        // primer play (la URI solo se guarda cuando ese permiso es persistente).
         try {
           started = (typeof N.loadUri === 'function')
-            ? N.loadUri(trackId, track.deviceUri, ms)
-            : N.playUri(trackId, track.deviceUri, ms);
+            ? N.loadUri(trackId, originalUri, ms)
+            : N.playUri(trackId, originalUri, ms);
         } catch (e) {
           started = false;
+        }
+        // Si el proveedor revocó el permiso entre medias, la copia privada
+        // de IndexedDB sigue siendo un camino válido para esta pista.
+        if (!started && !track.deviceUri) {
+          const ok = await NativeAudio.ensureUploaded(
+            trackId, NativeAudio.extFor(track), url, track._file || track.fileBlob || null);
+          if (token !== this._loadToken) return;
+          if (!ok) {
+            this._fail('no se pudo preparar el audio');
+            return;
+          }
+          try {
+            started = (typeof N.load === 'function') ? N.load(trackId, ms) : N.play(trackId, ms);
+          } catch (e) { started = false; }
         }
       } else {
         const ok = await NativeAudio.ensureUploaded(
@@ -434,7 +454,11 @@ class NativeAudioElement {
       }
       // El resto llega por eventos de Java (loaded → playing → time).
     };
-    this._loading = run().catch((e) => this._fail(String(e)));
+    const loading = run().catch((e) => this._fail(String(e)));
+    this._loading = loading;
+    loading.then(() => {
+      if (this._loading === loading) this._loading = null;
+    });
 
     // Adelantar la siguiente pista: cuando llegue el final, MediaPlayer
     // hará el relevo sin silencio.
@@ -456,9 +480,11 @@ class NativeAudioElement {
       const N = window.AuroraNativePlayer;
       if (!N) return;
 
-      // Pista del móvil: no hay nada que subir, se prepara por content://.
-      if (next.deviceUri && typeof N.prepareNextUri === 'function') {
-        try { N.prepareNextUri(next.id, next.deviceUri); } catch (e) {}
+      // Original accesible (MediaStore o permiso SAF persistente): preparar
+      // directamente por content:// sin copiarlo al motor nativo.
+      const nextUri = next.deviceUri || next.sourceUri;
+      if (nextUri && typeof N.prepareNextUri === 'function') {
+        try { N.prepareNextUri(next.id, nextUri); } catch (e) {}
         return;
       }
 

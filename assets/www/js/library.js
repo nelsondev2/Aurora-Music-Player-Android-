@@ -261,9 +261,9 @@ Object.assign(App, {
         // privada (MediaPlayer no lee IndexedDB). Calentar solo la primera
         // en segundo plano evita que el primer toque espere varios segundos;
         // no bloquea la importación ni intenta copiar toda una biblioteca.
-        if (tracksToAdd.length && typeof this.isNativeAudio === 'function' &&
-            this.isNativeAudio() && window.NativeAudio &&
-            typeof window.NativeAudio.ensureUploaded === 'function') {
+        if (tracksToAdd.length && !tracksToAdd[0].deviceUri && !tracksToAdd[0].sourceUri &&
+            typeof this.isNativeAudio === 'function' && this.isNativeAudio() &&
+            window.NativeAudio && typeof window.NativeAudio.ensureUploaded === 'function') {
           const firstTrack = tracksToAdd[0];
           const firstUrl = this.getTrackUrl(firstTrack);
           window.NativeAudio.ensureUploaded(

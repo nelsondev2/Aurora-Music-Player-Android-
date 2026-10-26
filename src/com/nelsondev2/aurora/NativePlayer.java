@@ -489,6 +489,15 @@ final class NativePlayer {
             new MediaPlayer.OnErrorListener() {
                 @Override
                 public boolean onError(MediaPlayer mp, int what, int extra) {
+                    // MediaPlayer puede entregar onError después de release()
+                    // al reemplazar la pista (o al fallar el prefetched). Un
+                    // error de un reproductor viejo no debe marcar como fallida
+                    // la pista actual: esa carrera mostraba el toast y luego
+                    // sonaba correctamente el nuevo MediaPlayer.
+                    if (mp != current) {
+                        if (mp == prepared) releasePrepared();
+                        return true;
+                    }
                     handler.removeCallbacks(ticker);
                     JSONObject event = new JSONObject();
                     put(event, "event", "error");
