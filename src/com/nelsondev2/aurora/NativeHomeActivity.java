@@ -2,12 +2,14 @@ package com.nelsondev2.aurora;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.ContentUris;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.BitmapFactory;
 import android.media.audiofx.Visualizer;
 import android.net.Uri;
@@ -24,6 +26,7 @@ import android.text.style.StyleSpan;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.MenuItem;
+import android.widget.FrameLayout;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
@@ -61,11 +64,11 @@ public class NativeHomeActivity extends Activity {
     private static final int REQ_RECORD_AUDIO = 2206;
     private static final int REQ_EXPORT_BACKUP = 2207;
     private static final String POST_NOTIFICATIONS = "android.permission.POST_NOTIFICATIONS";
-    private int BG = Color.rgb(9, 10, 16);
-    private int SURFACE = Color.rgb(24, 25, 35);
-    private int TEXT = Color.rgb(245, 245, 250);
-    private int MUTED = Color.rgb(165, 168, 181);
-    private int ACCENT = Color.rgb(156, 108, 255);
+    private int BG = Color.rgb(5, 5, 9);
+    private int SURFACE = Color.rgb(20, 20, 31);
+    private int TEXT = Color.rgb(250, 249, 255);
+    private int MUTED = Color.rgb(167, 165, 185);
+    private int ACCENT = Color.rgb(157, 139, 255);
 
     private NativeLibraryDatabase database;
     private NativePlayerBridge player;
@@ -73,6 +76,7 @@ public class NativeHomeActivity extends Activity {
     private final ArrayList<JSONObject> visibleTracks = new ArrayList<JSONObject>();
     private final ArrayList<JSONObject> playlists = new ArrayList<JSONObject>();
     private final ArrayList<JSONObject> playQueue = new ArrayList<JSONObject>();
+    private final HashMap<String, Button> tabButtons = new HashMap<String, Button>();
     private ListView listView;
     private TrackAdapter adapter;
     private EditText search;
@@ -84,6 +88,16 @@ public class NativeHomeActivity extends Activity {
     private TextView durationLine;
     private Button playButton;
     private SeekBar seekBar;
+    private Dialog fullPlayerDialog;
+    private ImageView fullPlayerCover;
+    private TextView fullPlayerTitle;
+    private TextView fullPlayerArtist;
+    private TextView fullPlayerElapsed;
+    private TextView fullPlayerDuration;
+    private SeekBar fullPlayerSeek;
+    private Button fullPlayerPlay;
+    private boolean fullPlayerSeeking;
+    private String fullPlayerTrackId = "";
     private String screen = "library";
     private String screenBeforeLyrics = "library";
     private JSONObject currentTrack;
@@ -208,18 +222,18 @@ public class NativeHomeActivity extends Activity {
         if ("light".equals(themeName)) {
             BG = Color.rgb(246, 245, 250);
             SURFACE = Color.WHITE;
-            TEXT = Color.rgb(28, 28, 38);
-            MUTED = Color.rgb(100, 101, 113);
+            TEXT = Color.rgb(28, 26, 42);
+            MUTED = Color.rgb(105, 102, 124);
         } else if ("amoled".equals(themeName)) {
             BG = Color.BLACK;
-            SURFACE = Color.rgb(10, 10, 12);
-            TEXT = Color.rgb(245, 245, 250);
-            MUTED = Color.rgb(155, 157, 170);
+            SURFACE = Color.rgb(10, 10, 14);
+            TEXT = Color.rgb(250, 249, 255);
+            MUTED = Color.rgb(159, 157, 178);
         } else {
-            BG = Color.rgb(9, 10, 16);
-            SURFACE = Color.rgb(24, 25, 35);
-            TEXT = Color.rgb(245, 245, 250);
-            MUTED = Color.rgb(165, 168, 181);
+            BG = Color.rgb(5, 5, 9);
+            SURFACE = Color.rgb(20, 20, 31);
+            TEXT = Color.rgb(250, 249, 255);
+            MUTED = Color.rgb(167, 165, 185);
         }
     }
 
@@ -361,6 +375,7 @@ public class NativeHomeActivity extends Activity {
 
     private void showTrackScreen(String destination) {
         screen = destination;
+        updateNavigationTabs();
         search.setVisibility(View.VISIBLE);
         lyricsScroll.setVisibility(View.GONE);
         listView.setVisibility(View.VISIBLE);
@@ -836,29 +851,50 @@ public class NativeHomeActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         rootView = root;
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(BG);
-        root.setPadding(dp(16), dp(12), dp(16), dp(8));
+        root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{blend(BG, ACCENT, 0.10f), BG, Color.rgb(7, 7, 12)}));
+        root.setPadding(dp(18), dp(12), dp(18), dp(10));
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        TextView brand = text(NativeText.text(this, "app_title").toUpperCase(java.util.Locale.getDefault()), 21, TEXT, true);
-        header.addView(brand, new LinearLayout.LayoutParams(0, dp(48), 1));
-        addHeaderButton(header, NativeText.text(this, "menu_load_music"), new View.OnClickListener() {
+        TextView logo = text("A", 18, Color.WHITE, true);
+        logo.setGravity(Gravity.CENTER);
+        logo.setBackground(accentGradient(dp(16)));
+        logo.setElevation(dp(6));
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(dp(42), dp(42));
+        logoParams.rightMargin = dp(12);
+        header.addView(logo, logoParams);
+        LinearLayout wordmark = new LinearLayout(this);
+        wordmark.setOrientation(LinearLayout.VERTICAL);
+        wordmark.setGravity(Gravity.CENTER_VERTICAL);
+        TextView brand = text(NativeText.text(this, "app_title"), 22, TEXT, true);
+        brand.setLetterSpacing(-0.025f);
+        TextView brandSub = text("M U S I C   P L A Y E R", 8, MUTED, true);
+        wordmark.addView(brand);
+        wordmark.addView(brandSub);
+        header.addView(wordmark, new LinearLayout.LayoutParams(0, dp(52), 1));
+        addHeaderButton(header, "＋", tr("menu_load_music"), new View.OnClickListener() {
+
             @Override public void onClick(View v) { requestAudioPermission(); }
         });
-        addHeaderButton(header, NativeText.text(this, "more_options"), new View.OnClickListener() {
+        addHeaderButton(header, "⋮", tr("more_options"), new View.OnClickListener() {
             @Override public void onClick(View v) { showMoreMenu(v); }
         });
         root.addView(header);
 
         LinearLayout tabs = new LinearLayout(this);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setPadding(dp(4), dp(4), dp(4), dp(4));
+        tabs.setBackground(roundedBackground(blend(SURFACE, Color.BLACK, 0.22f), dp(17), 0x18ffffff));
         addTab(tabs, NativeText.text(this, "nav_library"), "library");
         addTab(tabs, NativeText.text(this, "your_playlists"), "playlists");
-        addTab(tabs, "+ " + NativeText.text(this, "new_playlist"), "new-playlist");
-        addTab(tabs, "+ " + NativeText.text(this, "load_music"), "import");
-        root.addView(tabs, new LinearLayout.LayoutParams(-1, dp(46)));
+        addTab(tabs, "+", "new-playlist");
+        addTab(tabs, "⇧", "import");
+        LinearLayout.LayoutParams tabsParams = new LinearLayout.LayoutParams(-1, dp(52));
+        tabsParams.topMargin = dp(12);
+        tabsParams.bottomMargin = dp(10);
+        root.addView(tabs, tabsParams);
         visualizerView = new NativeVisualizerView(this);
         visualizerView.setColor(ACCENT);
         visualizerView.setVisibility(View.GONE);
@@ -869,9 +905,20 @@ public class NativeHomeActivity extends Activity {
         search.setTextColor(TEXT);
         search.setHintTextColor(MUTED);
         search.setHint(NativeText.text(this, "search_placeholder"));
-        search.setPadding(dp(14), 0, dp(14), 0);
-        search.setBackgroundColor(SURFACE);
-        root.addView(search, new LinearLayout.LayoutParams(-1, dp(46)));
+        search.setPadding(dp(4), 0, dp(12), 0);
+        search.setBackgroundColor(Color.TRANSPARENT);
+        search.setTextSize(14);
+        search.setSingleLine(true);
+        LinearLayout searchBox = new LinearLayout(this);
+        searchBox.setGravity(Gravity.CENTER_VERTICAL);
+        searchBox.setPadding(dp(14), 0, dp(6), 0);
+        searchBox.setBackground(roundedBackground(blend(SURFACE, Color.WHITE, 0.025f), dp(17), 0x20ffffff));
+        TextView searchIcon = text("⌕", 27, MUTED, false);
+        searchBox.addView(searchIcon, new LinearLayout.LayoutParams(dp(30), -2));
+        searchBox.addView(search, new LinearLayout.LayoutParams(0, -1, 1));
+        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, dp(50));
+        searchParams.bottomMargin = dp(8);
+        root.addView(searchBox, searchParams);
         search.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { filterTracks(s.toString()); }
@@ -879,8 +926,11 @@ public class NativeHomeActivity extends Activity {
         });
 
         listView = new ListView(this);
-        listView.setDividerHeight(dp(1));
-        listView.setDivider(getDrawableColor(0x33ffffff));
+        listView.setDividerHeight(0);
+        listView.setDivider(getDrawableColor(Color.TRANSPARENT));
+        listView.setSelector(android.R.color.transparent);
+        listView.setPadding(0, dp(2), 0, dp(6));
+        listView.setClipToPadding(false);
         adapter = new TrackAdapter();
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
@@ -948,14 +998,20 @@ public class NativeHomeActivity extends Activity {
 
         LinearLayout playerPanel = new LinearLayout(this);
         playerPanel.setOrientation(LinearLayout.VERTICAL);
-        playerPanel.setPadding(dp(12), dp(9), dp(12), dp(6));
-        playerPanel.setBackgroundColor(SURFACE);
+        playerPanel.setPadding(dp(14), dp(12), dp(14), dp(10));
+        playerPanel.setBackground(roundedBackground(blend(SURFACE, ACCENT, 0.035f), dp(22), 0x28ffffff));
+        playerPanel.setElevation(dp(10));
+        LinearLayout.LayoutParams panelParams = new LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT);
+        panelParams.topMargin = dp(8);
+        root.addView(playerPanel, panelParams);
         LinearLayout nowPlaying = new LinearLayout(this);
         nowPlaying.setGravity(Gravity.CENTER_VERTICAL);
         coverImage = new ImageView(this);
         coverImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        coverImage.setBackgroundColor(BG);
-        nowPlaying.addView(coverImage, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        coverImage.setBackground(roundedBackground(blend(ACCENT, BG, 0.68f), dp(14), 0x33ffffff));
+        coverImage.setClipToOutline(true);
+        coverImage.setElevation(dp(4));
+        nowPlaying.addView(coverImage, new LinearLayout.LayoutParams(dp(58), dp(58)));
         LinearLayout currentInfo = new LinearLayout(this);
         currentInfo.setOrientation(LinearLayout.VERTICAL);
         currentInfo.setPadding(dp(12), 0, 0, 0);
@@ -964,6 +1020,12 @@ public class NativeHomeActivity extends Activity {
         currentInfo.addView(titleLine);
         currentInfo.addView(artistLine);
         nowPlaying.addView(currentInfo, new LinearLayout.LayoutParams(0, -2, 1));
+        nowPlaying.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showFullPlayer(); }
+        });
+        coverImage.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showFullPlayer(); }
+        });
         playerPanel.addView(nowPlaying);
 
         LinearLayout seekRow = new LinearLayout(this);
@@ -989,27 +1051,45 @@ public class NativeHomeActivity extends Activity {
 
         LinearLayout controls = new LinearLayout(this);
         controls.setGravity(Gravity.CENTER);
-        addControl(controls, NativeText.text(this, "previous"), new View.OnClickListener() {
+        addControl(controls, "‹‹", tr("previous"), new View.OnClickListener() {
             @Override public void onClick(View v) { playRelative(-1); }
         });
-        playButton = button(NativeText.text(this, "play"));
-        controls.addView(playButton, new LinearLayout.LayoutParams(0, dp(42), 1));
+        playButton = button("▶");
+        playButton.setContentDescription(tr("play"));
+        playButton.setTextSize(18);
+        playButton.setTextColor(Color.WHITE);
+        playButton.setBackground(accentGradient(dp(25)));
+        playButton.setElevation(dp(7));
+        controls.addView(playButton, new LinearLayout.LayoutParams(dp(54), dp(48)));
         playButton.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { togglePlayback(); }
         });
-        addControl(controls, NativeText.text(this, "next"), new View.OnClickListener() {
+        addControl(controls, "››", tr("next"), new View.OnClickListener() {
             @Override public void onClick(View v) { playRelative(1); }
         });
+        controls.setGravity(Gravity.CENTER);
         playerPanel.addView(controls);
         LinearLayout extras = new LinearLayout(this);
         extras.setGravity(Gravity.CENTER);
-        lyricsButton = button(NativeText.text(this, "lyrics"));
-        favoriteButton = button(NativeText.text(this, "favorite"));
-        shuffleButton = button(NativeText.text(this, "shuffle"));
-        repeatButton = button(NativeText.text(this, "repeat"));
+        lyricsButton = button("♫");
+        lyricsButton.setContentDescription(tr("lyrics"));
+        favoriteButton = button("♡");
+        favoriteButton.setContentDescription(tr("favorite"));
+        shuffleButton = button("⤨");
+        shuffleButton.setContentDescription(tr("shuffle"));
+        repeatButton = button("↻");
+        repeatButton.setContentDescription(tr("repeat"));
         abButton = button("A-B");
+        abButton.setContentDescription("AB repeat");
         Button[] extraButtons = {lyricsButton, favoriteButton, shuffleButton, repeatButton, abButton};
-        for (Button extra : extraButtons) extras.addView(extra, new LinearLayout.LayoutParams(0, dp(36), 1));
+        for (Button extra : extraButtons) {
+            extra.setTextSize(15);
+            extra.setBackground(roundedBackground(blend(SURFACE, Color.WHITE, 0.04f), dp(13), 0x16ffffff));
+            LinearLayout.LayoutParams extraParams = new LinearLayout.LayoutParams(0, dp(38), 1);
+            extraParams.leftMargin = dp(3);
+            extraParams.rightMargin = dp(3);
+            extras.addView(extra, extraParams);
+        }
         lyricsButton.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { showLyrics(); }
         });
@@ -1026,7 +1106,6 @@ public class NativeHomeActivity extends Activity {
             @Override public void onClick(View v) { cycleAbRepeat(); }
         });
         playerPanel.addView(extras);
-        root.addView(playerPanel, new LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT));
         setContentView(root);
     }
 
@@ -1368,12 +1447,21 @@ public class NativeHomeActivity extends Activity {
 
     private void addTab(LinearLayout tabs, String label, final String destination) {
         Button tab = button(label);
-        tabs.addView(tab, new LinearLayout.LayoutParams(0, dp(42), 1));
+        boolean action = "new-playlist".equals(destination) || "import".equals(destination);
+        tab.setTextSize(action ? 21 : 11);
+        tab.setContentDescription("new-playlist".equals(destination) ? tr("new_playlist")
+                : ("import".equals(destination) ? tr("load_music") : label));
+        tab.setBackground(roundedBackground("library".equals(destination)
+                ? blend(ACCENT, Color.BLACK, 0.20f) : Color.TRANSPARENT, dp(13), 0));
+        tab.setTextColor("library".equals(destination) ? Color.WHITE : MUTED);
+        if ("library".equals(destination) || "playlists".equals(destination)) tabButtons.put(destination, tab);
+        tabs.addView(tab, new LinearLayout.LayoutParams(0, -1, action ? 0.52f : 1f));
         tab.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if ("import".equals(destination)) { chooseAudioFiles(); return; }
                 if ("new-playlist".equals(destination)) { createPlaylist(); return; }
                 screen = destination;
+                updateNavigationTabs();
                 lyricsScroll.setVisibility(View.GONE);
                 listView.setVisibility(View.VISIBLE);
                 if ("library".equals(screen)) search.setVisibility(View.VISIBLE);
@@ -1383,26 +1471,75 @@ public class NativeHomeActivity extends Activity {
         });
     }
 
-    private void addHeaderButton(LinearLayout parent, String label, View.OnClickListener listener) {
+    private void updateNavigationTabs() {
+        String selected = ("playlists".equals(screen) || "playlist-detail".equals(screen))
+                ? "playlists" : "library";
+        for (String destination : tabButtons.keySet()) {
+            Button tab = tabButtons.get(destination);
+            boolean active = destination.equals(selected);
+            tab.setTextColor(active ? Color.WHITE : MUTED);
+            tab.setBackground(roundedBackground(active ? blend(ACCENT, Color.BLACK, 0.20f)
+                    : Color.TRANSPARENT, dp(13), 0));
+        }
+    }
+
+    private void addHeaderButton(LinearLayout parent, String label, String description,
+                                View.OnClickListener listener) {
         Button b = button(label);
-        b.setTextSize(11);
-        parent.addView(b, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)));
+        b.setTextSize(22);
+        b.setContentDescription(description);
+        b.setBackground(roundedBackground(blend(SURFACE, Color.WHITE, 0.035f), dp(16), 0x22ffffff));
+        parent.addView(b, new LinearLayout.LayoutParams(dp(44), dp(44)));
         b.setOnClickListener(listener);
     }
 
-    private void addControl(LinearLayout parent, String label, View.OnClickListener listener) {
+    private void addControl(LinearLayout parent, String label, String description,
+                            View.OnClickListener listener) {
         Button b = button(label);
-        parent.addView(b, new LinearLayout.LayoutParams(0, dp(42), 1));
+        b.setTextSize(20);
+        b.setContentDescription(description);
+        b.setBackground(roundedBackground(blend(SURFACE, Color.WHITE, 0.04f), dp(18), 0x16ffffff));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(48), 1);
+        params.leftMargin = dp(4);
+        params.rightMargin = dp(4);
+        parent.addView(b, params);
         b.setOnClickListener(listener);
     }
 
     private Button button(String label) {
         Button b = new Button(this);
         b.setText(label);
+        b.setTextSize(12);
         b.setTextColor(TEXT);
         b.setAllCaps(false);
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(SURFACE));
+        b.setMinWidth(0);
+        b.setMinimumWidth(0);
+        b.setPadding(dp(8), 0, dp(8), 0);
+        b.setBackground(roundedBackground(blend(SURFACE, Color.WHITE, 0.035f), dp(14), 0x22ffffff));
         return b;
+    }
+
+    private GradientDrawable roundedBackground(int color, int radius, int strokeColor) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(radius);
+        if (strokeColor != 0) drawable.setStroke(dp(1), strokeColor);
+        return drawable;
+    }
+
+    private GradientDrawable accentGradient(int radius) {
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{blend(ACCENT, Color.WHITE, 0.10f), ACCENT, blend(ACCENT, Color.BLACK, 0.20f)});
+        drawable.setCornerRadius(radius);
+        return drawable;
+    }
+
+    private int blend(int base, int overlay, float amount) {
+        float a = Math.max(0f, Math.min(1f, amount));
+        int r = Math.round(Color.red(base) * (1f - a) + Color.red(overlay) * a);
+        int g = Math.round(Color.green(base) * (1f - a) + Color.green(overlay) * a);
+        int b = Math.round(Color.blue(base) * (1f - a) + Color.blue(overlay) * a);
+        return Color.rgb(r, g, b);
     }
 
     private TextView text(String value, int size, int color, boolean bold) {
@@ -1627,12 +1764,12 @@ public class NativeHomeActivity extends Activity {
 
     private void updateModeButtons() {
         if (shuffleButton != null) {
-            shuffleButton.setText((shuffleEnabled ? "✓ " : "") + tr("shuffle"));
+            shuffleButton.setText(shuffleEnabled ? "⤨ ✓" : "⤨");
             shuffleButton.setTextColor(shuffleEnabled ? ACCENT : TEXT);
         }
         if (repeatButton != null) {
-            String mode = "all".equals(repeatMode) ? " ∞" : ("one".equals(repeatMode) ? " 1" : "");
-            repeatButton.setText(tr("repeat") + mode);
+            String mode = "all".equals(repeatMode) ? "∞" : ("one".equals(repeatMode) ? "1" : "↻");
+            repeatButton.setText(mode);
             repeatButton.setTextColor("off".equals(repeatMode) ? TEXT : ACCENT);
         }
     }
@@ -1658,7 +1795,7 @@ public class NativeHomeActivity extends Activity {
     private void updateFavoriteButton() {
         if (favoriteButton == null) return;
         boolean liked = currentTrack != null && favorites.contains(currentTrack.optString("id"));
-        favoriteButton.setText((liked ? "♥ " : "♡ ") + tr("favorite"));
+        favoriteButton.setText(liked ? "♥" : "♡");
         favoriteButton.setTextColor(liked ? ACCENT : TEXT);
     }
 
@@ -1716,7 +1853,8 @@ public class NativeHomeActivity extends Activity {
                     + (currentTrack.optString("album", "").length() > 0
                     ? " · " + currentTrack.optString("album", "") : ""));
             boolean playing = player.isPlaying();
-            playButton.setText(playing ? tr("pause") : tr("play"));
+            playButton.setText(playing ? "Ⅱ" : "▶");
+            playButton.setContentDescription(playing ? tr("pause") : tr("play"));
             updateModeButtons();
             updateFavoriteButton();
             if (lyricsButton != null) lyricsButton.setEnabled(currentTrack.opt("lrc") != null);
@@ -1726,8 +1864,244 @@ public class NativeHomeActivity extends Activity {
             elapsedLine.setText(time(position));
             durationLine.setText(time(duration));
         } else {
-            playButton.setText(tr("play"));
+            playButton.setText("▶");
+            playButton.setContentDescription(tr("play"));
         }
+        updateFullPlayerControls();
+    }
+
+    private void showFullPlayer() {
+        if (currentTrack == null) return;
+        final Dialog dialog = new Dialog(this);
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setGravity(Gravity.CENTER_HORIZONTAL);
+        page.setPadding(dp(22), dp(18), dp(22), dp(18));
+        page.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{blend(BG, ACCENT, 0.25f), BG, Color.rgb(5, 5, 9)}));
+
+        LinearLayout top = new LinearLayout(this);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        Button close = button("⌄");
+        close.setTextSize(25);
+        close.setBackground(roundedBackground(blend(SURFACE, Color.WHITE, 0.06f), dp(16), 0x22ffffff));
+        close.setContentDescription(tr("close_btn"));
+        top.addView(close, new LinearLayout.LayoutParams(dp(46), dp(44)));
+        LinearLayout captionBox = new LinearLayout(this);
+        captionBox.setOrientation(LinearLayout.VERTICAL);
+        captionBox.setGravity(Gravity.CENTER);
+        TextView caption = text("NOW PLAYING", 10, MUTED, true);
+        caption.setLetterSpacing(0.18f);
+        TextView context = text(tr("your_library"), 12, TEXT, true);
+        captionBox.addView(caption);
+        captionBox.addView(context);
+        top.addView(captionBox, new LinearLayout.LayoutParams(0, -2, 1));
+        Button queue = button("☷");
+        queue.setTextSize(21);
+        queue.setContentDescription(tr("queue"));
+        queue.setBackground(roundedBackground(blend(SURFACE, Color.WHITE, 0.06f), dp(16), 0x22ffffff));
+        top.addView(queue, new LinearLayout.LayoutParams(dp(46), dp(44)));
+        page.addView(top, new LinearLayout.LayoutParams(-1, dp(48)));
+
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int artSize = Math.max(dp(220), Math.min(dp(330), screenWidth - dp(68)));
+        FrameLayout artFrame = new FrameLayout(this);
+        artFrame.setBackground(accentGradient(dp(27)));
+        artFrame.setClipToOutline(true);
+        artFrame.setElevation(dp(22));
+        fullPlayerCover = new ImageView(this);
+        fullPlayerCover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        artFrame.addView(fullPlayerCover, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout.LayoutParams artParams = new LinearLayout.LayoutParams(artSize, artSize);
+        artParams.topMargin = dp(20);
+        artParams.bottomMargin = dp(22);
+        page.addView(artFrame, artParams);
+
+        fullPlayerTitle = text("", 24, TEXT, true);
+        fullPlayerTitle.setGravity(Gravity.CENTER);
+        fullPlayerTitle.setMaxLines(2);
+        fullPlayerTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        fullPlayerArtist = text("", 14, MUTED, false);
+        fullPlayerArtist.setGravity(Gravity.CENTER);
+        fullPlayerArtist.setPadding(0, dp(3), 0, 0);
+        page.addView(fullPlayerTitle, new LinearLayout.LayoutParams(-1, -2));
+        page.addView(fullPlayerArtist, new LinearLayout.LayoutParams(-1, -2));
+
+        LinearLayout starsRow = new LinearLayout(this);
+        starsRow.setGravity(Gravity.CENTER);
+        for (int i = 1; i <= 5; i++) {
+            final int value = i;
+            Button star = button(rating(currentTrack) >= i ? "★" : "☆");
+            star.setTextSize(19);
+            star.setTextColor(rating(currentTrack) >= i ? ACCENT : MUTED);
+            star.setBackgroundColor(Color.TRANSPARENT);
+            star.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { setRating(currentTrack, value); }
+            });
+            starsRow.addView(star, new LinearLayout.LayoutParams(dp(42), dp(38)));
+        }
+        LinearLayout.LayoutParams starsParams = new LinearLayout.LayoutParams(-2, dp(40));
+        starsParams.topMargin = dp(5);
+        page.addView(starsRow, starsParams);
+
+        LinearLayout progress = new LinearLayout(this);
+        progress.setOrientation(LinearLayout.VERTICAL);
+        progress.setPadding(dp(2), dp(9), dp(2), 0);
+        fullPlayerSeek = new SeekBar(this);
+        fullPlayerSeek.setMax(1000);
+        fullPlayerSeek.setProgressTintList(android.content.res.ColorStateList.valueOf(ACCENT));
+        fullPlayerSeek.setThumbTintList(android.content.res.ColorStateList.valueOf(TEXT));
+        progress.addView(fullPlayerSeek, new LinearLayout.LayoutParams(-1, dp(34)));
+        LinearLayout times = new LinearLayout(this);
+        times.setGravity(Gravity.CENTER_VERTICAL);
+        fullPlayerElapsed = text("0:00", 11, MUTED, false);
+        fullPlayerDuration = text("0:00", 11, MUTED, false);
+        times.addView(fullPlayerElapsed, new LinearLayout.LayoutParams(0, -2, 1));
+        times.addView(fullPlayerDuration);
+        progress.addView(times);
+        page.addView(progress, new LinearLayout.LayoutParams(-1, -2));
+        fullPlayerSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int value, boolean fromUser) { }
+            @Override public void onStartTrackingTouch(SeekBar bar) { fullPlayerSeeking = true; }
+            @Override public void onStopTrackingTouch(SeekBar bar) {
+                fullPlayerSeeking = false;
+                if (currentTrack != null) player.seekTo(bar.getProgress() * player.duration() / 1000.0);
+            }
+        });
+
+        LinearLayout controls = new LinearLayout(this);
+        controls.setGravity(Gravity.CENTER);
+        addFullPlayerControl(controls, "⤨", tr("shuffle"), new View.OnClickListener() {
+            @Override public void onClick(View v) { toggleShuffle(); }
+        }, 44);
+        addFullPlayerControl(controls, "‹‹", tr("previous"), new View.OnClickListener() {
+            @Override public void onClick(View v) { playRelative(-1); }
+        }, 52);
+        fullPlayerPlay = button("▶");
+        fullPlayerPlay.setTextSize(20);
+        fullPlayerPlay.setTextColor(Color.WHITE);
+        fullPlayerPlay.setBackground(accentGradient(dp(31)));
+        fullPlayerPlay.setElevation(dp(10));
+        fullPlayerPlay.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { togglePlayback(); }
+        });
+        controls.addView(fullPlayerPlay, new LinearLayout.LayoutParams(dp(62), dp(62)));
+        addFullPlayerControl(controls, "››", tr("next"), new View.OnClickListener() {
+            @Override public void onClick(View v) { playRelative(1); }
+        }, 52);
+        addFullPlayerControl(controls, "↻", tr("repeat"), new View.OnClickListener() {
+            @Override public void onClick(View v) { cycleRepeat(); }
+        }, 44);
+        LinearLayout.LayoutParams controlsParams = new LinearLayout.LayoutParams(-1, dp(68));
+        controlsParams.topMargin = dp(12);
+        page.addView(controls, controlsParams);
+
+        LinearLayout secondary = new LinearLayout(this);
+        secondary.setGravity(Gravity.CENTER);
+        addFullPlayerAction(secondary, "♫", tr("lyrics"), new View.OnClickListener() {
+            @Override public void onClick(View v) { dialog.dismiss(); showLyrics(); }
+        });
+        addFullPlayerAction(secondary, "♡", tr("favorite"), new View.OnClickListener() {
+            @Override public void onClick(View v) { toggleCurrentFavorite(); }
+        });
+        addFullPlayerAction(secondary, "☷", tr("queue"), new View.OnClickListener() {
+            @Override public void onClick(View v) { showQueue(); }
+        });
+        addFullPlayerAction(secondary, "⋯", tr("options_title"), new View.OnClickListener() {
+            @Override public void onClick(View v) { showSettings(); }
+        });
+        LinearLayout.LayoutParams secondaryParams = new LinearLayout.LayoutParams(-1, dp(48));
+        secondaryParams.topMargin = dp(6);
+        page.addView(secondary, secondaryParams);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(Color.TRANSPARENT);
+        scroll.addView(page, new ScrollView.LayoutParams(-1, -2));
+        dialog.setContentView(scroll);
+        dialog.setOnDismissListener(new android.content.DialogInterface.OnDismissListener() {
+            @Override public void onDismiss(android.content.DialogInterface ignored) {
+                fullPlayerDialog = null;
+                fullPlayerCover = null;
+                fullPlayerSeek = null;
+                fullPlayerPlay = null;
+                fullPlayerTitle = null;
+                fullPlayerArtist = null;
+            }
+        });
+        fullPlayerDialog = dialog;
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            dialog.getWindow().setStatusBarColor(BG);
+            dialog.getWindow().setNavigationBarColor(BG);
+        }
+        close.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { dialog.dismiss(); }
+        });
+        queue.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showQueue(); }
+        });
+        fullPlayerTrackId = "";
+        updateFullPlayerControls();
+    }
+
+    private void addFullPlayerControl(LinearLayout row, String glyph, String description,
+                                     View.OnClickListener listener, int size) {
+        Button control = button(glyph);
+        control.setTextSize(19);
+        control.setContentDescription(description);
+        control.setBackgroundColor(Color.TRANSPARENT);
+        control.setOnClickListener(listener);
+        row.addView(control, new LinearLayout.LayoutParams(dp(size), dp(52)));
+    }
+
+    private void addFullPlayerAction(LinearLayout row, String glyph, String label,
+                                    View.OnClickListener listener) {
+        LinearLayout action = new LinearLayout(this);
+        action.setOrientation(LinearLayout.VERTICAL);
+        action.setGravity(Gravity.CENTER);
+        TextView icon = text(glyph, 18, ACCENT, true);
+        TextView caption = text(label, 9, MUTED, true);
+        action.addView(icon);
+        action.addView(caption);
+        action.setOnClickListener(listener);
+        row.addView(action, new LinearLayout.LayoutParams(0, -1, 1));
+    }
+
+    private void updateFullPlayerControls() {
+        if (fullPlayerDialog == null || !fullPlayerDialog.isShowing()) return;
+        if (currentTrack == null) return;
+        String id = currentTrack.optString("id", "");
+        if (!id.equals(fullPlayerTrackId)) {
+            fullPlayerTrackId = id;
+            fullPlayerTitle.setText(currentTrack.optString("title", "(sin título)"));
+            fullPlayerArtist.setText(currentTrack.optString("artist", tr("unknown_artist"))
+                    + (currentTrack.optString("album", "").length() > 0
+                    ? " · " + currentTrack.optString("album", "") : ""));
+            String data = currentTrack.optString("coverThumbLg", currentTrack.optString("coverThumb", ""));
+            boolean loaded = false;
+            try {
+                int comma = data.indexOf(',');
+                if (comma >= 0) data = data.substring(comma + 1);
+                if (data.length() > 0 && data.length() < 3 * 1024 * 1024) {
+                    byte[] bytes = Base64.decode(data, Base64.DEFAULT);
+                    android.graphics.Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                    if (bitmap != null) { fullPlayerCover.setImageBitmap(bitmap); loaded = true; }
+                }
+            } catch (Exception ignored) { }
+            if (!loaded) fullPlayerCover.setImageDrawable(accentGradient(dp(27)));
+        }
+        long duration = Math.max(0L, Math.round(player.duration()));
+        long position = Math.max(0L, Math.round(player.position()));
+        if (!fullPlayerSeeking) fullPlayerSeek.setProgress(duration > 0
+                ? (int) Math.min(1000, position * 1000 / duration) : 0);
+        fullPlayerElapsed.setText(time(position));
+        fullPlayerDuration.setText(time(duration));
+        boolean playing = player.isPlaying();
+        fullPlayerPlay.setText(playing ? "Ⅱ" : "▶");
+        fullPlayerPlay.setContentDescription(playing ? tr("pause") : tr("play"));
     }
 
     private void showCover(JSONObject track) {
@@ -1752,7 +2126,7 @@ public class NativeHomeActivity extends Activity {
                 return;
             } catch (Exception ignored) { }
         }
-        coverImage.setImageDrawable(new android.graphics.drawable.ColorDrawable(SURFACE));
+        coverImage.setImageDrawable(accentGradient(dp(14)));
     }
 
     private static String time(long millis) {
@@ -2008,6 +2382,7 @@ public class NativeHomeActivity extends Activity {
         originalQueue = new ArrayList<JSONObject>(playQueue);
         queueIndex = currentTrack == null ? 0 : Math.max(0, indexOfId(playQueue, currentTrack.optString("id")));
         screen = "playlist-detail";
+        updateNavigationTabs();
         search.setVisibility(View.GONE);
         lyricsScroll.setVisibility(View.GONE);
         listView.setVisibility(View.VISIBLE);
@@ -2097,26 +2472,81 @@ public class NativeHomeActivity extends Activity {
         @Override public Object getItem(int position) { return visibleTracks.get(position); }
         @Override public long getItemId(int position) { return position; }
         @Override public View getView(int position, View convertView, ViewGroup parent) {
-            LinearLayout row = convertView instanceof LinearLayout ? (LinearLayout) convertView : new LinearLayout(NativeHomeActivity.this);
-            row.setOrientation(LinearLayout.VERTICAL);
-            row.setPadding(dp(12), dp(9), dp(8), dp(9));
+            LinearLayout row = convertView instanceof LinearLayout
+                    ? (LinearLayout) convertView : new LinearLayout(NativeHomeActivity.this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(10), dp(8), dp(12), dp(8));
             row.removeAllViews();
             JSONObject item = visibleTracks.get(position);
+            boolean playlistRow = "playlists".equals(screen);
+            boolean isCurrent = !playlistRow && currentTrack != null
+                    && currentTrack.optString("id").equals(item.optString("id"));
+            row.setBackground(roundedBackground(isCurrent ? blend(SURFACE, ACCENT, 0.18f) : blend(SURFACE, Color.WHITE, 0.018f),
+                    dp(17), isCurrent ? blend(ACCENT, Color.TRANSPARENT, 0.25f) : 0x15ffffff));
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(-1, dp(72));
+            rowParams.bottomMargin = dp(7);
+            row.setLayoutParams(rowParams);
+
+            FrameLayout cover = new FrameLayout(NativeHomeActivity.this);
+            GradientDrawable coverShape = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    new int[]{blend(ACCENT, Color.rgb(255, 125, 181), 0.18f), blend(ACCENT, Color.BLACK, 0.38f)});
+            coverShape.setCornerRadius(dp(13));
+            cover.setBackground(coverShape);
+            cover.setClipToOutline(true);
+            ImageView artwork = new ImageView(NativeHomeActivity.this);
+            artwork.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            String coverData = playlistRow ? "" : item.optString("coverThumb", item.optString("coverThumbLg", ""));
+            boolean loadedArtwork = false;
+            if (coverData.length() > 0 && coverData.length() < 900000) {
+                try {
+                    int comma = coverData.indexOf(',');
+                    if (comma >= 0) coverData = coverData.substring(comma + 1);
+                    byte[] bytes = Base64.decode(coverData, Base64.DEFAULT);
+                    android.graphics.Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                    if (bitmap != null) { artwork.setImageBitmap(bitmap); loadedArtwork = true; }
+                } catch (Exception ignored) { }
+            }
+            cover.addView(artwork, new FrameLayout.LayoutParams(-1, -1));
+            if (!loadedArtwork) {
+                TextView glyph = text(playlistRow ? "♫" : "♪", 24, Color.WHITE, true);
+                glyph.setGravity(Gravity.CENTER);
+                cover.addView(glyph, new FrameLayout.LayoutParams(-1, -1));
+            }
+            LinearLayout.LayoutParams coverParams = new LinearLayout.LayoutParams(dp(54), dp(54));
+            coverParams.rightMargin = dp(12);
+            row.addView(cover, coverParams);
+
+            LinearLayout info = new LinearLayout(NativeHomeActivity.this);
+            info.setOrientation(LinearLayout.VERTICAL);
+            info.setGravity(Gravity.CENTER_VERTICAL);
+            info.setPadding(0, dp(1), 0, dp(1));
             String title;
             String subtitle;
-            if ("playlists".equals(screen)) {
-                title = item.optString("name", "Lista");
+            if (playlistRow) {
+                title = item.optString("name", tr("your_playlists"));
                 JSONArray ids = item.optJSONArray("trackIds");
-                subtitle = (ids == null ? 0 : ids.length()) + " pistas · toca para abrir";
+                subtitle = (ids == null ? 0 : ids.length()) + "  ·  " + tr("queue_title");
             } else {
                 title = item.optString("title", "(sin título)");
                 subtitle = item.optString("artist", tr("unknown_artist"));
-                if (item.optString("album", "").length() > 0) subtitle += " · " + item.optString("album");
+                if (item.optString("album", "").length() > 0) subtitle += "  ·  " + item.optString("album");
                 if (rating(item) > 0) subtitle += "   " + stars(rating(item));
                 if (favorites.contains(item.optString("id"))) subtitle += "   ♥";
             }
-            row.addView(text(title, 15, TEXT, true));
-            row.addView(text(subtitle, 12, MUTED, false));
+            TextView titleView = text(title, 14, isCurrent ? ACCENT : TEXT, true);
+            titleView.setMaxLines(1);
+            titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            TextView subtitleView = text(subtitle, 11, MUTED, false);
+            subtitleView.setMaxLines(1);
+            subtitleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            info.addView(titleView);
+            info.addView(subtitleView);
+            row.addView(info, new LinearLayout.LayoutParams(0, -1, 1));
+
+            TextView more = text(playlistRow ? "›" : "⋮", playlistRow ? 26 : 19, MUTED, true);
+            more.setGravity(Gravity.CENTER);
+            row.addView(more, new LinearLayout.LayoutParams(dp(28), -1));
             return row;
         }
     }
