@@ -1,0 +1,396 @@
+# Changelog
+
+Historial de versiones **publicadas** de Aurora Music Player.
+
+## Sin publicar — 1.5.0 · Interfaz Aurora restaurada
+
+- **El lanzador vuelve a `MainActivity` y a la interfaz Aurora original** de `assets/www`, recuperando el reproductor visual, portadas, navegación y pantallas web.
+- **El audio sigue usando componentes Android nativos** (`MediaPlayer`, `PlaybackService`, notificación y MediaSession) para reproducción en segundo plano.
+- Se conserva la biblioteca local, MediaStore, importación de audio y coordinación de cola con el motor Android.
+- Se mantienen exportación e importación manual de respaldos ZIP, listas, ajustes y metadatos.
+- **La selección múltiple del selector Android ya no pierde canciones**: se recogen todas las URI devueltas en `ClipData`, además del caso de URI única.
+- **El cambio de motor de audio reinicia Aurora de forma segura**: guarda la sesión y vuelve a enlazar el reproductor elegido; antes solo cambiaba la preferencia y podía dejar la interfaz usando el motor anterior.
+- La primera pista importada se prepara en segundo plano para reducir la espera inicial del motor del sistema.
+- **Al salir explícitamente de Aurora, la reproducción se pausa y la próxima apertura queda en pausa**; cerrar la tarea desde Recientes también detiene el servicio huérfano. Mandar Aurora al fondo con Home sigue permitiendo música en segundo plano. La restauración evita cargar de nuevo sobre un `MediaPlayer` activo y el WebView reanuda sus timers al volver.
+- **El editor de letras puede buscar en LRCLIB** por título y artista; solo muestra letras con marcas de tiempo sincronizadas y las pone en el editor para revisarlas antes de Guardar. También puede traducir la letra a cualquiera de los 14 idiomas de la app mediante MyMemory; reemplaza el texto del editor, conserva timestamps y metadatos LRC, y solo guarda cuando el usuario pulsa Guardar. Requiere Internet, envía el texto de la letra al servicio y está sujeto a sus límites gratuitos.
+- **Desde la vista de un álbum o artista se pueden añadir todas sus pistas a una playlist de una vez**: se elige el destino, se conservan el orden visible y las canciones que ya estaban en la lista, y también se puede crear una playlist nueva en el mismo flujo.
+- El selector Android conserva la URI y el permiso persistente del archivo original cuando el proveedor los concede. **Guardar LRC en Android escribe en el MP3 o FLAC original** mediante ID3 `USLT`/`SYLT` o comentarios Vorbis `LYRICS`/`SYNCEDLYRICS`; también lee esas letras desde el archivo. Requiere acceso de escritura. Si el original no está vinculado, Android deniega el acceso o el formato no está soportado, no se presenta como guardado. La interfaz web sin puente nativo mantiene su guardado local.
+- Las solicitudes externas de búsqueda en LRCLIB y traducción MyMemory son iniciadas por el usuario. Al traducir, solo se envía el texto del editor al servicio; las demás solicitudes externas siguen bloqueadas.
+- La APK sigue siendo única y universal, con `minSdk 21` (Android 5.0+). `NativeHomeActivity` queda retenida, pero deja de ser la pantalla de inicio.
+
+## Sin publicar — 1.4.0 · Reproductor nativo
+
+- **Respaldo ZIP para migrar los datos a la edición nativa**: Ajustes →
+  Mantenimiento crea un archivo con la biblioteca, las listas, los ajustes
+  y el audio importado, usando bloques para limitar la memoria. Las pistas
+  de MediaStore conservan la referencia al archivo original.
+- **El visualizador se sincroniza con el audio nativo.** Android captura la forma de onda de la sesión de `MediaPlayer` y la envía al WebView; requiere el permiso de audio del sistema, solicitado solo al activar el visualizador. Las muestras se usan en memoria y no se guardan ni se envían a Internet. Con el motor Web se mantiene el análisis directo mediante `AnalyserNode`.
+- **Pausa al retirar auriculares.** `PlaybackService` escucha
+  `ACTION_AUDIO_BECOMING_NOISY` y manda una pausa coordinada al reproductor
+  cuando se desconectan auriculares cableados o Bluetooth; el receptor se
+  desregistra al destruir el servicio.
+- **«No deja añadir más de una canción del almacenamiento a la lista»,
+  arreglado por los dos lados.**
+  - **La causa que estaba en la app:** mientras una importación seguía
+    en marcha (`_importing`), la siguiente selección se **descartaba**
+    con un aviso («Procesando X archivos…») y esos archivos no entraban
+    nunca. En un móvil lento, con una tanda de FLAC decodificándose,
+    la segunda selección se perdía para siempre. Ahora se **apunta en
+    una cola** (`_importQueue`) y arranca sola al terminar la anterior.
+  - **La causa que estaba en el sistema:** el `<input type="file"
+    multiple>` depende del WebView y del selector del teléfono. Nuevo
+    **«Añadir pistas → Del móvil»**: lista la música del teléfono
+    (MediaStore) con casillas, se marcan varias y entran todas de golpe,
+    sin copiar archivos y sin pasar por el selector del sistema. Las que
+    ya están en la biblioteca se reutilizan (sin duplicar fichas) y solo
+    se importan las elegidas. Se mantienen «Subir archivos del móvil…» y
+    «Subir canciones» para lo que no esté en MediaStore.
+- **Diagnóstico del WebView**: Ajustes → Acerca de enseña la versión
+  (`105.0.5195.136 · Android 9 · API 28`) y al arrancar se comprueba una
+  vez qué le falta al motor. `js/polyfills.js` (ES5, se carga el primero)
+  rellena `includes`, `closest`, `Object.assign`, `Array.from`,
+  `padStart`, `Promise.finally`… para que los WebView intermedios no den
+  fallos raros.
+- **Auditoría de los cuatro fallos reportados en el móvil** (y sus
+  arreglos, con la causa raíz de cada uno):
+  - **Añadir varias canciones a la vez a una lista**: nuevo botón
+    **«Añadir pistas»** dentro de la lista, con hoja a pantalla completa,
+    buscador, casillas, «seleccionar todo» y contador. Antes solo se podía
+    añadir la canción cuyo menú se abría. Las que ya están no se repiten,
+    la lista virtualiza sus filas a partir de 80 y, si esa lista está
+    sonando, la cola se re-sincroniza sin cortar la pista actual.
+  - **La interfaz se congelaba**: `PlaybackService.command()` solo sabía
+    pausar (con el WebView cerrado, «play», «siguiente» y «anterior» no
+    hacían nada); el puente subía el audio a Java en trozos de 512 KB sin
+    ceder el hilo y con dos subidas entrelazadas que corrompían archivos;
+    y cada actualización de la notificación la construía dos veces
+    decodificando la carátula en el hilo principal. Ahora las cinco
+    acciones tienen respaldo nativo, las subidas van en serie
+    (`_uploadChain`, cediendo el hilo cada 256 KB) y se construye una sola
+    notificación por actualización.
+  - **Mini reproductor, reproductor y notificación sin coordinar**: una
+    sola fuente de verdad (`_applyNativePlayState()`), reconciliación con
+    Java al volver a primer plano (`syncNativeState()`), la `MediaSession`
+    del WebView se calla bajo el motor nativo, la notificación copia el
+    estado del `snapshot()` de Java en vez de la bandera de la interfaz y
+    los comandos del sistema se deciden por el estado real del motor
+    (`isReallyPlaying()`), incluso si Java ya pausó por pérdida de foco.
+    `_realignQueueIdx()` evita que «siguiente» repita la canción actual
+    cuando el índice de la cola se quedó atrás.
+  - **«Dice que reproduce y no se oye nada»**: `play()` ya no miente —
+    resuelve cuando Java confirma `playing` (y a los 15 s se rechaza con
+    `TimeoutError` sin saltarse la pista); se carga con
+    `load()`/`loadUri()` y solo se arranca con `resume()` si el usuario
+    quiere sonido; con el motor nativo el relevo lo lleva
+    `setNextMediaPlayer` (la web ya no recarga la misma pista en cada
+    `timeupdate`); y la caché de audio se purga una vez para tirar los
+    archivos dañados.
+  - Diez claves nuevas de traducción en los 14 idiomas.
+- **La compilación en CI está comprobada de verdad**: el primer intento- **La compilación en CI está comprobada de verdad**: el primer intento
+  falló con cuatro errores de `javac` que aquí no se veían (dos métodos
+  `isPlaying()`, un aviso de relevo con el método equivocado, `JSONArray.add`
+  y un `Uri` sin importar). Ya están arreglados, se compila contra la
+  plataforma del `targetSdk` (no contra la beta que traiga el runner) y
+  `tools/check.py` ahora caza las dos familias: métodos duplicados en una
+  clase y clases conocidas usadas sin importar.
+- **La música del móvil, sin copiarla** (`DeviceLibraryBridge.java` +
+  `js/device-library.js`): «Buscar música en el móvil» lee la biblioteca
+  del teléfono por MediaStore y guarda solo la ficha y el `content://`
+  del archivo original. La canción suena desde donde ya estaba, con
+  carátula (álbum o incrustada, 256 px), y nunca se duplica: el escaneo
+  descarta lo que ya está por id de MediaStore o por nombre + tamaño.
+  Si borras una pista de Aurora, el archivo sigue en el teléfono.
+  El audio de estas pistas va al motor nativo (`playUri` /
+  `prepareNextUri`), así que el relevo entre canciones sigue sin hueco,
+  y compartirlas comparte el archivo original. Permiso
+  `READ_MEDIA_AUDIO` (Android 13+) o `READ_EXTERNAL_STORAGE` (hasta
+  Android 12), pedido solo al usarlo.
+
+- **Una sola APK universal para Android 5.0 o superior**: el manifiesto
+  fija `minSdk 21` y CI compila y verifica un único artefacto firmado
+  (`aurora-android5-plus.apk`). Al no incluir bibliotecas nativas, sirve
+  para todas las arquitecturas Android habituales.
+
+
+- **El audio lo pone Android** (`NativePlayer.java`, sobre `MediaPlayer`):
+  la música sigue sonando aunque el WebView desaparezca, y la pista
+  siguiente se prepara por adelantado con `setNextMediaPlayer`, así que
+  el relevo entre canciones no tiene hueco.
+- **Dos motores, elegibles en Ajustes → Motor de audio**: el del sistema
+  (por defecto: aguanta el cierre de la app y hace gapless) y el de la
+  app (Web Audio: ecualizador, visualizador, fundidos y normalización).
+  El cambio se aplica en la siguiente reproducción.
+- **`js/native-audio.js`**: el motor nativo se presenta a la app con la
+  cara del `<audio>` (mismos `timeupdate`, `ended`, `error`), así que
+  cola, letras, estadísticas e interfaz no cambian.
+- **Caché de audio en archivos** (`NativeAudioStore.java`): la web manda
+  la pista por trozos de 512 KB la primera vez que suena; queda en
+  `filesDir/audio` con tope de 1 GB y poda por antigüedad. Borrar una
+  pista de la biblioteca borra también su archivo.
+- **Vuelta atrás automática**: tras tres fallos seguidos del motor
+  nativo con las mismas pistas (códec no reconocido), la app avisa y
+  vuelve al motor del WebView.
+- La notificación, el foco de audio y el botón de auriculares también
+  pausan el motor nativo, aunque la página ya no exista.
+- **La cola sigue funcionando con la app cerrada**: la web empuja a
+  `PlayQueue.java` una ventana de la pista actual y las diez siguientes
+  (título, artista, álbum, duración), deduplicada. Con eso «siguiente»,
+  «anterior», el avance automático al terminar y la carátula de la
+  notificación (últimas ocho portadas en memoria) siguen vivos sin
+  página. Si la ventana se agota, la reproducción se detiene.
+
+## Sin publicar — 1.3.0 · Funciones Android
+
+- **Recursos locales desde `https://aurora.localhost`**: IndexedDB,
+  `localStorage` y `navigator.storage.persist()` funcionan de forma
+  fiable y conservan la biblioteca y los ajustes entre sesiones.
+- **Selector de archivos del sistema** para los `<input type="file">`:
+  importar música, letras y portadas sigue igual, sin pedir permisos
+  de almacenamiento.
+- **Compartir con el selector de Android**: canciones, listas y letras
+  salen a cualquier app. El archivo cruza al lado nativo por trozos y
+  se comparte como `content://` de solo lectura.
+- **Botón atrás con criterio**: cierra la hoja abierta, sale de Letras
+  o manda la app al fondo si suena música, en vez de cortar la
+  reproducción.
+- **Reproducción en segundo plano de verdad**: `PlaybackService` es un
+  servicio en primer plano que mantiene vivo el proceso mientras suena,
+  publica la notificación con carátula y controles (anterior, play/pausa,
+  siguiente), expone la música a la pantalla de bloqueo y a los botones
+  de los auriculares con `MediaSession`, pide el foco de audio —si entra
+  una llamada, Aurora se pausa sola— y sostiene un wake lock parcial para
+  que el sueño del dispositivo no la corte. En pausa suelta el primer
+  plano y la notificación se puede descartar.
+- Los enlaces externos («Código fuente») abren el navegador del
+  sistema, así que desaparece la URL en texto como sustituto.
+
+## 1.2.5 — Más ligera, en 14 idiomas
+
+- Limpieza de cara al público: los comentarios del código
+  ya no cuentan la crónica interna del desarrollo y el
+  README solo trae lo que interesa a quien usa o desarrolla
+  la app, incluida la nota que aclara que es un proyecto
+  generado por IA.
+- Restauraciones a petición del usuario: vuelve el **bucle A-B del reproductor**
+  tal cual era en la 1.2.0 (botón en la fila de controles,
+  rango marcado en la barra, se limpia al cambiar de
+  canción) y el **menú de Letras muestra otra vez todas
+  sus opciones una detrás de otra** — desfase, velocidad,
+  bucle de sección y restablecer siempre visibles, sin
+  botón de despliegue.
+- Barra de herramientas de Letras en su sitio: todas las
+  opciones vuelven a ir **en una sola fila, una detrás de
+  otra** (tamaño, desfase, velocidad, bucle, acciones),
+  sin grupos desperdigados ni acciones cortadas.
+- Gran poda tras una auditoría completa (§100): fuera la hoja
+  de Volumen (nadie la abría), el bucle A-B del reproductor
+  (queda el de Letras), «sincronizar tocando» y el karaoke por
+  palabras, el modo vinilo, «Iniciar radio» y compartir
+  estadísticas. La transición entre canciones es ahora un solo
+  control (Corte / Sin pausa / Fundido), el ajuste fino de
+  Letras se pliega tras un botón, el menú ⋯ ya no mezcla
+  contexto de la canción, y «Mantenimiento» explica qué hace
+  y qué destruye cada opción. La valoración con estrellas
+  no se ha tocado.
+- Trabajos de fondo (§101): el ajuste del sistema «reducir
+  movimiento» ahora también calma el visualizador y la
+  portada flotante (antes el lienzo seguía animándose), y
+  las listas con miles de canciones ya no se pintan enteras
+  al abrirlas — el detalle de lista usa la misma lista
+  virtual que la cola — sin perder el abrir donde suena.
+  De paso, un arreglo menor: una pista sin portada ya no
+  puede romper el pintado de las filas. El blindaje de
+  datos se evaluó y se descartó expresamente: sin copia de
+  seguridad, como estaba.
+- Internacionalización (§102): seis idiomas nuevos con el
+  diccionario completo (363 textos cada uno) — Alemán,
+  Ucraniano, Polaco, Turco e Indonesio, más chino
+  tradicional (el simplificado ya estaba), que además ya
+  se detecta solo en teléfonos de Taiwán/Hong Kong. La app
+  pasa de 8 a 14 idiomas. Las traducciones nuevas son
+  automáticas: convendría una revisión nativa antes de
+  publicarlas.
+- Micro-pulido interno (§103, sin cambio visible): el
+  índice que localiza canciones por identificador ahora
+  también detecta si la lista entera fue sustituida por
+  otra con el mismo número de canciones, para no mirar
+  nunca un mapa anticuado.
+- Segunda auditoría aplicada (§104): desaparece la hoja
+  de Listas que nadie podía abrir (las listas viven en
+  Biblioteca y ya no se pintan dos veces), Favoritos
+  tiene una sola casa (su vista), se acaban las listas
+  inteligentes — las ya creadas se convierten en listas
+  normales con las canciones que su regla elegía — y el
+  Historial como pantalla propia («Buscar duplicados»
+  se queda). Estadísticas conserva lo esencial y el
+  diccionario baja a 333 textos por idioma.
+- Blindaje interno (§105, sin cambio visible): la
+  conversión de listas heredadas al arrancar ahora trata
+  cada lista por separado — si alguna diera un problema,
+  queda intacta y el resto de la biblioteca carga igual.
+
+## 1.2.0 — Primera versión pública
+
+Primera versión compartida fuera del desarrollo. Incluye, ya
+verificado función a función:
+
+- Importación de MP3, M4A, FLAC, WAV, OGG y Opus con metadatos,
+  portadas, duración real y deduplicación al reimportar.
+- Carga rápida con bibliotecas grandes (§85): el arranque ya no
+  relee ni reescribe la biblioteca entera — solo se re-revisan las
+  canciones incompletas y quedan marcadas —, las direcciones de
+  cada canción se crean al reproducirlas y los FLAC/OGG/Opus ya
+  no se leen dos veces al importar.
+- Biblioteca con listas editables, Favoritos y «Mi Música»
+  automática. Las listas y la cola se ordenan automáticamente por
+  estrellas (mejor nota primero, sin nota al final), y el escaparate
+  «Más valoradas» de Inicio enseña las mejores notas.
+- Valoración de 1 a 5 estrellas en el menú de canción, el reproductor
+  y las filas, con insignia visible en las listas y la cola.
+- Reproductor con cola, aleatorio, repetir, contexto «Reproduciendo
+  desde…», gapless/crossfade, ecualizador, visualizador y temporizador
+  de apagado.
+- Letras sincronizadas LRC (archivo o incrustadas).
+- Limpieza interna (§93): auditoría de código muerto — fuera el
+  selector de pistas de la hoja de crear (inalcanzable desde
+  que las pistas se añaden en la vista de edición), 10 textos
+  sin uso en los 8 idiomas, 6 variables de estilo huérfanas y
+  un archivo de iconos que viajaba en la app sin cargarse.
+  La app pesa un poco menos y hace exactamente lo mismo.
+- Ajustes a petición (§98): la portada a pantalla completa
+  ya no lleva iconos de entrar/salir (se descubre tocando);
+  la cola de reproducción se abre, como las listas, en la
+  canción que está sonando; y desaparece la cabecera
+  «A continuación · N» de la cola.
+- Cinco detalles que se notan (§97): en la portada a pantalla
+  completa, el título flota unos segundos y se desvanece; la
+  onda del visualizador ya no «despierta» de cero en cada
+  canción; la fila Sleep del menú muestra la cuenta atrás;
+  al abrir una lista, la vista va directa a la canción que
+  suena; y la portada siguiente se prepara en silencio para
+  que cambiar de canción no parpadee.
+- Tocar la portada ya no pausa (§95): la abre a pantalla
+  completa con el visualizador, y tocarla de nuevo vuelve al
+  reproductor (también se sale con Escape o cambiando de
+  vista). La pausa se queda en el botón de play. Deslizar
+  sobre la portada sigue cambiando de canción y la pulsación
+  larga sigue marcando favorito. Los iconos de entrar/salir
+  son ahora una insignia pequeña en la esquina, sin velar la
+  carátula (§96).
+- Ronda de correcciones (§94) tras un informe de bugs externo,
+  verificado punto a punto: Espacio ya no secuestra los botones
+  enfocados y Escape cierra la ventana que abriste la última;
+  un archivo corrupto salta una vez, no dos; cancelar el
+  temporizador de sueño ya no pausa la música; las líneas de
+  crédito de las letras ya no saltan al principio y se aceptan
+  sellos con horas y coma decimal; al borrar una pista el
+  historial y las estadísticas quedan limpios, y deshacer la
+  devuelve a la cola en el mismo sitio; editar una canción a
+  mano ya no lo deshace el re-etiquetado automático.
+- Micro-detalles (§92): las insignias (estrellas, «Inteligente»,
+  «Se conserva») dejan los 10 px y entran en la escala
+  tipográfica; los títulos largos de las hojas se recortan con
+  elipsis en vez de empujar el botón de cerrar; y las pestañas
+  de Biblioteca (Listas/Álbumes/Artistas/Géneros) ya anuncian
+  su estado a los lectores de pantalla.
+- Estados vacíos (§91): el icono deja de ser un mosaico morado
+  sólido con halo — ahora es un cristal suave tintado con el
+  color de acento (y con los colores de la portada en Letras),
+  a juego con el resto de la interfaz.
+- Visualizador (§90): solo queda la onda fluida sobre la
+  portada; el modo de barras de espectro desaparece (tapaba
+  demasiado el cover). El botón alterna onda/apagado y quien
+  tuviera «barras» guardado pasa a onda automáticamente.
+- Biblioteca (§89): la barra de pestañas (Listas, Álbumes,
+  Artistas, Géneros) queda fija bajo la cabecera al desplazar
+  la lista, sin perderse nunca de vista.
+- Duplicados a tu elección (§88): en «Canciones duplicadas» ya
+  no manda siempre la copia más antigua — marcas «Conservar
+  esta» en la copia que prefieras (cada fila enseña nombre,
+  duración y tamaño para decidir por calidad) y puedes borrar
+  las demás una a una o todas de una vez.
+- Corrección grave (§87): al cerrar y reabrir la app, el
+  reproductor ya no salta de canción en canción diciendo que no
+  se puede reproducir — las direcciones temporales de cada
+  archivo ya no se guardan y se recrean al momento de sonar —,
+  y «Mi Música» ya no aparece de sorpresa al arrancar cuando ya
+  tienes tus listas: nace al importar canciones sin lista.
+- Letras con foco (§86): en la vista de letras solo se lee con
+  claridad la línea que está sonando y el resto queda difuminado
+  (al desplazar a mano la letra se aclara para buscar un verso);
+  sin letra la vista ya no muestra mini reproductor — solo la
+  tarjeta para cargar la letra — y el gesto de deslizar para
+  cambiar de canción dentro de Letras desaparece.
+- Estadísticas (recientes, más reproducidas, historial; solo cuentan las canciones escuchadas enteras) y compartir
+  canciones, listas `.m3u8` y letras por `sendToChat`.
+- Interfaz en 8 idiomas, temas y colores de acento.
+- Pasada visual (§69): portadas renderizadas a la resolución real de
+  pantalla (filas ×2, tarjetas y héroe incluidos), pestañas inferiores
+  legibles también en oscuro y agarre táctil de la barra de progreso
+  ampliado.
+- Arreglo (§84): con el visualizador activo la portada ya
+  no encoge. El visualizador se dibuja ahora sobre la
+  parte baja de la propia carátula y no le quita espacio:
+  la portada se ve igual de grande con él encendido o
+  apagado.
+- Auditoría de la cola por valoradas (§83): «Reproducir
+  siguiente» ahora se llama «Reproducir después de la
+  canción actual» y MUEVE la canción en vez de duplicarla
+  (antes sonaba dos veces); valorar canciones reordena al
+  momento lo que queda por sonar; las canciones nuevas de
+  la lista entran en la cola por su nota, no al final; el
+  avance sin pausa también respeta los cambios de la
+  lista; y cada canción de la cola tiene por fin su menú
+  «Más opciones» (⋯).
+- Arreglo (§82): quitar una canción de la cola ya no la trae
+  de vuelta al pasar a la siguiente. La cola manda: solo
+  entran las canciones nuevas de la lista (al final) y
+  salen las que se borren de la lista.
+- Lo que le faltaba a un reproductor normal (§81): ordenación
+  manual de listas (título, artista, álbum, duración…, además
+  del orden por estrellas), catálogo navegable de Álbumes,
+  Artistas y Géneros en Biblioteca, listas inteligentes que
+  se rellenan solas (4+ estrellas, un género, nunca
+  reproducidas, olvidadas…), guardar la cola como lista,
+  sincronizar la letra tocando al ritmo de la canción,
+  estadísticas de canciones saltadas y olvidadas, buscador
+  de duplicados y fundido suave al pausar/reanudar. Y el
+  renombre de listas ahora se puede confirmar (✓/✗, Enter
+  o Escape), como debe ser.
+- Auditoría general (§80): poda verificada de código muerto
+  (37 claves de idioma sin uso en los 8 idiomas, 11 clases CSS
+  y 1 enlace JS), con regresión completa de las funciones
+  recientes en verde. Sin cambios visibles.
+- Fondo del reproductor según la portada (§75): los colores se
+  extraen de la carátula (con normalización para no ensuciar ni
+  romper el contraste) y tiñen fondo, resplandor y visualizador;
+  sin portada o sin color aprovechable, el fondo de acento de
+  siempre. Adaptado a tema claro y AMOLED.
+- Letras (§74): la línea resaltada va ahora centrada en pantalla
+  también en modo normal (antes quedaba alta, al 25 %).
+- Letras sin letra (§73): la vista entra en modo limpio (la barra de
+  herramientas inútil se oculta y manda la tarjeta de acciones), con
+  variante propia cuando no hay ninguna pista cargada.
+- Reproductor (§72): barra de progreso con avance continuo, duración
+  total que alterna a tiempo restante al tocarla, botón de Letras que
+  anuncia si la canción trae letra, nombre accesible del modo de
+  repetición y portadas guardadas a 800 px para el lienzo de 720.
+- Portadas de Inicio nítidas en pantallas de alta densidad (§71):
+  miniaturas y lienzos dimensionados para DPR 3 (384/144 px), con
+  actualización automática de las miniaturas guardadas por versiones
+  anteriores la primera vez que cada portada se ve en grande.
+- Respuesta a auditoría externa con navegador (§70): etiqueta de
+  artistas en estadísticas, toast honesto al compartir (enviado vs.
+  descargado), foco de teclado contenido en las hojas, objetivos
+  táctiles y contraste reforzados, contenido de escritorio acotado y
+  visualizador con estado de reposo en pausa.
+
+### Limitaciones de esta versión
+
+- La biblioteca vive en el almacenamiento de la app: sin
+  sincronización entre dispositivos ni copia de seguridad integrada.
+- El audio sigue viviendo en el WebView: si Android mata el proceso por
+  memoria o se cierra la tarea desde «recientes», la reproducción se
+  corta. El paso siguiente es un reproductor nativo de verdad.
+- Verificada a mano por el mantenedor antes de publicar; los fallos
+  se recogen en los *issues* de GitHub.

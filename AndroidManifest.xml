@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Aurora Music Player para Android.
+  Compatibilidad mínima: Android 5.0 (API 21).
+  La interfaz y la reproducción se ejecutan de forma nativa en Java.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.nelsondev2.aurora"
+    android:versionCode="141"
+    android:versionName="1.5.0">
+
+    <uses-sdk
+        android:minSdkVersion="21"
+        android:targetSdkVersion="33" />
+
+    <!-- Consulta explícita de letras sincronizadas en LRCLIB. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Reproducción en segundo plano (PlaybackService) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Solo para analizar la salida del reproductor y sincronizar el visualizador. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Android 13+ pide permiso en tiempo de ejecución para la notificación -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Escanear la música que ya está en el móvil (MediaStore).
+         Desde Android 13 el permiso es READ_MEDIA_AUDIO; antes,
+         READ_EXTERNAL_STORAGE (limitado a API 32 a propósito). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AuroraTheme">
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Pantalla nativa anterior retenida mientras se conserva el modo web. -->
+        <activity
+            android:name=".NativeHomeActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Reproducción en segundo plano y controles del sistema. -->
+        <service
+            android:name=".PlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Archivos exportados (compartir) con permiso temporal de lectura -->
+        <provider
+            android:name=".ShareProvider"
+            android:authorities="com.nelsondev2.aurora.share"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>

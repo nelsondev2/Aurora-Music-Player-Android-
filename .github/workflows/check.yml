@@ -1,0 +1,35 @@
+# Comprobaciones de estructura, recursos, traducciones y sintaxis.
+# La compilación completa de la APK se ejecuta en el workflow de Android.
+#
+#   python3 tools/check.py
+#   node --check assets/www/js/*.js
+
+name: Comprobaciones
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Estructura, recursos y traducciones
+        run: python3 tools/check.py
+
+      - name: Sintaxis del JavaScript
+        run: |
+          for f in assets/www/js/*.js; do
+            node --check "$f"
+          done
