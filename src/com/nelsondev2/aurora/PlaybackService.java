@@ -86,7 +86,9 @@ public class PlaybackService extends Service {
     private final Runnable sleepDeadline = new Runnable() {
         @Override public void run() { beginSleepFade(); }
     };
-    private final Runnable sleepFadeStep = new Runnable() {
+    private final SleepFadeRunnable sleepFadeStep = new SleepFadeRunnable();
+
+    private final class SleepFadeRunnable implements Runnable {
         int step;
         float initialVolume;
         @Override public void run() {
@@ -104,7 +106,7 @@ public class PlaybackService extends Service {
                 applyState();
             }
         }
-    };
+    }
     private final Runnable progressTicker = new Runnable() {
         @Override public void run() {
             if (live != PlaybackService.this || !sPlaying) {
