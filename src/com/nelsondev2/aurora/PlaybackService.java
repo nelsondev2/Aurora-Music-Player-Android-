@@ -23,6 +23,8 @@ import android.os.PowerManager;
 import android.util.Base64;
 import android.util.Log;
 
+import org.json.JSONObject;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 

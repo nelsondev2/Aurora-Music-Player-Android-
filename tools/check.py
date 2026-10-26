@@ -251,11 +251,16 @@ def check_java_shapes():
         # Clases conocidas usadas sin importar (y que no son de este paquete).
         imports = set(re.findall(r"^import\s+([\w.]+);", code, re.M))
         propias = set(re.findall(r"\b(?:class|interface|enum)\s+(\w+)", code))
+        sin_comentarios = re.sub(r"/\*.*?\*/|//[^\n]*", " ", code, flags=re.S)
+        sin_comentarios = re.sub(r'"(?:\\.|[^"\\])*"', " ", sin_comentarios)
         for simbolo, completo in IMPORTANTES.items():
             if simbolo in propias or completo in imports:
                 continue
-            if re.search(r"(?<![\w.\"'])" + simbolo + r"\s*\.", code):
-                fail("%s usa %s. pero no importa %s" % (base, simbolo, completo))
+            # Una referencia completamente cualificada no necesita import.
+            sin_cualificar = re.sub(r"(?:[\w]+\.)+" + re.escape(simbolo) + r"\b",
+                                    " ", sin_comentarios)
+            if re.search(r"\b" + re.escape(simbolo) + r"\b", sin_cualificar):
+                fail("%s usa %s sin importar %s" % (base, simbolo, completo))
 
     ok.append("%d archivos Java sin métodos duplicados ni clases sin importar (%d métodos)"
               % (len(fuentes), metodos))
