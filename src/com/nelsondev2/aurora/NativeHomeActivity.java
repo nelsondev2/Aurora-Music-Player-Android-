@@ -136,13 +136,19 @@ public class NativeHomeActivity extends Activity {
         listView.setDivider(getDrawableColor(0x33ffffff));
         adapter = new TrackAdapter();
         listView.setAdapter(adapter);
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            if ("playlists".equals(screen)) openPlaylist(visibleTracks.get(position));
-            else playTrack(visibleTracks.get(position));
+        listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
+            @Override public void onItemClick(android.widget.AdapterView<?> parent, View view,
+                                              int position, long id) {
+                if ("playlists".equals(screen)) openPlaylist(visibleTracks.get(position));
+                else playTrack(visibleTracks.get(position));
+            }
         });
-        listView.setOnItemLongClickListener((parent, view, position, id) -> {
-            if ("library".equals(screen)) offerAddToPlaylist(visibleTracks.get(position));
-            return true;
+        listView.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
+            @Override public boolean onItemLongClick(android.widget.AdapterView<?> parent, View view,
+                                                     int position, long id) {
+                if ("library".equals(screen)) offerAddToPlaylist(visibleTracks.get(position));
+                return true;
+            }
         });
         root.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1));
 
@@ -633,22 +639,24 @@ public class NativeHomeActivity extends Activity {
         input.setHint("Nombre de la lista");
         new AlertDialog.Builder(this).setTitle("Nueva lista").setView(input)
                 .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Crear", (dialog, which) -> {
-                    String name = input.getText().toString().trim();
-                    if (name.length() == 0) return;
-                    try {
-                        JSONObject playlist = new JSONObject();
-                        playlist.put("id", "pl-" + UUID.randomUUID().toString());
-                        playlist.put("name", name);
-                        JSONArray initialTracks = new JSONArray();
-                        if (firstTrack != null) initialTracks.put(firstTrack.optString("id", ""));
-                        playlist.put("trackIds", initialTracks);
-                        playlist.put("createdAt", System.currentTimeMillis());
-                        database.savePlaylist(playlist);
-                        loadStoredData();
-                        screen = "playlists";
-                        filterTracks("");
-                    } catch (Exception ignored) { }
+                .setPositiveButton("Crear", new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                        String name = input.getText().toString().trim();
+                        if (name.length() == 0) return;
+                        try {
+                            JSONObject playlist = new JSONObject();
+                            playlist.put("id", "pl-" + UUID.randomUUID().toString());
+                            playlist.put("name", name);
+                            JSONArray initialTracks = new JSONArray();
+                            if (firstTrack != null) initialTracks.put(firstTrack.optString("id", ""));
+                            playlist.put("trackIds", initialTracks);
+                            playlist.put("createdAt", System.currentTimeMillis());
+                            database.savePlaylist(playlist);
+                            loadStoredData();
+                            screen = "playlists";
+                            filterTracks("");
+                        } catch (Exception ignored) { }
+                    }
                 }).show();
     }
 
@@ -677,17 +685,28 @@ public class NativeHomeActivity extends Activity {
         if (playlists.isEmpty()) { createPlaylist(track); return; }
         String[] names = new String[playlists.size()];
         for (int i = 0; i < playlists.size(); i++) names[i] = playlists.get(i).optString("name", "Lista");
-        new AlertDialog.Builder(this).setTitle("Añadir a una lista").setItems(names, (dialog, which) -> {
-            JSONObject playlist = playlists.get(which);
-            JSONArray ids = playlist.optJSONArray("trackIds");
-            if (ids == null) ids = new JSONArray();
-            boolean exists = false;
-            for (int i = 0; i < ids.length(); i++) if (track.optString("id").equals(ids.optString(i))) exists = true;
-            if (!exists) ids.put(track.optString("id"));
-            try { playlist.put("trackIds", ids); database.savePlaylist(playlist); loadStoredData(); }
-            catch (Exception ignored) { }
-            Toast.makeText(this, exists ? "La pista ya está en la lista" : "Añadida a " + playlist.optString("name"), Toast.LENGTH_SHORT).show();
-        }).show();
+        new AlertDialog.Builder(this).setTitle("Añadir a una lista").setItems(names,
+                new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                        JSONObject playlist = playlists.get(which);
+                        JSONArray ids = playlist.optJSONArray("trackIds");
+                        if (ids == null) ids = new JSONArray();
+                        boolean exists = false;
+                        for (int i = 0; i < ids.length(); i++) {
+                            if (track.optString("id").equals(ids.optString(i))) exists = true;
+                        }
+                        if (!exists) ids.put(track.optString("id"));
+                        try {
+                            playlist.put("trackIds", ids);
+                            database.savePlaylist(playlist);
+                            loadStoredData();
+                        } catch (Exception ignored) { }
+                        Toast.makeText(NativeHomeActivity.this,
+                                exists ? "La pista ya está en la lista"
+                                        : "Añadida a " + playlist.optString("name"),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                }).show();
     }
 
     @Override
