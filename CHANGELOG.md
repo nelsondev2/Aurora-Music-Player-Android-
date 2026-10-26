@@ -2,15 +2,13 @@
 
 Historial de versiones **publicadas** de Aurora Music Player.
 
-## Sin publicar — 1.5.0 · Migración nativa ampliada
+## Sin publicar — 1.5.0 · Interfaz Aurora restaurada
 
-- **Interfaz Java nativa** (`NativeHomeActivity`) para biblioteca, búsqueda, listas y reproducción; el lanzador no abre un WebView.
-- **Persistencia local SQLite** para pistas, metadatos, listas, favoritos, calificaciones y preferencias.
-- **Exportación e importación manual de respaldos ZIP v1**: biblioteca, listas, ajustes y audio accesible; las pistas de MediaStore conservan la referencia original.
-- **Cola Java persistente** con IDs, URI, contexto, reproducción aleatoria y modo de repetición; el servicio guarda periódicamente el estado de la sesión.
-- **Funciones portadas:** letras LRC con editor, sincronización, tamaño, bucle, vista inmersiva y compartir; estrellas, favoritos, estadísticas, temas, acento, idiomas, ecualizador, visualizador, temporizador, carátulas, control de velocidad, repetición A-B, cola editable/guardable y exportación de listas M3U8.
-- **Reproducción Android nativa:** controles multimedia, notificación, reproducción en segundo plano y preparación de la pista siguiente.
-- La APK continúa siendo una sola versión universal con `minSdk 21` (Android 5.0+). `assets/www` permanece como recurso heredado del repositorio, no como interfaz de inicio.
+- **El lanzador vuelve a `MainActivity` y a la interfaz Aurora original** de `assets/www`, recuperando el reproductor visual, portadas, navegación y pantallas web.
+- **El audio sigue usando componentes Android nativos** (`MediaPlayer`, `PlaybackService`, notificación y MediaSession) para reproducción en segundo plano.
+- Se conserva la biblioteca local, MediaStore, importación de audio y coordinación de cola con el motor Android.
+- Se mantienen exportación e importación manual de respaldos ZIP, listas, ajustes y metadatos.
+- La APK sigue siendo única y universal, con `minSdk 21` (Android 5.0+). `NativeHomeActivity` queda retenida, pero deja de ser la pantalla de inicio.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 

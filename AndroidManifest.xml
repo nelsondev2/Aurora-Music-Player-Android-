@@ -16,7 +16,6 @@
     <!-- Reproducción en segundo plano (PlaybackService) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Android 13+ pide permiso en tiempo de ejecución para la notificación -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -38,13 +37,6 @@
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".NativeHomeActivity"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
             android:exported="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
@@ -53,6 +45,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Pantalla nativa anterior retenida mientras se conserva el modo web. -->
+        <activity
+            android:name=".NativeHomeActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Reproducción en segundo plano y controles del sistema. -->
         <service
