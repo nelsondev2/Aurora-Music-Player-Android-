@@ -204,6 +204,11 @@ class NativeAudioElement {
   }
 
   set src(url) {
+    // Cada fuente nueva se carga en pausa. No heredar la intención de play
+    // de la pista anterior: en particular, restaurar sesión al abrir la app
+    // debe limitarse a preparar la canción y no reanudarla accidentalmente.
+    this._wantPlay = false;
+    this._paused = true;
     this._src = url || '';
     this._error = null;
     this._readyState = 0;

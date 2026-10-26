@@ -412,6 +412,8 @@ def check_native_first_play_race():
         fail("errores de reproductores obsoletos o prefetched no deben afectar la pista actual")
     if "if (this._src && !this._loading) this._startLoad();" not in native_audio:
         fail("load() debe evitar duplicar una carga que src ya inició")
+    if "this._wantPlay = false;\n    this._paused = true;\n    this._src = url || '';" not in native_audio:
+        fail("cambiar src debe limpiar la intención de play heredada y cargar en pausa")
     if "const originalUri = track.deviceUri || track.sourceUri" not in native_audio:
         fail("el motor nativo debe reproducir directamente las URI originales accesibles")
     if "const nextUri = next.deviceUri || next.sourceUri" not in native_audio:
