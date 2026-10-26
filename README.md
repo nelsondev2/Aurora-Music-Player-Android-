@@ -13,9 +13,11 @@ El lanzador muestra de nuevo la interfaz completa de Aurora: portada y
 reproductor, inicio, biblioteca, listas, letras y ajustes. La pantalla se
 sirve desde los recursos locales de la APK; no necesita conexión ni servidor.
 
-El audio usa el motor Android `MediaPlayer` y `PlaybackService`, por lo que
-puede seguir sonando al salir de la interfaz. La notificación, la sesión
-multimedia y la cola nativa se coordinan con el reproductor web.
+El audio usa el motor Android `MediaPlayer` y `PlaybackService`. Puede seguir
+sonando si Aurora queda en segundo plano con Home; al salir con Atrás o quitar
+la tarea desde Recientes se pausa y la siguiente apertura queda en pausa. La
+notificación, la sesión multimedia y la cola nativa se coordinan con el
+reproductor web.
 
 ## Funciones
 

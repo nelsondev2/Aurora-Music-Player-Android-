@@ -453,9 +453,17 @@ public class PlaybackService extends Service {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        // En pausa, no hace falta mantener vivo el servicio al quitar la
-        // actividad de la pantalla de recientes.
-        if (!sPlaying) stopSelf();
+        // Al cerrar explícitamente la app desde Recientes no dejar un
+        // reproductor huérfano sonando: al volver, la sesión se restaura
+        // cargada pero pausada. El audio en segundo plano sigue disponible
+        // mientras la actividad solo está oculta (Home/otra app).
+        NativePlayer player = NativePlayerBridge.get(this);
+        sPositionMs = player.position();
+        player.pause();
+        sPlaying = false;
+        applyState();
+        player.stop();
+        stopSelf();
         super.onTaskRemoved(rootIntent);
     }
 

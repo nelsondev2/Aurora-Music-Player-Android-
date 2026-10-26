@@ -343,9 +343,15 @@ def check_multi_selection():
 def check_playback_restore():
     """No reemplazar un MediaPlayer activo y reanudar el WebView al volver."""
     settings = read(os.path.join(WWW, "js", "settings.js"))
+    platform = read(os.path.join(WWW, "js", "platform.js"))
     main = read(os.path.join(SRC, "MainActivity.java"))
+    service = read(os.path.join(SRC, "PlaybackService.java"))
     if "nativeAlreadyPlaying" not in settings or "if (!nativeAlreadyPlaying)" not in settings:
         fail("restoreSession no debe recargar una pista si MediaPlayer ya está sonando")
+    if "this.togglePlay(false)" not in platform or "return 'exit'" not in platform:
+        fail("salir con Atrás debe pausar la música y no reanudarla al abrir")
+    if "public void onTaskRemoved" not in service or "player.stop();" not in service:
+        fail("cerrar la tarea desde Recientes debe detener el reproductor nativo")
     for call in ("webView.onResume()", "webView.resumeTimers()",
                  "webView.onPause()", "webView.pauseTimers()"):
         if call not in main:

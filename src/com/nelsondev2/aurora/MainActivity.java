@@ -230,9 +230,9 @@ public class MainActivity extends Activity {
 
     /**
      * Atrás lo decide la web (assets/www/js/platform.js): cerrar la hoja
-     * abierta, salir de Letras, mantener la app viva si suena música o
-     * cerrar de verdad. Consecuencia útil: pulsar atrás mientras se
-     * escucha algo manda la app al fondo en vez de matar la reproducción.
+     * abierta, salir de Letras o salir de la app. Si suena música al
+     * salir, la web la pausa antes de terminar la actividad; Home sigue
+     * permitiendo reproducción normal en segundo plano.
      */
     @Override
     public void onBackPressed() {
@@ -248,10 +248,6 @@ public class MainActivity extends Activity {
                     public void onReceiveValue(String value) {
                         String answer = value == null ? "" : value.replace("\"", "").trim();
                         if ("handled".equals(answer)) return;
-                        if ("playing".equals(answer)) {
-                            moveTaskToBack(true);
-                            return;
-                        }
                         finish();
                     }
                 });

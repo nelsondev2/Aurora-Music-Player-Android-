@@ -87,9 +87,7 @@ Object.assign(App, {
    *  MainActivity pregunta antes de cerrar nada. Respuestas:
    *    'handled' — se cerró una hoja, la vista de letras o el modo
    *                portada: la actividad no hace nada más.
-   *    'playing' — no había nada que cerrar pero suena audio: la
-   *                actividad pasa al fondo para no cortar la música.
-   *    'exit'    — nada abierto y nada sonando: salir de la app.
+   *    'exit'    — nada abierto; si sonaba audio, se pausa antes de salir.
    * ============================================================ */
   handleAndroidBack() {
     try {
@@ -120,8 +118,14 @@ Object.assign(App, {
         this.showView('player');
         return 'handled';
       }
-      // 5. Nada abierto: si suena música, no cerrar la actividad.
-      if (this.isPlaying) return 'playing';
+      // 5. Salir detiene la reproducción; al volver a abrir la app debe
+      // quedar en pausa, no parecer un autoarranque del motor en segundo plano.
+      const playing = typeof this.isReallyPlaying === 'function'
+        ? this.isReallyPlaying() : this.isPlaying;
+      if (playing) {
+        try { this.togglePlay(false); } catch (e) {}
+        try { this.saveSession(); } catch (e) {}
+      }
       return 'exit';
     } catch (e) {
       return 'exit';

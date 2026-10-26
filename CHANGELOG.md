@@ -11,7 +11,7 @@ Historial de versiones **publicadas** de Aurora Music Player.
 - **La selección múltiple del selector Android ya no pierde canciones**: se recogen todas las URI devueltas en `ClipData`, además del caso de URI única.
 - **El cambio de motor de audio reinicia Aurora de forma segura**: guarda la sesión y vuelve a enlazar el reproductor elegido; antes solo cambiaba la preferencia y podía dejar la interfaz usando el motor anterior.
 - La primera pista importada se prepara en segundo plano para reducir la espera inicial del motor del sistema.
-- **Al volver a abrir Aurora no se reinicia un `MediaPlayer` que sigue sonando** durante la restauración de la sesión; además, el WebView reanuda sus timers al regresar a primer plano.
+- **Al salir explícitamente de Aurora, la reproducción se pausa y la próxima apertura queda en pausa**; cerrar la tarea desde Recientes también detiene el servicio huérfano. Mandar Aurora al fondo con Home sigue permitiendo música en segundo plano. La restauración evita cargar de nuevo sobre un `MediaPlayer` activo y el WebView reanuda sus timers al volver.
 - **El editor de letras puede buscar en LRCLIB** por título y artista; solo muestra letras con marcas de tiempo sincronizadas y las pone en el editor para revisarlas antes de Guardar.
 - La app permite conexión a Internet solo para la búsqueda HTTPS de LRCLIB; las demás solicitudes externas siguen bloqueadas.
 - La APK sigue siendo única y universal, con `minSdk 21` (Android 5.0+). `NativeHomeActivity` queda retenida, pero deja de ser la pantalla de inicio.
