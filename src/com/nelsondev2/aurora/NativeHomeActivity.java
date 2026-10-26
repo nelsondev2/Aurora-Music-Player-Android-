@@ -552,7 +552,8 @@ public class NativeHomeActivity extends Activity {
         if (player.isPlaying()) {
             player.pause();
             PlaybackService.update(currentTrack.optString("title", ""), currentTrack.optString("artist", ""),
-                    currentTrack.optString("album", ""), false, player.duration(), player.position());
+                    currentTrack.optString("album", ""), false,
+                    Math.round(player.duration()), Math.round(player.position()));
         } else {
             if (currentTrack.optString("localAudioUri", "").length() > 0
                     || new NativeAudioStore(this).has(currentTrack.optString("id", ""))) {
@@ -563,7 +564,8 @@ public class NativeHomeActivity extends Activity {
             }
             PlaybackService.ensureRunning(this);
             PlaybackService.update(currentTrack.optString("title", ""), currentTrack.optString("artist", ""),
-                    currentTrack.optString("album", ""), true, player.duration(), player.position());
+                    currentTrack.optString("album", ""), true,
+                    Math.round(player.duration()), Math.round(player.position()));
         }
         updatePlayerControls();
     }
