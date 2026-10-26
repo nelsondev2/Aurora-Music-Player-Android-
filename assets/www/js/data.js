@@ -4051,15 +4051,15 @@ const I18N = {
     'zh-TW': '系統引擎在應用關閉後仍可播放，歌曲之間沒有空隙。應用引擎支援等化器、視覺化與淡入淡出。'
   },
   engine_needs_reload: {
-    es: 'Se aplicará en la próxima reproducción', en: 'Applies on the next playback', pt: 'Aplica-se na próxima reprodução',
-    zh: '将在下次播放时生效', ja: '次回の再生から適用されます', fr: 'S\'applique à la prochaine lecture',
-    it: 'Si applica alla prossima riproduzione', ru: 'Применится при следующем воспроизведении',
-    de: 'Gilt ab der nächsten Wiedergabe',
-    uk: 'Застосується з наступного відтворення',
-    pl: 'Zadziała przy następnym odtwarzaniu',
-    tr: 'Bir sonraki oynatmada geçerli olur',
-    id: 'Berlaku pada pemutaran berikutnya',
-    'zh-TW': '將於下次播放時生效'
+    es: 'Aurora se reiniciará para aplicar el motor de audio', en: 'Aurora will restart to apply the audio engine', pt: 'Aurora será reiniciada para aplicar o motor de áudio',
+    zh: 'Aurora 将重启以应用音频引擎', ja: 'オーディオエンジンを適用するためAuroraを再起動します', fr: 'Aurora va redémarrer pour appliquer le moteur audio',
+    it: 'Aurora verrà riavviata per applicare il motore audio', ru: 'Aurora перезапустится для применения аудиодвижка',
+    de: 'Aurora wird neu gestartet, um die Audio-Engine anzuwenden',
+    uk: 'Aurora перезапуститься, щоб застосувати аудіодвигун',
+    pl: 'Aurora uruchomi się ponownie, aby zastosować silnik audio',
+    tr: 'Ses motorunu uygulamak için Aurora yeniden başlatılacak',
+    id: 'Aurora akan dimulai ulang untuk menerapkan mesin audio',
+    'zh-TW': 'Aurora 將重新啟動以套用音訊引擎'
   },
   engine_fallback: {
     es: 'El motor del sistema no pudo con estas pistas; vuelvo al reproductor de la app',

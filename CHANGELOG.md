@@ -9,6 +9,8 @@ Historial de versiones **publicadas** de Aurora Music Player.
 - Se conserva la biblioteca local, MediaStore, importación de audio y coordinación de cola con el motor Android.
 - Se mantienen exportación e importación manual de respaldos ZIP, listas, ajustes y metadatos.
 - **La selección múltiple del selector Android ya no pierde canciones**: se recogen todas las URI devueltas en `ClipData`, además del caso de URI única.
+- **El cambio de motor de audio reinicia Aurora de forma segura**: guarda la sesión y vuelve a enlazar el reproductor elegido; antes solo cambiaba la preferencia y podía dejar la interfaz usando el motor anterior.
+- La primera pista importada se prepara en segundo plano para reducir la espera inicial del motor del sistema.
 - La APK sigue siendo única y universal, con `minSdk 21` (Android 5.0+). `NativeHomeActivity` queda retenida, pero deja de ser la pantalla de inicio.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo

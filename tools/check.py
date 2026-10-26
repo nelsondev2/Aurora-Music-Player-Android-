@@ -314,6 +314,7 @@ def check_multi_selection():
     library = read(os.path.join(WWW, "js", "library.js"))
     picker = read(os.path.join(WWW, "js", "playlist-edit.js"))
     device = read(os.path.join(WWW, "js", "device-library.js"))
+    events = read(os.path.join(WWW, "js", "events.js"))
 
     if "Intent.EXTRA_ALLOW_MULTIPLE, true" not in main:
         fail("el selector Android no habilita la selección múltiple")
@@ -330,7 +331,11 @@ def check_multi_selection():
     if not any("for (" in line and "clip.getItemCount()" in line
                for line in main.splitlines()):
         fail("ClipData no itera todos los archivos seleccionados")
-    ok.append("selección múltiple: selector Android, importación web y pistas de playlist")
+    if "location.reload()" not in events or "saveSession()" not in events:
+        fail("el cambio de motor debe guardar la sesión y reiniciar el audio elegido")
+    if "NativeAudio.ensureUploaded(" not in library:
+        fail("la primera pista importada no se prepara en segundo plano para el motor nativo")
+    ok.append("selección múltiple, cambio de motor y preparación inicial de audio verificados")
 
 
 # ---------------------------------------------------------------------- i18n

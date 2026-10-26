@@ -240,6 +240,20 @@ Object.assign(App, {
             if (this.shuffle && this._originalQueue) this._originalQueue.push(t.id);
           });
         }
+        // El motor del sistema necesita copiar la primera pista a su caché
+        // privada (MediaPlayer no lee IndexedDB). Calentar solo la primera
+        // en segundo plano evita que el primer toque espere varios segundos;
+        // no bloquea la importación ni intenta copiar toda una biblioteca.
+        if (tracksToAdd.length && typeof this.isNativeAudio === 'function' &&
+            this.isNativeAudio() && window.NativeAudio &&
+            typeof window.NativeAudio.ensureUploaded === 'function') {
+          const firstTrack = tracksToAdd[0];
+          const firstUrl = this.getTrackUrl(firstTrack);
+          window.NativeAudio.ensureUploaded(
+            firstTrack.id, window.NativeAudio.extFor(firstTrack), firstUrl,
+            firstTrack._file || firstTrack.fileBlob || null
+          ).catch((e) => console.warn('[Aurora] preparación anticipada:', e));
+        }
         this.renderPlaylists();
         this.renderQueue();
         this.renderFavorites();

@@ -280,6 +280,16 @@ Object.assign(App, {
           if (chosen === this._engine) return;
           this.setAudioEngine(chosen);
           this.toast(this.t('engine_needs_reload'));
+          // El elemento <audio> o NativeAudioElement se elige al arrancar;
+          // cambiar solo _engine deja ambos motores desincronizados. Guardar
+          // el punto actual y reiniciar para crear/cablear el motor elegido.
+          try { if (this.audio) this.audio.pause(); } catch (e) {}
+          const reload = () => setTimeout(() => location.reload(), 350);
+          try {
+            if (typeof this.saveSession === 'function') {
+              Promise.resolve(this.saveSession()).then(reload, reload);
+            } else reload();
+          } catch (e) { reload(); }
         });
       });
       document.querySelectorAll('[data-transition]').forEach(b => {
