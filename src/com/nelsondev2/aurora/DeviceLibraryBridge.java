@@ -3,6 +3,7 @@ package com.nelsondev2.aurora;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -10,6 +11,7 @@ import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
@@ -46,6 +48,98 @@ class DeviceLibraryBridge {
 
     private Context context() {
         return activity;
+    }
+
+    /**
+     * Empieza el lote de selección de archivos de una importación. Las URI se
+     * asocian por nombre y tamaño al File que entrega el WebView; si la clave
+     * no es única, JS no recibe ninguna URI para evitar escribir otra canción.
+     */
+    synchronized void beginPickedBatch() {
+        context().getSharedPreferences("picked_audio_sources", Context.MODE_PRIVATE)
+                .edit().clear().apply();
+    }
+
+    synchronized void rememberPickedUri(Uri uri) {
+        if (uri == null) return;
+        ContentResolver resolver = context().getContentResolver();
+        Cursor cursor = null;
+        try {
+            cursor = resolver.query(uri,
+                    new String[]{OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE},
+                    null, null, null);
+            if (cursor == null || !cursor.moveToFirst()) return;
+            String name = cursor.getString(0);
+            long size = cursor.isNull(1) ? -1 : cursor.getLong(1);
+            if (name == null || name.length() == 0 || size < 0) return;
+            String key = sourceKey(name, size);
+            SharedPreferences prefs = context().getSharedPreferences(
+                    "picked_audio_sources", Context.MODE_PRIVATE);
+            String encoded = prefs.getString(key, "[]");
+            JSONArray values = new JSONArray(encoded);
+            for (int i = 0; i < values.length(); i++) {
+                if (uri.toString().equals(values.optString(i))) return;
+            }
+            values.put(uri.toString());
+            prefs.edit().putString(key, values.toString()).apply();
+        } catch (Exception e) {
+            Log.w(TAG, "No se pudo recordar la URI seleccionada: " + e);
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+    }
+
+    @JavascriptInterface
+    public synchronized String originalUriFor(String displayName, long size) {
+        if (displayName == null || size < 0) return "";
+        try {
+            String encoded = context().getSharedPreferences(
+                    "picked_audio_sources", Context.MODE_PRIVATE)
+                    .getString(sourceKey(displayName, size), "[]");
+            JSONArray values = new JSONArray(encoded);
+            return values.length() == 1 ? values.getString(0) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    @JavascriptInterface
+    public String readLyricsFromMp3(String uri) {
+        JSONObject out = new JSONObject();
+        try {
+            String lyrics = Mp3LyricsWriter.read(context(), Uri.parse(uri));
+            out.put("ok", true);
+            out.put("lyrics", lyrics == null ? JSONObject.NULL : lyrics);
+        } catch (Exception e) {
+            try {
+                out.put("ok", false);
+                out.put("code", e.getMessage() == null ? "read_failed" : e.getMessage());
+            } catch (Exception ignored) {
+            }
+        }
+        return out.toString();
+    }
+
+    @JavascriptInterface
+    public String writeLyricsToMp3(String uri, String lyrics) {
+        JSONObject out = new JSONObject();
+        try {
+            Mp3LyricsWriter.write(context(), Uri.parse(uri), lyrics);
+            out.put("ok", true);
+        } catch (Exception e) {
+            String code = e.getMessage();
+            if (code == null || code.length() == 0) code = "write_failed";
+            try {
+                out.put("ok", false);
+                out.put("code", code);
+            } catch (Exception ignored) {
+            }
+        }
+        return out.toString();
+    }
+
+    private static String sourceKey(String name, long size) {
+        return "source:" + name.trim().toLowerCase(java.util.Locale.ROOT) + ":" + size;
     }
 
     /** Permiso de lectura de audio: READ_MEDIA_AUDIO desde Android 13. */

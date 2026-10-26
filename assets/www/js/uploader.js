@@ -224,6 +224,7 @@
         lrc: meta.lrc,
         fileSize: file.size,
         fileName: file.name,
+        sourceUri: file._auroraSourceUri || null,
         addedAt: Date.now(),
         _file: file
       };
@@ -684,6 +685,7 @@
         lrc: null,
         fileSize: file.size,
         fileName: file.name,
+        sourceUri: file._auroraSourceUri || null,
         addedAt: Date.now(),
         _file: file
       };

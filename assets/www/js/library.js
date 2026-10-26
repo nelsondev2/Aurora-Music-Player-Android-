@@ -101,6 +101,17 @@ Object.assign(App, {
         }
         return;
       }
+      // WebView entrega un File legible, pero no la URI escribible de origen.
+      // MainActivity conserva la URI seleccionada por SAF; solo la asocia si
+      // nombre+tamaño identifican un único archivo (nunca adivinar duplicados).
+      if (window.AuroraDevice && typeof window.AuroraDevice.originalUriFor === 'function') {
+        mediaFiles.forEach(file => {
+          try {
+            const uri = window.AuroraDevice.originalUriFor(file.name || '', Number(file.size) || 0);
+            if (uri) file._auroraSourceUri = uri;
+          } catch (e) {}
+        });
+      }
       const count = mediaFiles.length;
       this._importCancelled = false;
       this.showImportOverlay(0, count, '');
@@ -127,6 +138,12 @@ Object.assign(App, {
           const existing = byKey.get(this._dupKey(t.fileName, t.fileSize)) || null;
           if (existing) {
             dupCount++;
+            // Reimportar el mismo audio puede aportar una URI SAF escribible
+            // que la ficha anterior todavía no tenía (o renovar un permiso).
+            if (t.sourceUri && existing.sourceUri !== t.sourceUri) {
+              existing.sourceUri = t.sourceUri;
+              this.persistTrack(existing);
+            }
             if (t.src && t.src.startsWith('blob:')) {
               URL.revokeObjectURL(t.src);
             }

@@ -74,6 +74,7 @@ def check_android_project():
         "src/com/nelsondev2/aurora/NativeAudioStore.java",
         "src/com/nelsondev2/aurora/PlayQueue.java",
         "src/com/nelsondev2/aurora/DeviceLibraryBridge.java",
+        "src/com/nelsondev2/aurora/Mp3LyricsWriter.java",
         "src/com/nelsondev2/aurora/PlaybackService.java",
         "src/com/nelsondev2/aurora/WebApp.java",
         "src/com/nelsondev2/aurora/ShareProvider.java",
@@ -273,7 +274,7 @@ def check_bridge():
     # native-audio.js (motor nativo) e init.js (limpieza de la caché).
     js = "".join(read(os.path.join(WWW, "js", name))
                  for name in ("platform.js", "native-audio.js", "init.js",
-                              "device-library.js", "library.js"))
+                              "device-library.js", "library.js", "lyrics.js"))
     pairs = [
         ("AuroraAndroid", "B", "AuroraBridge.java"),
         ("AuroraMedia", "M", "AuroraMediaBridge.java"),
@@ -399,6 +400,31 @@ def check_browse_playlist_add():
     ok.append("adición de álbum/artista completo a playlist")
 
 
+# -------------------------------------------------------------- original LRC write
+
+def check_original_lrc_write():
+    """LRC en Android debe ir al archivo original, no solo a IndexedDB."""
+    main = read(os.path.join(SRC, "MainActivity.java"))
+    device = read(os.path.join(SRC, "DeviceLibraryBridge.java"))
+    writer = read(os.path.join(SRC, "Mp3LyricsWriter.java"))
+    lyrics = read(os.path.join(WWW, "js", "lyrics.js"))
+    library = read(os.path.join(WWW, "js", "library.js"))
+    uploader = read(os.path.join(WWW, "js", "uploader.js"))
+    if "Intent.ACTION_OPEN_DOCUMENT" not in main or "takePersistableUriPermission" not in main:
+        fail("el selector debe conservar URI de origen y permisos SAF cuando el proveedor lo permite")
+    if ("originalUriFor" not in device or "readLyricsFromMp3" not in device
+            or "writeLyricsToMp3" not in device):
+        fail("AuroraDevice debe exponer URI original y lectura/escritura nativa de LRC")
+    if "USLT" not in writer or "SYLT" not in writer or 'openOutputStream(uri, \"wt\")' not in writer:
+        fail("el escritor debe incrustar letras ID3 en el MP3 original")
+    if ("writeLyricsToMp3" not in lyrics or "readLyricsFromMp3" not in lyrics
+            or "lrc_original_unavailable" not in lyrics):
+        fail("el editor debe leer y escribir LRC del original cuando hay URI")
+    if "originalUriFor" not in library or "sourceUri: file._auroraSourceUri" not in uploader:
+        fail("la importación debe conservar la URI original asociada a la pista")
+    ok.append("acceso nativo al original y LRC MP3 en ID3 (USLT/SYLT)")
+
+
 # ---------------------------------------------------------------------- i18n
 def check_i18n():
     data = read(os.path.join(WWW, "js", "data.js"))
@@ -464,6 +490,7 @@ def main():
     check_playback_restore()
     check_lrclib_search()
     check_browse_playlist_add()
+    check_original_lrc_write()
     check_i18n()
 
     for line in ok:

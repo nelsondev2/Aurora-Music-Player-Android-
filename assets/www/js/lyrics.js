@@ -191,6 +191,28 @@ Object.assign(App, {
     /* ============================================================
      *  Render de letras con todas las mejoras
      * ============================================================ */
+    loadLyricsFromOriginal(track) {
+      if (!track || track._originalLyricsChecked) return;
+      const bridge = window.AuroraDevice;
+      const uri = track.deviceUri || track.sourceUri;
+      if (!uri || !bridge || typeof bridge.readLyricsFromMp3 !== 'function') return;
+      track._originalLyricsChecked = true;
+      setTimeout(() => {
+        try {
+          const result = JSON.parse(bridge.readLyricsFromMp3(uri) || '{}');
+          if (!result.ok || typeof result.lyrics !== 'string' || !result.lyrics.trim()) return;
+          if (this.currentTrack !== track || (track.lrc && track.lrc.length)) return;
+          track.lrc = result.lyrics.split(/\r?\n/);
+          track._lrcCache = null;
+          this.persistTrack(track);
+          this.renderLyrics();
+          if (typeof this._syncLyricsButton === 'function') this._syncLyricsButton();
+        } catch (e) {
+          console.warn('[Aurora] No se pudieron leer letras del archivo original:', e);
+        }
+      }, 0);
+    },
+
     renderLyrics() {
       const cont = document.getElementById('lyricsContent');
       if (!cont) return;
@@ -202,6 +224,7 @@ Object.assign(App, {
       if (scroll) scroll.style.setProperty('--lrc-font-size', this._lrcFontCss());
 
       if (!t || !t.lrc || (Array.isArray(t.lrc) && t.lrc.length === 0)) {
+        if (t) this.loadLyricsFromOriginal(t);
         this.lrcLines = [];
         this.lrcHasTimed = false;
         this._setLyricsEmpty(true);
@@ -594,20 +617,52 @@ Object.assign(App, {
       }
     },
 
-    saveLrcFromEditor() {
+    async saveLrcFromEditor() {
       const ta = document.getElementById('lrcEditorText');
       if (!ta || !this.currentTrack) return;
+      const track = this.currentTrack;
       const text = ta.value.trim();
-      if (!text) {
-        this.currentTrack.lrc = null;
-      } else {
-        this.currentTrack.lrc = text.split(/\r?\n/);
+      const androidFiles = window.AuroraDevice;
+      let embeddedInOriginal = false;
+      if (androidFiles && typeof androidFiles.writeLyricsToMp3 === 'function') {
+        const uri = track.deviceUri || track.sourceUri;
+        if (!uri) {
+          this.toast(this.t('lrc_original_unavailable'));
+          return;
+        }
+        const button = document.getElementById('btnLrcSave');
+        if (button) button.disabled = true;
+        try {
+          const raw = androidFiles.writeLyricsToMp3(uri, text);
+          const result = JSON.parse(raw || '{}');
+          if (!result.ok) {
+            let message;
+            if (result.code === 'write_denied') message = this.t('lrc_original_permission_denied');
+            else if (result.code === 'format_unsupported' || result.code === 'tag_unsupported') {
+              message = this.t('lrc_original_format_unsupported');
+            } else message = this.t('lrc_original_write_error');
+            this.toast(message);
+            return;
+          }
+          embeddedInOriginal = true;
+        } catch (e) {
+          console.warn('[Aurora] No se pudo incrustar la letra en el original:', e);
+          this.toast(this.t('lrc_original_write_error'));
+          return;
+        } finally {
+          if (button) button.disabled = false;
+        }
       }
-      this.currentTrack._lrcCache = null;
-      this.persistTrack(this.currentTrack);
+      if (!text) {
+        track.lrc = null;
+      } else {
+        track.lrc = text.split(/\r?\n/);
+      }
+      track._lrcCache = null;
+      try { await this.persistTrack(track); } catch (e) {}
       this.renderLyrics();
       this.closeSheet('sheetLrcEditor');
-      this.toast(this.t('lrc_saved'));
+      this.toast(embeddedInOriginal ? this.t('lrc_original_saved') : this.t('lrc_saved'));
       if (typeof this._syncLyricsButton === 'function') this._syncLyricsButton();
     },
 

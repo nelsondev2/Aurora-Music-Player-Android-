@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private ValueCallback<Uri[]> pendingFileCallback;
+    private DeviceLibraryBridge deviceLibraryBridge;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -109,7 +110,8 @@ public class MainActivity extends Activity {
         w.addJavascriptInterface(new AuroraBridge(this), "AuroraAndroid");
         w.addJavascriptInterface(new AuroraMediaBridge(this), "AuroraMedia");
         w.addJavascriptInterface(new NativePlayerBridge(this), "AuroraNativePlayer");
-        w.addJavascriptInterface(new DeviceLibraryBridge(this), "AuroraDevice");
+        deviceLibraryBridge = new DeviceLibraryBridge(this);
+        w.addJavascriptInterface(deviceLibraryBridge, "AuroraDevice");
     }
 
     /**
@@ -168,18 +170,41 @@ public class MainActivity extends Activity {
         }
         pendingFileCallback = callback;
 
-        Intent intent = null;
+        Intent original = null;
         try {
-            if (params != null) intent = params.createIntent();
+            if (params != null) original = params.createIntent();
         } catch (Exception ignored) {
         }
-        if (intent == null) {
-            intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("*/*");
-        }
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        if (Build.VERSION.SDK_INT >= 18) {
-            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        Intent intent;
+        // ACTION_OPEN_DOCUMENT can retain the grant to the selected original
+        // file. Keep folder-selection mode on the WebView's original flow.
+        int mode = -1;
+        try { if (params != null) mode = params.getMode(); } catch (Exception ignored) {}
+        if (Build.VERSION.SDK_INT >= 19 && mode != 3) {
+            intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            String type = original == null ? null : original.getType();
+            intent.setType(type == null || type.length() == 0 ? "*/*" : type);
+            boolean allowMultiple = mode == 1;
+            if (original != null) {
+                String[] mimeTypes = original.getStringArrayExtra(Intent.EXTRA_MIME_TYPES);
+                if (mimeTypes != null && mimeTypes.length > 0) {
+                    intent.setType("*/*");
+                    intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+                }
+                if (original.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)) allowMultiple = true;
+                String title = original.getStringExtra(Intent.EXTRA_TITLE);
+                if (title != null) intent.putExtra(Intent.EXTRA_TITLE, title);
+            }
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        } else {
+            intent = original == null ? new Intent(Intent.ACTION_GET_CONTENT) : original;
+            if (intent.getType() == null) intent.setType("*/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            if (Build.VERSION.SDK_INT >= 18) intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         }
         try {
             startActivityForResult(intent, REQ_FILE_CHOOSER);
@@ -219,7 +244,20 @@ public class MainActivity extends Activity {
                         }
                     }
                 }
-                if (!selected.isEmpty()) result = selected.toArray(new Uri[selected.size()]);
+                if (!selected.isEmpty()) {
+                    result = selected.toArray(new Uri[selected.size()]);
+                    if (deviceLibraryBridge != null) deviceLibraryBridge.beginPickedBatch();
+                    int grantFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    for (Uri uri : result) {
+                        if (Build.VERSION.SDK_INT >= 19 && grantFlags != 0 &&
+                                (data.getFlags() & Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) != 0) {
+                            try { getContentResolver().takePersistableUriPermission(uri, grantFlags); }
+                            catch (Exception ignored) { /* provider may not support persistent grants */ }
+                        }
+                        if (deviceLibraryBridge != null) deviceLibraryBridge.rememberPickedUri(uri);
+                    }
+                }
             }
             pendingFileCallback.onReceiveValue(result);
             pendingFileCallback = null;
