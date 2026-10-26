@@ -124,33 +124,52 @@ Object.assign(App, {
           };
         }
 
-        // Cargar la pista en el audio SIN reproducir (el usuario debe tocar
-        // play). Se resuelve la URL con getTrackUrl(): asignar
-        // currentTrack.src a ciegas convertía las pistas restauradas de
-        // una copia (sin blob todavía) en la URL literal «undefined».
-        const restoreUrl = typeof this.getTrackUrl === 'function'
-          ? this.getTrackUrl(this.currentTrack)
-          : (this.currentTrack && this.currentTrack.src) || null;
-        if (this.audio) {
-          if (restoreUrl) {
-            this.audio.src = restoreUrl;
-            this.audio.load();
-            // Restaurar posición cuando los metadatos carguen
-            const restoreTime = Number(session.currentTime) || 0;
-            const onMeta = () => {
-              try {
-                if (restoreTime > 0 && restoreTime < (this.audio.duration || 0)) {
-                  this.audio.currentTime = restoreTime;
-                }
-              } catch (e) {}
-              this.updateProgress();
-              this.audio.removeEventListener('loadedmetadata', onMeta);
-            };
-            this.audio.addEventListener('loadedmetadata', onMeta);
-          } else {
-            // Sin audio enlazado: el elemento queda limpio y en pausa;
-            // loadAndPlay() avisará y saltará al reproducir.
-            try { this.audio.removeAttribute('src'); this.audio.load(); } catch (e) {}
+        // Si Android mantuvo MediaPlayer sonando en segundo plano, no volver
+        // a cargar la sesión guardada sobre él: load() libera el MediaPlayer
+        // que ya está reproduciendo mientras la página se conecta al servicio.
+        // La foto viva del motor se sincroniza después desde init().
+        let nativeAlreadyPlaying = false;
+        if (typeof this.isNativeAudio === 'function' && this.isNativeAudio() &&
+            window.NativeAudio && typeof window.NativeAudio.snapshot === 'function') {
+          try {
+            const nativeState = window.NativeAudio.snapshot();
+            nativeAlreadyPlaying = !!(nativeState && nativeState.playing);
+            if (nativeAlreadyPlaying && window.NativeAudio.element) {
+              window.NativeAudio.element._position = (Number(nativeState.position) || 0) / 1000;
+              window.NativeAudio.element._duration = (Number(nativeState.duration) || 0) / 1000;
+              window.NativeAudio.element._wantPlay = true;
+              window.NativeAudio.element._paused = false;
+            }
+          } catch (e) {}
+        }
+
+        // Solo cargar la pista guardada si el motor nativo no sigue sonando.
+        // Se resuelve desde el blob: las URL blob antiguas no sobreviven al
+        // reinicio del WebView.
+        if (!nativeAlreadyPlaying) {
+          const restoreUrl = typeof this.getTrackUrl === 'function'
+            ? this.getTrackUrl(this.currentTrack)
+            : (this.currentTrack && this.currentTrack.src) || null;
+          if (this.audio) {
+            if (restoreUrl) {
+              this.audio.src = restoreUrl;
+              this.audio.load();
+              // Restaurar posición cuando los metadatos carguen.
+              const restoreTime = Number(session.currentTime) || 0;
+              const onMeta = () => {
+                try {
+                  if (restoreTime > 0 && restoreTime < (this.audio.duration || 0)) {
+                    this.audio.currentTime = restoreTime;
+                  }
+                } catch (e) {}
+                this.updateProgress();
+                this.audio.removeEventListener('loadedmetadata', onMeta);
+              };
+              this.audio.addEventListener('loadedmetadata', onMeta);
+            } else {
+              // Sin audio enlazado: dejar el elemento limpio y en pausa.
+              try { this.audio.removeAttribute('src'); this.audio.load(); } catch (e) {}
+            }
           }
         }
 

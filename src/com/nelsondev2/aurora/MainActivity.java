@@ -258,6 +258,24 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) {
+            webView.onResume();
+            webView.resumeTimers();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        if (webView != null) {
+            webView.onPause();
+            webView.pauseTimers();
+        }
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
         // Si el reproductor nativo está sonando, la música NO depende del
         // WebView: se deja el servicio (y su notificación) en pie.

@@ -338,6 +338,21 @@ def check_multi_selection():
     ok.append("selección múltiple, cambio de motor y preparación inicial de audio verificados")
 
 
+# ------------------------------------------------------------ restore audio
+
+def check_playback_restore():
+    """No reemplazar un MediaPlayer activo y reanudar el WebView al volver."""
+    settings = read(os.path.join(WWW, "js", "settings.js"))
+    main = read(os.path.join(SRC, "MainActivity.java"))
+    if "nativeAlreadyPlaying" not in settings or "if (!nativeAlreadyPlaying)" not in settings:
+        fail("restoreSession no debe recargar una pista si MediaPlayer ya está sonando")
+    for call in ("webView.onResume()", "webView.resumeTimers()",
+                 "webView.onPause()", "webView.pauseTimers()"):
+        if call not in main:
+            fail("MainActivity debe sincronizar el ciclo de vida del WebView: falta %s" % call)
+    ok.append("restauración sin reiniciar el audio nativo y ciclo de vida WebView")
+
+
 # ---------------------------------------------------------------------- i18n
 def check_i18n():
     data = read(os.path.join(WWW, "js", "data.js"))
@@ -400,6 +415,7 @@ def main():
     check_java_shapes()
     check_bridge()
     check_multi_selection()
+    check_playback_restore()
     check_i18n()
 
     for line in ok:
