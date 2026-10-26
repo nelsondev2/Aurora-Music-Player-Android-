@@ -115,6 +115,7 @@ public class NativeHomeActivity extends Activity {
     private int lyricsFontSize = 23;
     private int lastLyricsIndex = -2;
     private int originalSystemUiVisibility;
+    private Typeface displayTypeface;
     private String themeName = "dark";
     private String languageCode = "es";
     private final Set<String> favorites = new HashSet<String>();
@@ -163,6 +164,8 @@ public class NativeHomeActivity extends Activity {
         database = new NativeLibraryDatabase(this);
         player = new NativePlayerBridge(this);
         NativeText.load(this);
+        try { displayTypeface = Typeface.createFromAsset(getAssets(), "www/fonts/outfit-latin-700.woff2"); }
+        catch (Exception ignored) { displayTypeface = null; }
         loadPreferences();
         applyThemeColors();
         buildInterface();
@@ -869,6 +872,7 @@ public class NativeHomeActivity extends Activity {
         wordmark.setOrientation(LinearLayout.VERTICAL);
         wordmark.setGravity(Gravity.CENTER_VERTICAL);
         TextView brand = text(NativeText.text(this, "app_title"), 22, TEXT, true);
+        if (displayTypeface != null) brand.setTypeface(displayTypeface);
         brand.setLetterSpacing(-0.025f);
         TextView brandSub = text("M U S I C   P L A Y E R", 8, MUTED, true);
         wordmark.addView(brand);
@@ -1016,6 +1020,7 @@ public class NativeHomeActivity extends Activity {
         currentInfo.setOrientation(LinearLayout.VERTICAL);
         currentInfo.setPadding(dp(12), 0, 0, 0);
         titleLine = text(NativeText.text(this, "load_track_to_start"), 16, TEXT, true);
+        if (displayTypeface != null) titleLine.setTypeface(displayTypeface);
         artistLine = text(NativeText.text(this, "your_library"), 13, MUTED, false);
         currentInfo.addView(titleLine);
         currentInfo.addView(artistLine);
@@ -1918,6 +1923,7 @@ public class NativeHomeActivity extends Activity {
         page.addView(artFrame, artParams);
 
         fullPlayerTitle = text("", 24, TEXT, true);
+        if (displayTypeface != null) fullPlayerTitle.setTypeface(displayTypeface);
         fullPlayerTitle.setGravity(Gravity.CENTER);
         fullPlayerTitle.setMaxLines(2);
         fullPlayerTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -2535,6 +2541,7 @@ public class NativeHomeActivity extends Activity {
                 if (favorites.contains(item.optString("id"))) subtitle += "   ♥";
             }
             TextView titleView = text(title, 14, isCurrent ? ACCENT : TEXT, true);
+            if (displayTypeface != null) titleView.setTypeface(displayTypeface);
             titleView.setMaxLines(1);
             titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
             TextView subtitleView = text(subtitle, 11, MUTED, false);
