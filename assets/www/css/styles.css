@@ -2598,6 +2598,24 @@ svg { display: block; }
 .primary-btn.ghost:active { background: var(--surface-2); }
 .primary-btn.ghost .ico { width: 13px; height: 13px; }
 
+/* Selector de destino para añadir un álbum o artista completo. */
+.browse-playlist-list { margin-bottom: 12px; }
+.browse-playlist-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-1);
+  text-align: left;
+  font-size: var(--fs-ui);
+  font-weight: 600;
+}
+.browse-playlist-option:active { background: var(--surface-2); }
+
 /* Botón "Quitar de la lista" en editar playlist */
 #editPlaylistTracks .remove-from-pl {
   color: var(--text-3);

@@ -381,6 +381,24 @@ def check_lrclib_search():
     ok.append("búsqueda LRCLIB restringida a HTTPS y resultados sincronizados")
 
 
+# ---------------------------------------------------------- browse playlist add
+
+def check_browse_playlist_add():
+    """El browse permite elegir destino y añadir sus pistas en bloque."""
+    html = read(os.path.join(WWW, "index.html"))
+    playlist_edit = read(os.path.join(WWW, "js", "playlist-edit.js"))
+    events = read(os.path.join(WWW, "js", "events.js"))
+    if 'id="btnAddBrowseToPlaylist"' not in html or 'id="sheetBrowsePlaylistPicker"' not in html:
+        fail("la vista de álbum/artista debe ofrecer el selector de playlist")
+    if "openBrowsePlaylistPicker()" not in playlist_edit or "addBrowseTracksToPlaylist(playlistId)" not in playlist_edit:
+        fail("el selector debe añadir las pistas de browse a la playlist elegida")
+    if "this.browseTracksSorted().map(track => track.id)" not in playlist_edit:
+        fail("la adición en bloque debe respetar el orden visible de la vista")
+    if "btnAddBrowseToPlaylist" not in events or "btnBrowseCreatePlaylist" not in events:
+        fail("las acciones del selector de destino deben estar conectadas")
+    ok.append("adición de álbum/artista completo a playlist")
+
+
 # ---------------------------------------------------------------------- i18n
 def check_i18n():
     data = read(os.path.join(WWW, "js", "data.js"))
@@ -445,6 +463,7 @@ def main():
     check_multi_selection()
     check_playback_restore()
     check_lrclib_search()
+    check_browse_playlist_add()
     check_i18n()
 
     for line in ok:

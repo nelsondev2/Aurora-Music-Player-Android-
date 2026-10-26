@@ -507,6 +507,58 @@ Object.assign(App, {
     this.openSheet('sheetPickTracks');
   },
 
+  /* Elige una playlist para añadir todas las pistas de la vista abierta. */
+  openBrowsePlaylistPicker() {
+    const tracks = this.browseTracksSorted();
+    if (!tracks.length) {
+      this.toast(this.t('toast_playlist_empty'));
+      return;
+    }
+    const list = document.getElementById('browsePlaylistOptions');
+    const empty = document.getElementById('browsePlaylistEmpty');
+    if (!list) return;
+    list.innerHTML = '';
+    const playlists = (this.playlists || []).filter(pl => pl && pl.id);
+    if (empty) empty.style.display = playlists.length ? 'none' : '';
+    playlists.forEach(pl => {
+      const li = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'browse-playlist-option';
+      button.textContent = pl.name || this.t('create_playlist_title');
+      button.addEventListener('click', () => this.addBrowseTracksToPlaylist(pl.id));
+      li.appendChild(button);
+      list.appendChild(li);
+    });
+    this.openSheet('sheetBrowsePlaylistPicker');
+  },
+
+  async addBrowseTracksToPlaylist(playlistId) {
+    const pl = (this.playlists || []).find(item => item.id === playlistId);
+    const ids = this.browseTracksSorted().map(track => track.id);
+    if (!pl || !ids.length) return;
+    pl.trackIds = Array.isArray(pl.trackIds) ? pl.trackIds : [];
+    const available = new Set((this.tracks || []).map(track => track.id));
+    let added = 0;
+    ids.forEach(id => {
+      if (available.has(id) && !pl.trackIds.includes(id)) {
+        pl.trackIds.push(id);
+        added++;
+      }
+    });
+    if (typeof this._invalidatePlaylistCover === 'function') this._invalidatePlaylistCover(pl);
+    try { await this.persistPlaylist(pl); } catch (e) {}
+    this.closeSheet('sheetBrowsePlaylistPicker');
+    this.toast(added ? this.t('toast_pick_added').replace('X', String(added)) : this.t('pick_none_left'));
+    try { this.renderPlaylists(); } catch (e) {}
+    try { if (typeof this.renderHome === 'function') this.renderHome(); } catch (e) {}
+    if (this._editingPlaylistId === pl.id) this.renderEditPlaylist();
+    if (this.playContext && this.playContext.type === 'playlist' && this.playContext.id === pl.id) {
+      if (typeof this._syncQueueWithPlaylist === 'function') this._syncQueueWithPlaylist();
+      if (typeof this.syncNativeQueue === 'function') this.syncNativeQueue();
+    }
+  },
+
   /* Cambia entre «Biblioteca» y «Del móvil». */
   setPickSource(src) {
     const next = src === 'device' ? 'device' : 'library';

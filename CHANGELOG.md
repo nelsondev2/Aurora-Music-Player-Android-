@@ -13,6 +13,7 @@ Historial de versiones **publicadas** de Aurora Music Player.
 - La primera pista importada se prepara en segundo plano para reducir la espera inicial del motor del sistema.
 - **Al salir explícitamente de Aurora, la reproducción se pausa y la próxima apertura queda en pausa**; cerrar la tarea desde Recientes también detiene el servicio huérfano. Mandar Aurora al fondo con Home sigue permitiendo música en segundo plano. La restauración evita cargar de nuevo sobre un `MediaPlayer` activo y el WebView reanuda sus timers al volver.
 - **El editor de letras puede buscar en LRCLIB** por título y artista; solo muestra letras con marcas de tiempo sincronizadas y las pone en el editor para revisarlas antes de Guardar.
+- **Desde la vista de un álbum o artista se pueden añadir todas sus pistas a una playlist de una vez**: se elige el destino, se conservan el orden visible y las canciones que ya estaban en la lista, y también se puede crear una playlist nueva en el mismo flujo.
 - La app permite conexión a Internet solo para la búsqueda HTTPS de LRCLIB; las demás solicitudes externas siguen bloqueadas.
 - La APK sigue siendo única y universal, con `minSdk 21` (Android 5.0+). `NativeHomeActivity` queda retenida, pero deja de ser la pantalla de inicio.
 

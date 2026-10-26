@@ -1058,6 +1058,10 @@
                 <p id="browseSubtitle">—</p>
               </div>
             </div>
+            <button class="primary-btn ghost" id="btnAddBrowseToPlaylist" type="button">
+              <svg class="ico" aria-hidden="true"><use href="#i-plus"></use></svg>
+              <span data-i18n="add_to_playlist">Añadir a playlist</span>
+            </button>
             <div class="pl-sort-row">
               <span class="pl-sort-label" data-i18n="sort_label">Orden</span>
               <select id="browseSortSelect" class="aurora-select">
@@ -1071,6 +1075,29 @@
               </select>
             </div>
             <ul class="track-list" id="browseTracks"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Elegir destino para añadir el álbum/artista abierto completo. -->
+      <div class="sheet sheet-full" id="sheetBrowsePlaylistPicker">
+        <div class="sheet-backdrop" data-close-sheet="sheetBrowsePlaylistPicker"></div>
+        <div class="sheet-panel">
+          <div class="sheet-handle"></div>
+          <header class="sheet-header" role="presentation">
+            <button class="icon-btn-sm" data-close-sheet="sheetBrowsePlaylistPicker" data-i18n-aria="close_btn" aria-label="Cerrar"><svg class="ico" aria-hidden="true"><use href="#i-xmark"></use></svg></button>
+            <h3 data-i18n="choose_playlist">Elegir playlist</h3>
+            <span class="sheet-header-spacer" aria-hidden="true"></span>
+          </header>
+          <div class="sheet-body">
+            <ul class="playlist-list browse-playlist-list" id="browsePlaylistOptions"></ul>
+            <div class="empty-state" id="browsePlaylistEmpty" style="display:none">
+              <p data-i18n="no_playlists_yet">Sin listas todavía</p>
+            </div>
+            <button class="primary-btn ghost" id="btnBrowseCreatePlaylist" type="button">
+              <svg class="ico" aria-hidden="true"><use href="#i-plus"></use></svg>
+              <span data-i18n="create_playlist_title">Nueva playlist</span>
+            </button>
           </div>
         </div>
       </div>

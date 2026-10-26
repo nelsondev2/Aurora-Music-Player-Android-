@@ -470,7 +470,7 @@ Object.assign(App, {
       // añaden luego desde la vista de edición) o guarda la cola.
       // (: el modo «añadir a existente» desde esta hoja y su
       // selector de pistas eran inalcanzables desde la.)
-      $('btnSavePlaylist').addEventListener('click', () => {
+      $('btnSavePlaylist').addEventListener('click', async () => {
 
         // modo «guardar cola como lista»: la lista nace con la
         // cola entera en su orden exacto (sort='added').
@@ -499,7 +499,13 @@ Object.assign(App, {
         if (!created) return; // nombre duplicado: createPlaylist ya avisó
         $('playlistName').value = '';
         $('playlistDesc').value = '';
+        const addBrowseTracks = this._createBrowsePlaylistTarget === true;
+        this._createBrowsePlaylistTarget = false;
         this.closeSheet('sheetCreatePlaylist');
+        if (addBrowseTracks) {
+          await this.addBrowseTracksToPlaylist(created.id);
+          return;
+        }
         //  desde esta hoja la lista siempre nace vacía (sin
         // selector de pistas); antes había un toast alternativo
         // para «creada con pistas» que ya nunca podía sonar.
@@ -591,6 +597,14 @@ Object.assign(App, {
 
       const btnPlayBrowse = document.getElementById('btnPlayBrowse');
       if (btnPlayBrowse) btnPlayBrowse.addEventListener('click', () => this.playBrowse());
+      const btnAddBrowseToPlaylist = document.getElementById('btnAddBrowseToPlaylist');
+      if (btnAddBrowseToPlaylist) btnAddBrowseToPlaylist.addEventListener('click', () => this.openBrowsePlaylistPicker());
+      const btnBrowseCreatePlaylist = document.getElementById('btnBrowseCreatePlaylist');
+      if (btnBrowseCreatePlaylist) btnBrowseCreatePlaylist.addEventListener('click', () => {
+        this.closeSheet('sheetBrowsePlaylistPicker');
+        this._createBrowsePlaylistTarget = true;
+        this.openCreatePlaylistSheet();
+      });
 
       // Favorito desde el menú de pista: funciona sin abrir el reproductor
       // y para cualquier pista, no solo la que está sonando.

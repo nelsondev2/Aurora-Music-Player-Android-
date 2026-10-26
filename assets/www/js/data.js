@@ -1218,6 +1218,20 @@ const I18N = {
     id: 'Lagu, artis, atau album',
     'zh-TW': '歌曲、藝術家或專輯'
   },
+  add_to_playlist: {
+    es: 'Añadir a playlist', en: 'Add to playlist', pt: 'Adicionar à playlist',
+    zh: '添加到播放列表', ja: 'プレイリストに追加', fr: 'Ajouter à une playlist',
+    it: 'Aggiungi alla playlist', ru: 'Добавить в плейлист', de: 'Zur Playlist hinzufügen',
+    uk: 'Додати до плейлиста', pl: 'Dodaj do playlisty', tr: 'Çalma listesine ekle',
+    id: 'Tambahkan ke daftar putar', 'zh-TW': '加入播放清單'
+  },
+  choose_playlist: {
+    es: 'Elegir playlist', en: 'Choose a playlist', pt: 'Escolher playlist',
+    zh: '选择播放列表', ja: 'プレイリストを選択', fr: 'Choisir une playlist',
+    it: 'Scegli una playlist', ru: 'Выберите плейлист', de: 'Playlist auswählen',
+    uk: 'Виберіть плейлист', pl: 'Wybierz playlistę', tr: 'Bir çalma listesi seç',
+    id: 'Pilih daftar putar', 'zh-TW': '選擇播放清單'
+  },
   no_playlists_yet: {
     es: 'Sin listas todavía',
     en: 'No playlists yet',

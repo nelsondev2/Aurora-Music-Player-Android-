@@ -168,6 +168,7 @@ Object.assign(App, {
       }
       // (: al cerrar la hoja de creación ya no hay «modo add»
       // que limpiar: _addingToPlaylistId fue extirpado.)
+      if (id === 'sheetCreatePlaylist') this._createBrowsePlaylistTarget = false;
       // Si se cierra el sheet de edición, limpiar editing
       if (id === 'sheetEditPlaylist') {
         this._editingPlaylistId = null;
