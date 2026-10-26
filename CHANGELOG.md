@@ -2,13 +2,15 @@
 
 Historial de versiones **publicadas** de Aurora Music Player.
 
-## Sin publicar — 1.5.0 · Primera interfaz nativa
+## Sin publicar — 1.5.0 · Migración nativa ampliada
 
-- **La pantalla de inicio ya está en Java nativo** (`NativeHomeActivity`): biblioteca de MediaStore, búsqueda, importación de archivos, listas básicas y controles de reproducción.
-- **Persistencia local SQLite** para fichas, listas y ajustes (`NativeLibraryDatabase`).
-- **Importador del respaldo ZIP v1** (`NativeBackupImporter`): restaura metadatos, listas, ajustes y audios importados en almacenamiento privado; las URI de MediaStore se mantienen.
-- **Cola Java con URI**: los controles de notificación y el avance de pista pueden reproducir tanto `content://` como los audios restaurados locales.
-- **La transición sigue abierta**: letras, calificaciones, estadísticas, temas, ecualizador, visualizador reactivo, temporizador y opciones avanzadas de cola siguen pendientes de portar. Los recursos antiguos se conservan solo durante esta etapa.
+- **Interfaz Java nativa** (`NativeHomeActivity`) para biblioteca, búsqueda, listas y reproducción; el lanzador no abre un WebView.
+- **Persistencia local SQLite** para pistas, metadatos, listas, favoritos, calificaciones y preferencias.
+- **Exportación e importación manual de respaldos ZIP v1**: biblioteca, listas, ajustes y audio accesible; las pistas de MediaStore conservan la referencia original.
+- **Cola Java persistente** con IDs, URI, contexto, reproducción aleatoria y modo de repetición; el servicio guarda periódicamente el estado de la sesión.
+- **Funciones portadas:** letras LRC, estrellas, favoritos, estadísticas, temas, acento, idiomas, ecualizador, visualizador, temporizador, carátulas, control de velocidad, repetición A-B y exportación de listas M3U8.
+- **Reproducción Android nativa:** controles multimedia, notificación, reproducción en segundo plano y preparación de la pista siguiente.
+- La APK continúa siendo una sola versión universal con `minSdk 21` (Android 5.0+). `assets/www` permanece como recurso heredado del repositorio, no como interfaz de inicio.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 

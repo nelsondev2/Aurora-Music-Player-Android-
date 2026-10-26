@@ -54,7 +54,10 @@ public class PlaybackService extends Service {
     private static boolean sPlaying;
     private static long sDurationMs;
     private static long sPositionMs;
+    private static String sTrackId = "";
     private static Bitmap sArtwork;
+    private static long sSleepDeadlineMs;
+    private static boolean sSleepAtTrackEnd;
 
     private static PlaybackService live;
 
@@ -74,7 +77,32 @@ public class PlaybackService extends Service {
     private BroadcastReceiver noisyReceiver;
     private boolean focused;
     private boolean progressScheduled;
+    private long lastProgressPosition = -1;
+    private long pendingListenedMs;
+    private long lastSessionSavedAt;
     private final Handler progressHandler = new Handler(Looper.getMainLooper());
+    private final Runnable sleepDeadline = new Runnable() {
+        @Override public void run() { beginSleepFade(); }
+    };
+    private final Runnable sleepFadeStep = new Runnable() {
+        int step;
+        float initialVolume;
+        @Override public void run() {
+            NativePlayer player = NativePlayerBridge.get(PlaybackService.this);
+            if (step == 0) initialVolume = player.volume();
+            step++;
+            player.setVolume(initialVolume * Math.max(0f, 1f - step / 20f));
+            if (step < 20) progressHandler.postDelayed(this, 500);
+            else {
+                player.pause();
+                player.setVolume(initialVolume);
+                sPlaying = false;
+                sSleepDeadlineMs = 0;
+                sSleepAtTrackEnd = false;
+                applyState();
+            }
+        }
+    };
     private final Runnable progressTicker = new Runnable() {
         @Override public void run() {
             if (live != PlaybackService.this || !sPlaying) {
@@ -84,7 +112,13 @@ public class PlaybackService extends Service {
             NativePlayer player = NativePlayerBridge.get(PlaybackService.this);
             sPositionMs = player.position();
             sDurationMs = player.duration();
+            recordListeningProgress(sPositionMs);
             updatePlaybackState();
+            long now = System.currentTimeMillis();
+            if (now - lastSessionSavedAt >= 5000) {
+                persistNativeSession();
+                lastSessionSavedAt = now;
+            }
             progressHandler.postDelayed(this, 1000);
         }
     };
@@ -112,6 +146,128 @@ public class PlaybackService extends Service {
         sPositionMs = Math.max(0, positionMs);
         PlaybackService service = live;
         if (service != null) service.applyState();
+    }
+
+    static void trackStarted(String trackId) {
+        sTrackId = trackId == null ? "" : trackId;
+        sPositionMs = 0;
+        PlaybackService service = live;
+        if (service != null) service.lastProgressPosition = -1;
+    }
+
+    static boolean startSleepTimer(int minutes) {
+        PlaybackService service = live;
+        if (service == null || minutes <= 0) return false;
+        sSleepAtTrackEnd = false;
+        sSleepDeadlineMs = System.currentTimeMillis() + Math.min(24 * 60, minutes) * 60_000L;
+        service.progressHandler.removeCallbacks(service.sleepDeadline);
+        service.progressHandler.removeCallbacks(service.sleepFadeStep);
+        service.sleepFadeStep.step = 0;
+        service.progressHandler.postDelayed(service.sleepDeadline,
+                Math.max(0, sSleepDeadlineMs - System.currentTimeMillis()));
+        return true;
+    }
+
+    static boolean sleepAtTrackEnd() {
+        if (live == null) return false;
+        live.progressHandler.removeCallbacks(live.sleepDeadline);
+        live.progressHandler.removeCallbacks(live.sleepFadeStep);
+        live.sleepFadeStep.step = 0;
+        sSleepDeadlineMs = 0;
+        sSleepAtTrackEnd = true;
+        NativePlayerBridge.get(live).clearNext();
+        return true;
+    }
+
+    static void cancelSleepTimer() {
+        sSleepDeadlineMs = 0;
+        sSleepAtTrackEnd = false;
+        PlaybackService service = live;
+        if (service == null) return;
+        service.progressHandler.removeCallbacks(service.sleepDeadline);
+        service.progressHandler.removeCallbacks(service.sleepFadeStep);
+        if (service.sleepFadeStep.step > 0) {
+            NativePlayerBridge.get(service).setVolume(service.sleepFadeStep.initialVolume);
+        }
+        service.sleepFadeStep.step = 0;
+    }
+
+    private void beginSleepFade() {
+        if (!sPlaying) {
+            sSleepDeadlineMs = 0;
+            sSleepAtTrackEnd = false;
+            return;
+        }
+        sleepFadeStep.step = 0;
+        progressHandler.removeCallbacks(sleepFadeStep);
+        progressHandler.post(sleepFadeStep);
+    }
+
+    private void recordListeningProgress(long position) {
+        if (lastProgressPosition >= 0) {
+            long delta = position - lastProgressPosition;
+            if (delta > 0 && delta <= 2500) pendingListenedMs += delta;
+            if (pendingListenedMs >= 10_000) persistListeningTime();
+        }
+        lastProgressPosition = position;
+    }
+
+    private void persistListeningTime() {
+        long seconds = pendingListenedMs / 1000;
+        pendingListenedMs %= 1000;
+        if (seconds <= 0) return;
+        NativeLibraryDatabase db = new NativeLibraryDatabase(this);
+        try {
+            JSONObject stats = readStats(db);
+            stats.put("totalSeconds", Math.max(0, stats.optLong("totalSeconds", 0)) + seconds);
+            db.saveSetting("stats", stats);
+        } catch (Exception e) { Log.w(TAG, "no se pudo guardar el tiempo escuchado", e); }
+        finally { db.close(); }
+    }
+
+    private void recordCompletedTrack(String trackId) {
+        if (trackId == null || trackId.length() == 0) return;
+        NativeLibraryDatabase db = new NativeLibraryDatabase(this);
+        try {
+            JSONObject stats = readStats(db);
+            JSONObject plays = stats.optJSONObject("plays");
+            if (plays == null) plays = new JSONObject();
+            plays.put(trackId, plays.optInt(trackId, 0) + 1);
+            stats.put("plays", plays);
+            db.saveSetting("stats", stats);
+        } catch (Exception e) { Log.w(TAG, "no se pudo guardar la reproducción", e); }
+        finally { db.close(); }
+        persistListeningTime();
+    }
+
+    private void persistNativeSession() {
+        if (sTrackId == null || sTrackId.length() == 0) return;
+        PlayQueue queue = NativePlayerBridge.queue();
+        JSONObject session = new JSONObject();
+        try {
+            session.put("currentTrackId", sTrackId);
+            session.put("currentTrackTitle", sTitle);
+            session.put("currentTrackArtist", sArtist);
+            session.put("currentTrackAlbum", sAlbum);
+            session.put("currentTrackDuration", sDurationMs / 1000.0);
+            session.put("currentTime", sPositionMs / 1000.0);
+            session.put("queue", queue.trackIds());
+            session.put("queueIdx", queue.currentIndex());
+            session.put("shuffle", queue.shuffleEnabled());
+            session.put("repeat", queue.repeatMode());
+            session.put("originalQueue", queue.originalQueueIds());
+            JSONObject context = new JSONObject(queue.contextJson());
+            session.put("playContext", context);
+            session.put("ts", System.currentTimeMillis());
+            NativeLibraryDatabase db = new NativeLibraryDatabase(this);
+            try { db.saveSetting("local:aurora_session_v1", session); }
+            finally { db.close(); }
+        } catch (Exception e) { Log.w(TAG, "no se pudo guardar la sesión", e); }
+    }
+
+    private static JSONObject readStats(NativeLibraryDatabase db) {
+        Object value = db.settingValue("stats", null);
+        return value instanceof JSONObject ? (JSONObject) value : new JSONObject();
     }
 
     /** dataUrl «data:image/...;base64,XYZ» del álbum, ya recortada en la web. */
@@ -215,6 +371,12 @@ public class PlaybackService extends Service {
             wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "aurora:playback");
             wakeLock.setReferenceCounted(false);
         }
+        NativeText.load(this);
+        NativeLibraryDatabase preferenceDb = new NativeLibraryDatabase(this);
+        try {
+            NativeText.setLanguage(preferenceDb.setting("language",
+                    preferenceDb.setting("local:aurora_lang", "es")));
+        } finally { preferenceDb.close(); }
         createChannel();
         createSession();
         registerNoisyReceiver();
@@ -260,10 +422,13 @@ public class PlaybackService extends Service {
 
     @Override
     public void onDestroy() {
+        persistListeningTime();
+        persistNativeSession();
         progressHandler.removeCallbacks(progressTicker);
         progressScheduled = false;
         unregisterNoisyReceiver();
         NativePlayerBridge.releaseAll();
+        NativeEqualizerEngine.release();
         releaseFocus();
         releaseWakeLock();
         if (session != null) {
@@ -321,11 +486,41 @@ public class PlaybackService extends Service {
     /** Fin de pista sin página: ¿queda algo en la cola? Pues suena. */
     private void onTrackEnded() {
         if (WebApp.attached()) return; // la web ya se encarga (y avisará)
-        stepQueue(true);
+        recordCompletedTrack(sTrackId);
+        if (sSleepAtTrackEnd) {
+            sSleepAtTrackEnd = false;
+            sPlaying = false;
+            NativePlayerBridge.pauseIfPlaying();
+            applyState();
+            return;
+        }
+        PlayQueue queue = NativePlayerBridge.queue();
+        if ("one".equals(queue.repeatMode()) && queue.current() != null) {
+            playEntry(queue.current());
+        } else {
+            PlayQueue.Entry next = queue.next();
+            if (next != null) playEntry(next);
+            else {
+                sPlaying = false;
+                sPositionMs = sDurationMs;
+                applyState();
+            }
+        }
     }
 
     /** Relevo gapless: la cola mueve su cursor y la notificación se entera. */
     private void onNativeTrackChanged(String trackId) {
+        if (trackId != null && !trackId.equals(sTrackId)) {
+            recordCompletedTrack(sTrackId);
+            sTrackId = trackId;
+            if (sSleepAtTrackEnd) {
+                sSleepAtTrackEnd = false;
+                sPlaying = false;
+                NativePlayerBridge.pauseIfPlaying();
+                applyState();
+                return;
+            }
+        }
         PlayQueue queue = NativePlayerBridge.queue();
         if (trackId != null) queue.moveTo(trackId);
         if (WebApp.attached()) return; // la web actualizará todo al volver
@@ -357,8 +552,10 @@ public class PlaybackService extends Service {
         sTitle = entry.title;
         sArtist = entry.artist;
         sAlbum = entry.album;
+        sTrackId = entry.id;
         sDurationMs = entry.durationMs;
         sPositionMs = 0;
+        lastProgressPosition = -1;
         sPlaying = true;
         keepOrReplaceArtwork(entry.id);
         applyState();
@@ -373,11 +570,13 @@ public class PlaybackService extends Service {
 
         // La pista siguiente se prepara por URI o desde la caché local.
         PlayQueue.Entry following = queue.next();
-        if (following != null && following.uri != null
+        if (!sSleepAtTrackEnd && !"one".equals(queue.repeatMode())
+                && following != null && following.uri != null
                 && (following.uri.startsWith("content://") || following.uri.startsWith("file://"))) {
             player.setPendingPreparedId(following.id);
             player.prepareNextUri(following.uri);
-        } else if (following != null && player.hasTrack(following.id)) {
+        } else if (!sSleepAtTrackEnd && !"one".equals(queue.repeatMode())
+                && following != null && player.hasTrack(following.id)) {
             player.prepareNext(following.id);
         }
     }
@@ -400,9 +599,9 @@ public class PlaybackService extends Service {
         if (nm == null) return;
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                getString(R.string.notification_channel_playback),
+                NativeText.text(this, "notification_channel_playback"),
                 NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription(getString(R.string.notification_channel_playback_desc));
+        channel.setDescription(NativeText.text(this, "notification_channel_playback_desc"));
         channel.setShowBadge(false);
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         nm.createNotificationChannel(channel);
@@ -510,7 +709,7 @@ public class PlaybackService extends Service {
     // --------------------------------------------------------- notificación
 
     private Notification buildNotification() {
-        String title = sTitle.length() == 0 ? getString(R.string.app_name) : sTitle;
+        String title = sTitle.length() == 0 ? NativeText.text(this, "app_title") : sTitle;
 
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= 26) builder = new Notification.Builder(this, CHANNEL_ID);
@@ -525,12 +724,12 @@ public class PlaybackService extends Service {
                 .setShowWhen(false)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .addAction(android.R.drawable.ic_media_previous,
-                        getString(R.string.action_prev), actionIntent(ACTION_PREV, 1))
+                        NativeText.text(this, "action_prev"), actionIntent(ACTION_PREV, 1))
                 .addAction(sPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
-                        getString(sPlaying ? R.string.action_pause : R.string.action_play),
+                        NativeText.text(this, sPlaying ? "action_pause" : "action_play"),
                         actionIntent(ACTION_TOGGLE, 2))
                 .addAction(android.R.drawable.ic_media_next,
-                        getString(R.string.action_next), actionIntent(ACTION_NEXT, 3));
+                        NativeText.text(this, "action_next"), actionIntent(ACTION_NEXT, 3));
 
         if (sArtwork != null) builder.setLargeIcon(sArtwork);
 

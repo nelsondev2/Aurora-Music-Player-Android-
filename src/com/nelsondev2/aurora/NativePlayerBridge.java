@@ -50,6 +50,10 @@ class NativePlayerBridge {
         return queue;
     }
 
+    static int audioSessionId(Context context) {
+        return get(context).audioSessionId();
+    }
+
     /** Para el lado Java (MainActivity, servicio): ¿suena algo ahora? */
     static synchronized boolean isCurrentlyPlaying() {
         return player != null && player.isPlaying();

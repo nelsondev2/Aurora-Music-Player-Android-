@@ -112,6 +112,36 @@ final class NativeLibraryDatabase extends SQLiteOpenHelper {
                 SQLiteDatabase.CONFLICT_REPLACE);
     }
 
+    synchronized Object settingValue(String key, Object fallback) {
+        String raw = setting(key, null);
+        if (raw == null) return fallback;
+        try { return new org.json.JSONTokener(raw).nextValue(); }
+        catch (Exception ignored) { return raw; }
+    }
+
+    synchronized void deletePlaylist(String id) {
+        if (id != null) getWritableDatabase().delete("playlists", "id=?", new String[]{id});
+    }
+
+    synchronized JSONObject settingsSnapshot() {
+        JSONObject values = new JSONObject();
+        Cursor cursor = null;
+        try {
+            cursor = getReadableDatabase().query("settings", new String[]{"key", "value"},
+                    null, null, null, null, "key ASC");
+            while (cursor.moveToNext()) {
+                String key = cursor.getString(0);
+                String raw = cursor.getString(1);
+                Object value;
+                try { value = new org.json.JSONTokener(raw).nextValue(); }
+                catch (Exception ignored) { value = raw; }
+                values.put(key, value);
+            }
+        } catch (Exception e) { Log.w(TAG, "no se pudieron exportar los ajustes", e); }
+        finally { if (cursor != null) cursor.close(); }
+        return values;
+    }
+
     synchronized String setting(String key, String fallback) {
         Cursor cursor = null;
         try {

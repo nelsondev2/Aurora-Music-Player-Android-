@@ -37,6 +37,9 @@ final class PlayQueue {
     private final List<Entry> entries = new ArrayList<Entry>();
     private int index = -1;
     private String repeat = "off";
+    private boolean shuffle;
+    private String contextJson = "{}";
+    private JSONArray originalQueue = new JSONArray();
 
     /** ¿Hay cola con algo que poner? */
     boolean isEmpty() {
@@ -92,6 +95,11 @@ final class PlayQueue {
             JSONObject root = new JSONObject(json);
             String mode = root.optString("repeat", "off");
             if (mode.length() > 0) repeat = mode;
+            shuffle = root.optBoolean("shuffle", false);
+            JSONObject context = root.optJSONObject("context");
+            contextJson = context == null ? "{}" : context.toString();
+            JSONArray original = root.optJSONArray("originalQueue");
+            originalQueue = original == null ? new JSONArray() : original;
             JSONArray tracks = root.optJSONArray("tracks");
             if (tracks == null) return;
             for (int i = 0; i < tracks.length(); i++) {
@@ -110,6 +118,20 @@ final class PlayQueue {
             Log.w(TAG, "cola ilegible: " + e);
             entries.clear();
         }
+    }
+
+    String repeatMode() { return repeat; }
+    boolean shuffleEnabled() { return shuffle; }
+    String contextJson() { return contextJson; }
+    int currentIndex() { return index; }
+    JSONArray trackIds() {
+        JSONArray ids = new JSONArray();
+        for (Entry entry : entries) ids.put(entry.id);
+        return ids;
+    }
+    JSONArray originalQueueIds() {
+        try { return new JSONArray(originalQueue.toString()); }
+        catch (Exception e) { return new JSONArray(); }
     }
 
     int size() {

@@ -48,6 +48,10 @@ final class NativePlayer {
     private boolean currentPrepared;
     private boolean released;
     private float volume = 1f;
+    private float playbackRate = 1f;
+    private int audioSessionId;
+
+    int audioSessionId() { return audioSessionId; }
 
     /** Quien quiera reaccionar al final de una pista sin relevo preparado. */
     interface OnEndedListener {
@@ -196,6 +200,7 @@ final class NativePlayer {
             public void onPrepared(MediaPlayer mp) {
                 if (mp != current) return;
                 currentPrepared = true;
+                applyRate(mp);
                 if (start > 0) {
                     try { mp.seekTo((int) start); } catch (Exception ignored) {}
                 }
@@ -307,6 +312,8 @@ final class NativePlayer {
         }
     }
 
+    float volume() { return volume; }
+
     void setVolume(float v) {
         volume = Math.max(0f, Math.min(1f, v));
         applyVolume();
@@ -314,12 +321,14 @@ final class NativePlayer {
 
     /** Velocidad de reproducción; el tono se conserva si el sistema puede. */
     void setRate(float rate) {
-        if (current == null) return;
-        try {
-            current.setPlaybackParams(current.getPlaybackParams().setSpeed(rate));
-        } catch (Exception e) {
-            Log.w(TAG, "setRate: " + e);
-        }
+        playbackRate = Math.max(0.5f, Math.min(2f, rate));
+        applyRate(current);
+    }
+
+    private void applyRate(MediaPlayer target) {
+        if (target == null || !currentPrepared || android.os.Build.VERSION.SDK_INT < 23) return;
+        try { target.setPlaybackParams(target.getPlaybackParams().setSpeed(playbackRate)); }
+        catch (Exception e) { Log.w(TAG, "setRate: " + e); }
     }
 
     void stop() {
@@ -384,6 +393,9 @@ final class NativePlayer {
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build());
+            if (audioSessionId > 0) player.setAudioSessionId(audioSessionId);
+            audioSessionId = player.getAudioSessionId();
+            NativeEqualizerEngine.attach(appContext, audioSessionId);
             // La pantalla puede apagarse: el servicio ya sostiene un wake
             // lock parcial, y esto evita que el propio MediaPlayer duerma.
             player.setWakeMode(appContext, PowerManager.PARTIAL_WAKE_LOCK);
