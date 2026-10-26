@@ -10,6 +10,9 @@ import android.webkit.JavascriptInterface;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * Puente JS ↔ Android (window.AuroraAndroid).
@@ -32,6 +35,10 @@ class AuroraBridge {
 
     private final Activity activity;
     private FileOutputStream out;
+    private ZipOutputStream zipOut;
+    private File archiveFile;
+    private String archiveName;
+    private boolean archiveEntryOpen;
     private String pendingName;
 
     AuroraBridge(Activity activity) {
@@ -122,6 +129,109 @@ class AuroraBridge {
         }
     }
 
+    /** Inicia un archivo ZIP temporal para el respaldo de la biblioteca. */
+    @JavascriptInterface
+    public synchronized boolean beginArchive(String name) {
+        closeQuietly();
+        try {
+            archiveName = safeName(name == null ? "aurora-backup.zip" : name);
+            archiveFile = new File(ShareProvider.shareDir(activity), archiveName);
+            if (archiveFile.exists() && !archiveFile.delete()) return false;
+            zipOut = new ZipOutputStream(new FileOutputStream(archiveFile));
+            zipOut.setLevel(Deflater.BEST_SPEED);
+            archiveEntryOpen = false;
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "beginArchive: " + e);
+            closeQuietly();
+            return false;
+        }
+    }
+
+    /** Abre una entrada segura dentro del ZIP. */
+    @JavascriptInterface
+    public synchronized boolean beginArchiveEntry(String path) {
+        if (zipOut == null || path == null || path.length() == 0) return false;
+        String clean = path.replace('\\', '/');
+        if (clean.startsWith("/") || clean.indexOf('\n') >= 0
+                || clean.indexOf('\r') >= 0) return false;
+        String[] pathParts = clean.split("/");
+        for (String part : pathParts) {
+            if (part.length() == 0 || ".".equals(part) || "..".equals(part)
+                    || !part.matches("[A-Za-z0-9._-]+")) return false;
+        }
+        try {
+            if (archiveEntryOpen) zipOut.closeEntry();
+            zipOut.putNextEntry(new ZipEntry(clean));
+            archiveEntryOpen = true;
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "beginArchiveEntry: " + e);
+            return false;
+        }
+    }
+
+    /** Escribe un bloque base64 dentro de la entrada actual del ZIP. */
+    @JavascriptInterface
+    public synchronized boolean appendArchiveChunk(String base64) {
+        if (zipOut == null || !archiveEntryOpen || base64 == null) return false;
+        try {
+            zipOut.write(Base64.decode(base64, Base64.DEFAULT));
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "appendArchiveChunk: " + e);
+            closeQuietly();
+            return false;
+        }
+    }
+
+    /** Cierra la entrada actual. */
+    @JavascriptInterface
+    public synchronized boolean endArchiveEntry() {
+        if (zipOut == null || !archiveEntryOpen) return false;
+        try {
+            zipOut.closeEntry();
+            archiveEntryOpen = false;
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "endArchiveEntry: " + e);
+            closeQuietly();
+            return false;
+        }
+    }
+
+    /** Finaliza el ZIP y deja el archivo listo para compartir. */
+    @JavascriptInterface
+    public synchronized boolean finishArchive() {
+        if (zipOut == null || archiveFile == null) return false;
+        try {
+            if (archiveEntryOpen) zipOut.closeEntry();
+            zipOut.finish();
+            zipOut.close();
+            zipOut = null;
+            archiveEntryOpen = false;
+            pendingName = archiveName;
+            archiveName = null;
+            archiveFile = null;
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "finishArchive: " + e);
+            closeQuietly();
+            return false;
+        }
+    }
+
+    /** Descarta un respaldo incompleto y cierra el ZIP temporal. */
+    @JavascriptInterface
+    public synchronized boolean abortArchive() {
+        File partial = archiveFile;
+        closeQuietly();
+        if (partial != null && partial.exists()) {
+            try { return partial.delete(); } catch (Exception ignored) { return false; }
+        }
+        return true;
+    }
+
     /** Abre el selector «Compartir» de Android con el último archivo. */
     @JavascriptInterface
     public boolean share(final String name, final String mime) {
@@ -206,5 +316,15 @@ class AuroraBridge {
             }
             out = null;
         }
+        if (zipOut != null) {
+            try {
+                zipOut.close();
+            } catch (Exception ignored) {
+            }
+            zipOut = null;
+        }
+        archiveEntryOpen = false;
+        archiveFile = null;
+        archiveName = null;
     }
 }

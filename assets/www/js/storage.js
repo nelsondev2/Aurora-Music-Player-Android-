@@ -154,6 +154,21 @@
     },
     async setSetting(key, value) {
       return this._run(STORE_SETTINGS, 'readwrite', (os) => os.put(value, key));
+    },
+    async getAllSettings() {
+      await this.open();
+      const store = this._tx(STORE_SETTINGS, 'readonly');
+      return new Promise((resolve, reject) => {
+        const values = {};
+        const request = store.openCursor();
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor) { resolve(values); return; }
+          values[String(cursor.key)] = cursor.value;
+          cursor.continue();
+        };
+        request.onerror = () => reject(request.error);
+      });
     }
   };
 

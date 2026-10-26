@@ -4372,6 +4372,51 @@ const I18N = {
     id: 'Pemeliharaan',
     'zh-TW': '維護'
   },
+  settings_backup_export: {
+    es: 'Exportar respaldo para migrar', en: 'Export migration backup', pt: 'Exportar cópia de segurança para migrar',
+    zh: '导出迁移备份', ja: '移行用バックアップを書き出す', fr: 'Exporter une sauvegarde pour migration',
+    it: 'Esporta un backup per la migrazione', ru: 'Экспортировать резервную копию для переноса',
+    de: 'Migrationssicherung exportieren', uk: 'Експортувати резервну копію для перенесення',
+    pl: 'Eksportuj kopię do migracji', tr: 'Taşıma yedeğini dışa aktar',
+    id: 'Ekspor cadangan untuk migrasi', 'zh-TW': '匯出移轉備份'
+  },
+  settings_backup_hint: {
+    es: 'Guarda listas, ajustes, fichas y el audio importado en un ZIP. Las pistas del móvil conservan su archivo original.',
+    en: 'Saves playlists, settings, track details and imported audio in a ZIP. Music on your phone stays in place.',
+    pt: 'Guarda listas, ajustes, dados das faixas e áudio importado num ZIP. As músicas do telefone ficam no lugar.',
+    zh: '将播放列表、设置、曲目信息和已导入音频保存为 ZIP。手机中的音乐文件保持不变。',
+    ja: 'プレイリスト、設定、曲情報、取り込んだ音声をZIPに保存します。端末内の音楽ファイルはそのままです。',
+    fr: 'Enregistre listes, réglages, pistes et audio importé dans un ZIP. Les fichiers du téléphone restent en place.',
+    it: 'Salva playlist, impostazioni, dettagli e audio importato in uno ZIP. I brani sul telefono restano al loro posto.',
+    ru: 'Сохраняет списки, настройки, данные треков и импортированное аудио в ZIP. Файлы на телефоне не меняются.',
+    de: 'Speichert Playlists, Einstellungen, Titeldaten und importierte Audiodateien als ZIP. Musik auf dem Gerät bleibt unverändert.',
+    uk: 'Зберігає списки, налаштування, дані треків та імпортоване аудіо в ZIP. Файли на телефоні не змінюються.',
+    pl: 'Zapisuje playlisty, ustawienia, dane utworów i zaimportowane audio w ZIP. Pliki na telefonie pozostają bez zmian.',
+    tr: 'Listeleri, ayarları, parça bilgilerini ve içe aktarılan sesi ZIP olarak kaydeder. Telefondaki müzik değişmez.',
+    id: 'Menyimpan daftar putar, setelan, info trek, dan audio impor dalam ZIP. Musik di ponsel tetap utuh.',
+    'zh-TW': '將播放清單、設定、曲目資料及匯入音訊儲存為 ZIP。手機中的音樂檔案維持不變。'
+  },
+  toast_backup_start: {
+    es: 'Preparando el respaldo…', en: 'Preparing backup…', pt: 'A preparar a cópia…',
+    zh: '正在准备备份…', ja: 'バックアップを準備中…', fr: 'Préparation de la sauvegarde…',
+    it: 'Preparazione del backup…', ru: 'Подготовка копии…', de: 'Sicherung wird vorbereitet…',
+    uk: 'Підготовка копії…', pl: 'Przygotowywanie kopii…', tr: 'Yedek hazırlanıyor…',
+    id: 'Menyiapkan cadangan…', 'zh-TW': '正在準備備份…'
+  },
+  toast_backup_ready: {
+    es: 'Respaldo listo. Elige dónde guardarlo.', en: 'Backup ready. Choose where to save it.', pt: 'Cópia pronta. Escolhe onde a guardar.',
+    zh: '备份已就绪，请选择保存位置。', ja: 'バックアップの準備ができました。保存先を選んでください。', fr: 'Sauvegarde prête. Choisissez où l’enregistrer.',
+    it: 'Backup pronto. Scegli dove salvarlo.', ru: 'Копия готова. Выберите место для сохранения.', de: 'Sicherung bereit. Speicherort auswählen.',
+    uk: 'Копію підготовлено. Вибери місце збереження.', pl: 'Kopia gotowa. Wybierz miejsce zapisu.', tr: 'Yedek hazır. Kaydedilecek yeri seçin.',
+    id: 'Cadangan siap. Pilih lokasi penyimpanan.', 'zh-TW': '備份已就緒，請選擇儲存位置。'
+  },
+  toast_backup_error: {
+    es: 'No se pudo crear el respaldo.', en: 'Could not create the backup.', pt: 'Não foi possível criar a cópia de segurança.',
+    zh: '无法创建备份。', ja: 'バックアップを作成できませんでした。', fr: 'Impossible de créer la sauvegarde.',
+    it: 'Impossibile creare il backup.', ru: 'Не удалось создать резервную копию.', de: 'Sicherung konnte nicht erstellt werden.',
+    uk: 'Не вдалося створити резервну копію.', pl: 'Nie udało się utworzyć kopii zapasowej.', tr: 'Yedek oluşturulamadı.',
+    id: 'Tidak dapat membuat cadangan.', 'zh-TW': '無法建立備份。'
+  },
   settings_retag_hint: {
     es: 'Vuelve a leer título, artista y portada de tus archivos. No borra nada.',
     en: 'Re-reads title, artist and artwork from your files. Deletes nothing.',

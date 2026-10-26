@@ -249,6 +249,12 @@ Object.assign(App, {
         this.buildLangList();
         this.openSheet('sheetLanguage');
       });
+      const btnBackupExport = document.getElementById('menuBackupExport');
+      if (btnBackupExport) btnBackupExport.addEventListener('click', () => {
+        if (typeof this.exportMigrationBackup !== 'function' || btnBackupExport.disabled) return;
+        btnBackupExport.disabled = true;
+        this.exportMigrationBackup().then(() => { btnBackupExport.disabled = false; });
+      });
       const btnRetag = document.getElementById('menuRetagTracks');
       if (btnRetag) btnRetag.addEventListener('click', () => {
         this.closeSheet('sheetSettings');

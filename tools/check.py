@@ -271,7 +271,8 @@ def check_bridge():
     for window_name, var, java_file in pairs:
         java = read(os.path.join(SRC, java_file))
         exported = set(re.findall(
-            r"@JavascriptInterface\s+public\s+[\w<>\[\]]+\s+(\w+)\s*\(", java))
+            r"@JavascriptInterface\s+public\s+(?:synchronized\s+)?"
+            r"[\w<>\[\]]+\s+(\w+)\s*\(", java))
         used = set(re.findall(r"\b" + var + r"\.(\w+)\s*\(", js))
         for name in sorted(used - exported):
             fail("platform.js llama a %s.%s y Java no lo expone" % (window_name, name))

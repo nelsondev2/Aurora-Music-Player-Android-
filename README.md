@@ -92,6 +92,15 @@ reciente → Artifacts**, descarga **`aurora-android5-plus`**, descomprime el
 archivo e instala `aurora-android5-plus.apk`. Es el mismo artefacto para
 Android 5.0 y para versiones posteriores.
 
+### Respaldo para trasladar tus datos
+
+En **Ajustes → Mantenimiento → Exportar respaldo para migrar**, guarda el
+ZIP desde el selector de Android. Incluye listas, ajustes, metadatos de la
+biblioteca y el audio de los archivos importados; las pistas leídas desde
+MediaStore conservan su referencia al archivo original y no se duplican.
+El archivo contiene `backup.json` y las pistas incluidas bajo `audio/`.
+Consérvalo hasta confirmar que la versión nativa haya restaurado tus datos.
+
 ### Probar la parte web en el ordenador
 
 La app entera vive en `assets/www` y funciona en cualquier navegador

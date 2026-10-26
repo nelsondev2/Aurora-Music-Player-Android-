@@ -4,6 +4,10 @@ Historial de versiones **publicadas** de Aurora Music Player.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 
+- **Respaldo ZIP para migrar los datos a la edición nativa**: Ajustes →
+  Mantenimiento crea un archivo con la biblioteca, las listas, los ajustes
+  y el audio importado, usando bloques para limitar la memoria. Las pistas
+  de MediaStore conservan la referencia al archivo original.
 - **La onda del visualizador se mueve con el motor nativo.** Antes, ese
   motor solo pintaba una onda estática porque `MediaPlayer` no entrega
   muestras de audio al WebView. Ahora la onda se anima mientras suena;
