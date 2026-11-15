@@ -7,7 +7,7 @@ Historial de versiones **publicadas** de Aurora Music Player.
 - **El lanzador vuelve a `MainActivity` y a la interfaz Aurora original** de `assets/www`, recuperando el reproductor visual, portadas, navegación y pantallas web.
 - **El audio sigue usando componentes Android nativos** (`MediaPlayer`, `PlaybackService`, notificación y MediaSession) para reproducción en segundo plano.
 - Se conserva la biblioteca local, MediaStore, importación de audio y coordinación de cola con el motor Android.
-- Se mantienen exportación e importación manual de respaldos ZIP, listas, ajustes y metadatos.
+- **Respaldo ZIP completo y unificado entre ediciones.** Ajustes → **Importar copia de respaldo** / **Exportar copia de respaldo**: el respaldo (`aurora-migration-backup` v1) viaja igual desde la interfaz web, el WebXDC de Delta Chat y la edición nativa. En Android el ZIP se arma por trozos en Java y se comparte con el selector del sistema (elegible como adjunto de Delta Chat); en navegador se descarga; dentro de Delta Chat se envía al chat con `sendToChat` y se restaura con `importFiles` desde el propio adjunto. Al restaurar se **valida todo antes de borrar nada** (índice y CRC de cada audio) y la biblioteca se **reemplaza** (no se fusiona), con confirmación previa; las pistas de MediaStore conservan su enlace al archivo original. La lectura de ZIP propia (RFC 1951) garantiza restaurar respaldos aunque el WebView sea antiguo.
 - **La selección múltiple del selector Android ya no pierde canciones**: se recogen todas las URI devueltas en `ClipData`, además del caso de URI única.
 - **El cambio de motor de audio reinicia Aurora de forma segura**: guarda la sesión y vuelve a enlazar el reproductor elegido; antes solo cambiaba la preferencia y podía dejar la interfaz usando el motor anterior.
 - La primera pista importada se prepara en segundo plano para reducir la espera inicial del motor del sistema.
@@ -17,6 +17,8 @@ Historial de versiones **publicadas** de Aurora Music Player.
 - El selector Android conserva la URI y el permiso persistente del archivo original cuando el proveedor los concede. **Guardar LRC en Android escribe en el MP3 o FLAC original** mediante ID3 `USLT`/`SYLT` o comentarios Vorbis `LYRICS`/`SYNCEDLYRICS`; también lee esas letras desde el archivo. Requiere acceso de escritura. Si el original no está vinculado, Android deniega el acceso o el formato no está soportado, no se presenta como guardado. La interfaz web sin puente nativo mantiene su guardado local.
 - Las solicitudes externas de búsqueda en LRCLIB y traducción MyMemory son iniciadas por el usuario. Al traducir, solo se envía el texto del editor al servicio; las demás solicitudes externas siguen bloqueadas.
 - La APK sigue siendo única y universal, con `minSdk 21` (Android 5.0+). `NativeHomeActivity` queda retenida, pero deja de ser la pantalla de inicio.
+- **La portada del reproductor es más grande** en todos los tamaños de pantalla, incluidas las alturas bajas (landscape o móviles pequeños), y se amplía también en la columna ancha.
+- La restauración de respaldo en la edición nativa retenida (`NativeHomeActivity`) ahora también avisa antes de restaurar, valida la integridad del ZIP antes de tocar nada y sustituye la biblioteca anterior de forma atómica.
 
 ## Sin publicar — 1.4.0 · Reproductor nativo
 

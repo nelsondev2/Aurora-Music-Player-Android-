@@ -1266,29 +1266,39 @@ public class NativeHomeActivity extends Activity {
         if (resultCode != RESULT_OK || data == null) return;
         if (requestCode == REQ_BACKUP && data.getData() != null) {
             final Uri uri = data.getData();
-            new Thread(new Runnable() {
-                @Override public void run() {
-                    try {
-                        NativeBackupImporter.Result result = NativeBackupImporter.restore(NativeHomeActivity.this, uri);
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                loadStoredData();
-                                Toast.makeText(NativeHomeActivity.this,
-                                        "Restauradas " + result.tracks + " pistas y " + result.playlists + " listas",
-                                        Toast.LENGTH_LONG).show();
-                            }
-                        });
-                    } catch (final Exception e) {
-                        android.util.Log.e("AuroraNative", "falló la restauración", e);
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                Toast.makeText(NativeHomeActivity.this,
-                                        "No se pudo restaurar el respaldo: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                            }
-                        });
-                    }
-                }
-            }, "aurora-backup-import").start();
+            // Restaurar REEMPLAZA la biblioteca actual: primero se avisa.
+            new AlertDialog.Builder(this)
+                    .setTitle(tr("backup_import"))
+                    .setMessage(tr("confirm_restore_backup"))
+                    .setNegativeButton(tr("close_btn"), null)
+                    .setPositiveButton(tr("backup_import"), new android.content.DialogInterface.OnClickListener() {
+                        @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                            new Thread(new Runnable() {
+                                @Override public void run() {
+                                    try {
+                                        NativeBackupImporter.Result result = NativeBackupImporter.restore(NativeHomeActivity.this, uri);
+                                        runOnUiThread(new Runnable() {
+                                            @Override public void run() {
+                                                loadStoredData();
+                                                Toast.makeText(NativeHomeActivity.this,
+                                                        "Restauradas " + result.tracks + " pistas y " + result.playlists + " listas",
+                                                        Toast.LENGTH_LONG).show();
+                                            }
+                                        });
+                                    } catch (final Exception e) {
+                                        android.util.Log.e("AuroraNative", "falló la restauración", e);
+                                        runOnUiThread(new Runnable() {
+                                            @Override public void run() {
+                                                Toast.makeText(NativeHomeActivity.this,
+                                                        "No se pudo restaurar el respaldo: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                            }
+                                        });
+                                    }
+                                }
+                            }, "aurora-backup-import").start();
+                        }
+                    })
+                    .show();
             return;
         }
         if (requestCode == REQ_EXPORT_BACKUP && data.getData() != null) {

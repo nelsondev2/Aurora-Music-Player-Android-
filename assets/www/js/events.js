@@ -251,11 +251,21 @@ Object.assign(App, {
         this.buildLangList();
         this.openSheet('sheetLanguage');
       });
+      const btnBackupImport = document.getElementById('menuBackupImport');
+      if (btnBackupImport) btnBackupImport.addEventListener('click', () => {
+        if (typeof this.importMigrationBackup !== 'function' || btnBackupImport.disabled) return;
+        btnBackupImport.disabled = true;
+        Promise.resolve(this.importMigrationBackup())
+          .catch(() => {})
+          .then(() => { btnBackupImport.disabled = false; });
+      });
       const btnBackupExport = document.getElementById('menuBackupExport');
       if (btnBackupExport) btnBackupExport.addEventListener('click', () => {
         if (typeof this.exportMigrationBackup !== 'function' || btnBackupExport.disabled) return;
         btnBackupExport.disabled = true;
-        this.exportMigrationBackup().then(() => { btnBackupExport.disabled = false; });
+        Promise.resolve(this.exportMigrationBackup())
+          .catch(() => {})
+          .then(() => { btnBackupExport.disabled = false; });
       });
       const btnRetag = document.getElementById('menuRetagTracks');
       if (btnRetag) btnRetag.addEventListener('click', () => {

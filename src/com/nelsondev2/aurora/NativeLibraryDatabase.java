@@ -159,6 +159,12 @@ final class NativeLibraryDatabase extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
+            // Restaurar REEMPLAZA la biblioteca actual: no se fusiona con lo
+            // que hay. El borrado y la inserción van en la misma transacción,
+            // así que si algo falla la biblioteca queda como estaba.
+            db.delete("tracks", null, null);
+            db.delete("playlists", null, null);
+            db.delete("settings", null, null);
             JSONArray tracks = manifest.optJSONArray("tracks");
             if (tracks != null) {
                 for (int i = 0; i < tracks.length(); i++) {

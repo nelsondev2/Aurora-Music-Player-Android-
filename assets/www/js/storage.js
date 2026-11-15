@@ -155,6 +155,9 @@
     async setSetting(key, value) {
       return this._run(STORE_SETTINGS, 'readwrite', (os) => os.put(value, key));
     },
+    async clearSettings() {
+      return this._run(STORE_SETTINGS, 'readwrite', (os) => os.clear());
+    },
     async getAllSettings() {
       await this.open();
       const store = this._tx(STORE_SETTINGS, 'readonly');

@@ -4590,28 +4590,36 @@ const I18N = {
     'zh-TW': '維護'
   },
   settings_backup_export: {
-    es: 'Exportar respaldo para migrar', en: 'Export migration backup', pt: 'Exportar cópia de segurança para migrar',
-    zh: '导出迁移备份', ja: '移行用バックアップを書き出す', fr: 'Exporter une sauvegarde pour migration',
-    it: 'Esporta un backup per la migrazione', ru: 'Экспортировать резервную копию для переноса',
-    de: 'Migrationssicherung exportieren', uk: 'Експортувати резервну копію для перенесення',
-    pl: 'Eksportuj kopię do migracji', tr: 'Taşıma yedeğini dışa aktar',
-    id: 'Ekspor cadangan untuk migrasi', 'zh-TW': '匯出移轉備份'
+    es: 'Exportar copia de respaldo', en: 'Export backup', pt: 'Exportar cópia de segurança',
+    zh: '导出备份', ja: 'バックアップを書き出す', fr: 'Exporter une sauvegarde',
+    it: 'Esporta backup', ru: 'Экспортировать резервную копию',
+    de: 'Sicherung exportieren', uk: 'Експортувати резервну копію',
+    pl: 'Eksportuj kopię zapasową', tr: 'Yedeği dışa aktar',
+    id: 'Ekspor cadangan', 'zh-TW': '匯出備份'
+  },
+  settings_backup_import: {
+    es: 'Importar copia de respaldo', en: 'Import backup', pt: 'Importar cópia de segurança',
+    zh: '导入备份', ja: 'バックアップを復元', fr: 'Importer une sauvegarde',
+    it: 'Importa backup', ru: 'Импортировать резервную копию',
+    de: 'Sicherung importieren', uk: 'Імпортувати резервну копію',
+    pl: 'Importuj kopię zapasową', tr: 'Yedeği içe aktar',
+    id: 'Impor cadangan', 'zh-TW': '匯入備份'
   },
   settings_backup_hint: {
-    es: 'Guarda listas, ajustes, fichas y el audio importado en un ZIP. Las pistas del móvil conservan su archivo original.',
-    en: 'Saves playlists, settings, track details and imported audio in a ZIP. Music on your phone stays in place.',
-    pt: 'Guarda listas, ajustes, dados das faixas e áudio importado num ZIP. As músicas do telefone ficam no lugar.',
-    zh: '将播放列表、设置、曲目信息和已导入音频保存为 ZIP。手机中的音乐文件保持不变。',
-    ja: 'プレイリスト、設定、曲情報、取り込んだ音声をZIPに保存します。端末内の音楽ファイルはそのままです。',
-    fr: 'Enregistre listes, réglages, pistes et audio importé dans un ZIP. Les fichiers du téléphone restent en place.',
-    it: 'Salva playlist, impostazioni, dettagli e audio importato in uno ZIP. I brani sul telefono restano al loro posto.',
-    ru: 'Сохраняет списки, настройки, данные треков и импортированное аудио в ZIP. Файлы на телефоне не меняются.',
-    de: 'Speichert Playlists, Einstellungen, Titeldaten und importierte Audiodateien als ZIP. Musik auf dem Gerät bleibt unverändert.',
-    uk: 'Зберігає списки, налаштування, дані треків та імпортоване аудіо в ZIP. Файли на телефоні не змінюються.',
-    pl: 'Zapisuje playlisty, ustawienia, dane utworów i zaimportowane audio w ZIP. Pliki na telefonie pozostają bez zmian.',
-    tr: 'Listeleri, ayarları, parça bilgilerini ve içe aktarılan sesi ZIP olarak kaydeder. Telefondaki müzik değişmez.',
-    id: 'Menyimpan daftar putar, setelan, info trek, dan audio impor dalam ZIP. Musik di ponsel tetap utuh.',
-    'zh-TW': '將播放清單、設定、曲目資料及匯入音訊儲存為 ZIP。手機中的音樂檔案維持不變。'
+    es: 'La copia de respaldo guarda listas, ajustes, fichas y audio importado en un ZIP; al importarla reemplaza la biblioteca actual. Las pistas del móvil conservan su archivo original.',
+    en: 'The backup saves playlists, settings, track details and imported audio in a ZIP; importing it replaces the current library. Music on your phone stays in place.',
+    pt: 'A cópia de segurança guarda listas, ajustes, dados das faixas e áudio importado num ZIP; importá-la substitui a biblioteca atual. As músicas do telefone ficam no lugar.',
+    zh: '备份会将播放列表、设置、曲目信息和已导入音频保存为 ZIP；导入时会替换当前资料库。手机中的音乐文件保持不变。',
+    ja: 'バックアップはプレイリスト、設定、曲情報、取り込んだ音声をZIPに保存します。復元すると現在のライブラリが置き換えられます。端末内の音楽ファイルはそのままです。',
+    fr: 'La sauvegarde enregistre listes, réglages, pistes et audio importé dans un ZIP ; l’importer remplace la bibliothèque actuelle. Les fichiers du téléphone restent en place.',
+    it: 'Il backup salva playlist, impostazioni, dettagli e audio importato in uno ZIP; importarlo sostituisce la libreria attuale. I brani sul telefono restano al loro posto.',
+    ru: 'Резервная копия сохраняет списки, настройки, данные треков и импортированное аудио в ZIP; при импорте текущая библиотека заменяется. Файлы на телефоне не меняются.',
+    de: 'Die Sicherung speichert Playlists, Einstellungen, Titeldaten und importierte Audiodateien als ZIP; beim Importieren wird die aktuelle Bibliothek ersetzt. Musik auf dem Gerät bleibt unverändert.',
+    uk: 'Резервна копія зберігає списки, налаштування, дані треків та імпортоване аудіо в ZIP; імпорт замінює поточну бібліотеку. Файли на телефоні не змінюються.',
+    pl: 'Kopia zapasowa zapisuje playlisty, ustawienia, dane utworów i zaimportowane audio w ZIP; jej import zastępuje bieżącą bibliotekę. Pliki na telefonie pozostają bez zmian.',
+    tr: 'Yedek; listeleri, ayarları, parça bilgilerini ve içe aktarılan sesi ZIP olarak saklar; içe aktarmak mevcut kitaplığın yerine geçer. Telefondaki müzik değişmez.',
+    id: 'Cadangan menyimpan daftar putar, setelan, info trek, dan audio impor dalam ZIP; mengimpornya menggantikan pustaka saat ini. Musik di ponsel tetap utuh.',
+    'zh-TW': '備份會將播放清單、設定、曲目資料及匯入音訊儲存為 ZIP；匯入時會取代目前的資料庫。手機中的音樂檔案維持不變。'
   },
   toast_backup_start: {
     es: 'Preparando el respaldo…', en: 'Preparing backup…', pt: 'A preparar a cópia…',
@@ -4633,6 +4641,80 @@ const I18N = {
     it: 'Impossibile creare il backup.', ru: 'Не удалось создать резервную копию.', de: 'Sicherung konnte nicht erstellt werden.',
     uk: 'Не вдалося створити резервну копію.', pl: 'Nie udało się utworzyć kopii zapasowej.', tr: 'Yedek oluşturulamadı.',
     id: 'Tidak dapat membuat cadangan.', 'zh-TW': '無法建立備份。'
+  },
+  toast_backup_chat: {
+    es: 'Copia de respaldo enviada al chat.', en: 'Backup sent to the chat.', pt: 'Cópia de segurança enviada ao chat.',
+    zh: '备份已发送到聊天。', ja: 'バックアップをチャットに送信しました。', fr: 'Sauvegarde envoyée au chat.',
+    it: 'Backup inviato nella chat.', ru: 'Резервная копия отправлена в чат.', de: 'Sicherung in den Chat gesendet.',
+    uk: 'Резервну копію надіслано в чат.', pl: 'Kopia zapasowa wysłana na czat.', tr: 'Yedek sohbete gönderildi.',
+    id: 'Cadangan terkirim ke obrolan.', 'zh-TW': '備份已傳送到聊天。'
+  },
+  toast_backup_restore_start: {
+    es: 'Restaurando la copia de respaldo…', en: 'Restoring backup…', pt: 'A restaurar a cópia…',
+    zh: '正在恢复备份…', ja: 'バックアップを復元中…', fr: 'Restauration de la sauvegarde…',
+    it: 'Ripristino del backup…', ru: 'Восстановление копии…', de: 'Sicherung wird wiederhergestellt…',
+    uk: 'Відновлення копії…', pl: 'Przywracanie kopii…', tr: 'Yedek geri yükleniyor…',
+    id: 'Memulihkan cadangan…', 'zh-TW': '正在還原備份…'
+  },
+  backup_restore_ok: {
+    es: 'Restaurar', en: 'Restore', pt: 'Restaurar',
+    zh: '恢复', ja: '復元する', fr: 'Restaurer',
+    it: 'Ripristina', ru: 'Восстановить', de: 'Wiederherstellen',
+    uk: 'Відновити', pl: 'Przywróć', tr: 'Geri yükle',
+    id: 'Pulihkan', 'zh-TW': '還原'
+  },
+  backup_restore_confirm: {
+    es: 'Esto borrará la biblioteca actual y la reemplazará por la copia de respaldo (X pistas, Y listas). ¿Continuar?',
+    en: 'This will erase the current library and replace it with the backup (X tracks, Y playlists). Continue?',
+    pt: 'Isto apagará a biblioteca atual e a substituirá pela cópia de segurança (X faixas, Y listas). Continuar?',
+    zh: '这将清除当前资料库并以备份替换（X 首歌曲，Y 个歌单）。继续？',
+    ja: '現在のライブラリを消去し、バックアップで置き換えます（X曲、Y件のプレイリスト）。続行しますか？',
+    fr: 'Cela effacera la bibliothèque actuelle et la remplacera par la sauvegarde (X morceaux, Y playlists). Continuer ?',
+    it: 'Questo cancellerà la libreria attuale e la sostituirà con il backup (X brani, Y playlist). Continuare?',
+    ru: 'Это удалит текущую библиотеку и заменит её резервной копией (X треков, Y списков). Продолжить?',
+    de: 'Dadurch wird die aktuelle Bibliothek gelöscht und durch die Sicherung ersetzt (X Titel, Y Playlists). Fortfahren?',
+    uk: 'Це видалить поточну бібліотеку й замінить її копією (X треків, Y списків). Продовжити?',
+    pl: 'To usunie bieżącą bibliotekę i zastąpi ją kopią zapasową (X utworów, Y playlist). Kontynuować?',
+    tr: 'Bu, mevcut kitaplığı siler ve yedekle değiştirir (X parça, Y liste). Devam edilsin mi?',
+    id: 'Ini akan menghapus pustaka saat ini dan menggantinya dengan cadangan (X lagu, Y daftar putar). Lanjutkan?',
+    'zh-TW': '這會清除目前的資料庫並以備份取代（X 首歌曲，Y 個播放清單）。繼續嗎？'
+  },
+  toast_backup_restore_done: {
+    es: 'Copia restaurada: X pistas y Z listas.', en: 'Backup restored: X tracks and Z playlists.',
+    pt: 'Cópia restaurada: X faixas e Z listas.',
+    zh: '备份已恢复：X 首歌曲，Z 个歌单。', ja: 'バックアップを復元しました：X曲、Z件のプレイリスト。',
+    fr: 'Sauvegarde restaurée : X morceaux et Z playlists.',
+    it: 'Backup ripristinato: X brani e Z playlist.', ru: 'Копия восстановлена: X треков и Z списков.',
+    de: 'Sicherung wiederhergestellt: X Titel und Z Playlists.',
+    uk: 'Копію відновлено: X треків і Z списків.', pl: 'Kopia przywrócona: X utworów i Z playlist.',
+    tr: 'Yedek geri yüklendi: X parça ve Z liste.',
+    id: 'Cadangan dipulihkan: X lagu dan Z daftar putar.', 'zh-TW': '備份已還原：X 首歌曲，Z 個播放清單。'
+  },
+  toast_backup_restore_partial: {
+    es: 'Copia restaurada: X pistas (Y sin audio) y Z listas.',
+    en: 'Backup restored: X tracks (Y missing audio) and Z playlists.',
+    pt: 'Cópia restaurada: X faixas (Y sem áudio) e Z listas.',
+    zh: '备份已恢复：X 首歌曲（Y 首缺少音频），Z 个歌单。',
+    ja: 'バックアップを復元しました：X曲（Y曲は音声なし）、Z件のプレイリスト。',
+    fr: 'Sauvegarde restaurée : X morceaux (Y sans audio) et Z playlists.',
+    it: 'Backup ripristinato: X brani (Y senza audio) e Z playlist.',
+    ru: 'Копия восстановлена: X треков (Y без аудио) и Z списков.',
+    de: 'Sicherung wiederhergestellt: X Titel (Y ohne Audio) und Z Playlists.',
+    uk: 'Копію відновлено: X треків (Y без аудіо) і Z списків.',
+    pl: 'Kopia przywrócona: X utworów (Y bez audio) i Z playlist.',
+    tr: 'Yedek geri yüklendi: X parça (Y tanesi sessiz) ve Z liste.',
+    id: 'Cadangan dipulihkan: X lagu (Y tanpa audio) dan Z daftar putar.',
+    'zh-TW': '備份已還原：X 首歌曲（Y 首沒有音訊），Z 個播放清單。'
+  },
+  toast_backup_restore_error: {
+    es: 'No se pudo restaurar la copia de respaldo.', en: 'Could not restore the backup.',
+    pt: 'Não foi possível restaurar a cópia de segurança.',
+    zh: '无法恢复备份。', ja: 'バックアップを復元できませんでした。', fr: 'Impossible de restaurer la sauvegarde.',
+    it: 'Impossibile ripristinare il backup.', ru: 'Не удалось восстановить резервную копию.',
+    de: 'Die Sicherung konnte nicht wiederhergestellt werden.',
+    uk: 'Не вдалося відновити резервну копію.', pl: 'Nie udało się przywrócić kopii zapasowej.',
+    tr: 'Yedek geri yüklenemedi.',
+    id: 'Tidak dapat memulihkan cadangan.', 'zh-TW': '無法還原備份。'
   },
   settings_retag_hint: {
     es: 'Vuelve a leer título, artista y portada de tus archivos. No borra nada.',

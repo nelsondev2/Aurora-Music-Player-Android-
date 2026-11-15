@@ -279,7 +279,7 @@ def check_bridge():
     # native-audio.js (motor nativo) e init.js (limpieza de la caché).
     js = "".join(read(os.path.join(WWW, "js", name))
                  for name in ("platform.js", "native-audio.js", "audio.js", "init.js",
-                              "device-library.js", "library.js", "lyrics.js"))
+                              "device-library.js", "library.js", "lyrics.js", "backup.js"))
     pairs = [
         ("AuroraAndroid", "B", "AuroraBridge.java"),
         ("AuroraMedia", "M", "AuroraMediaBridge.java"),
