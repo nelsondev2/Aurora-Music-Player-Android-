@@ -34,11 +34,25 @@ reproductor web.
 
 ## Respaldo de datos
 
-Antes de actualizar, usa **Más opciones → Exportar respaldo** y guarda el
-ZIP en una ubicación segura. La app permite importar ese archivo después.
-Las pistas de MediaStore conservan la referencia al archivo original; el ZIP
-incluye los audios que Aurora todavía puede leer. Mantén una copia hasta
-comprobar que la restauración terminó.
+En **Ajustes** hay dos entradas, una debajo de otra:
+
+- **Importar copia de respaldo** — elige un archivo `.zip` de Aurora y la
+  biblioteca actual se reemplaza por la del respaldo (no se fusiona).
+- **Exportar copia de respaldo** — crea el respaldo y lo abre/envía según
+  dónde corre la app: en el navegador lo descarga; en Android abre el
+  selector del sistema (ahí se puede elegir Delta Chat u otra app); dentro
+  de un WebXDC de Delta Chat se arma el ZIP y se envía directo al chat.
+  Restaurar también funciona dentro de Delta Chat con el adjunto del chat.
+
+El respaldo es un ZIP con `backup.json` (pistas, listas, ajustes y claves
+`aurora_*`) y el audio que Aurora puede leer. Las pistas de MediaStore
+conservan su referencia al archivo original; si el archivo sigue donde
+estaba, el enlace se restaura. Restaurar **valida todo antes de borrar
+nada** (índice y CRC de cada entrada de audio) y luego reemplaza la
+biblioteca: solo si el respaldo está íntegro se borra lo actual. El
+respaldo es compatible entre ediciones y versiones (Web/WebXDC, Android
+nativa y navegador leen y escriben el mismo formato `aurora-migration-backup`
+v1). Mantén una copia hasta comprobar que la restauración terminó.
 
 ## APK Android 5.0+
 

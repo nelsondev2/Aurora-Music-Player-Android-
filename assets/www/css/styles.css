@@ -252,7 +252,7 @@ svg { display: block; }
     --pad: 10px;
     --bottom-nav-h: 46px;
   }
-  .cover-art { width: min(48vw, 220px); }
+  .cover-art { width: min(48vw, 240px); }
   .track-title { font-size: 1rem; }
   .ctrl-play { width: 50px; height: 50px; }
   .controls-secondary { padding: 2px 0; }
@@ -266,7 +266,7 @@ svg { display: block; }
 /* Altura media-baja */
 @media (max-height: 700px) and (min-height: 601px) {
   :root { --pad: 14px; }
-  .cover-art, .cover-glow { width: min(48vw, 220px); }
+  .cover-art, .cover-glow { width: min(48vw, 240px); }
   .track-title { font-size: 1.1875rem; }
   .ctrl-play { width: 58px; height: 58px; }
   .controls-secondary { padding: 4px 0; }
@@ -402,7 +402,7 @@ svg { display: block; }
 }
 .cover-glow {
   position: absolute;
-  width: min(88vw, 44dvh, 360px);
+  width: min(90vw, 46dvh, 372px);
   aspect-ratio: 1;
   max-height: 100%;
   border-radius: 40%;
@@ -415,7 +415,7 @@ svg { display: block; }
 .cover-art {
   position: relative;
   z-index: 1;
-  width: min(86vw, 36dvh, 320px);
+  width: min(88vw, 41dvh, 344px);
   aspect-ratio: 1;
   border-radius: var(--radius-cover);
   overflow: hidden;
@@ -4120,7 +4120,7 @@ html.aurora-wide .view-player {
 }
 html.aurora-wide .view-player .cover-art,
 html.aurora-wide .view-player .cover-glow {
-  width: min(100%, 36dvh, 340px);
+  width: min(100%, 41dvh, 364px);
 }
 /*  también en la columna ancha la portada inmersiva crece. */
 html.aurora-wide .view-player.cover-fullscreen .cover-art,
