@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Sin barra de título y con el fondo ya oscuro: lo único que se ve
+      antes de que el WebView pinte es el negro de la app, nunca un
+      destello blanco. Los colores de las barras del sistema se fijan
+      en MainActivity (paintSystemBars) para no depender de atributos
+      con nivel de API.
+    -->
+    <style name="AuroraTheme" parent="@android:style/Theme.NoTitleBar">
+        <item name="android:windowBackground">@color/aurora_bg</item>
+        <item name="android:colorBackground">@color/aurora_bg</item>
+    </style>
+</resources>
